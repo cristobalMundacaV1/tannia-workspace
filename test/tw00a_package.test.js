@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { startClient, call, data, tmpHome, ROOT, FIX, MCPB_BIN } from './helpers.js';
+import { startClient, call, data, tmpHome, ROOT, FIX, mcpb } from './helpers.js';
 
 // Construye, empaqueta con el CLI oficial, DESCOMPRIME en un directorio limpio (sin node_modules,
 // ruta con espacios y acentos) y ejecuta el protocolo MCP contra el bundle instalado.
@@ -17,7 +17,7 @@ test('TW-00A: .mcpb se empaqueta, valida y funciona desde instalación limpia', 
   assert.match(fs.readFileSync(`${pkg}.sha256`, 'utf8'), /^[0-9a-f]{64}  /);
 
   const inst = fs.mkdtempSync(path.join(os.tmpdir(), 'Extensión instalada ñ '));
-  execFileSync(MCPB_BIN, ['unpack', pkg, inst], { stdio: 'pipe', shell: process.platform === 'win32' });
+  mcpb(['unpack', pkg, inst]);
   assert.ok(!fs.existsSync(path.join(inst, 'node_modules')));
   const entry = path.join(inst, 'server', 'index.js');
   assert.ok(fs.existsSync(entry));

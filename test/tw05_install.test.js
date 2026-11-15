@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { startClient, call, data, tmpHome, ROOT, FIX, MCPB_BIN } from './helpers.js';
+import { startClient, call, data, tmpHome, ROOT, FIX, mcpb } from './helpers.js';
 
 const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
 const build = (version) => {
@@ -13,10 +13,10 @@ const build = (version) => {
   const mf = path.join(ROOT, 'dist', 'mcpb', 'manifest.json');
   const m = JSON.parse(fs.readFileSync(mf, 'utf8')); m.version = version; fs.writeFileSync(mf, JSON.stringify(m, null, 2));
   const out = path.join(os.tmpdir(), `tannia-${version}-${process.pid}.mcpb`);
-  execFileSync(MCPB_BIN, ['pack', path.join(ROOT, 'dist', 'mcpb'), out], { stdio: 'pipe', shell: process.platform === 'win32' });
+  mcpb(['pack', path.join(ROOT, 'dist', 'mcpb'), out]);
   return out;
 };
-const unpack = (pkg, dest) => execFileSync(MCPB_BIN, ['unpack', pkg, dest], { stdio: 'pipe', shell: process.platform === 'win32' });
+const unpack = (pkg, dest) => mcpb(['unpack', pkg, dest]);
 
 test('TW-05: actualización conserva datos del usuario; desinstalar no borra proyectos; reinstalar los recupera', { timeout: 180000 }, async () => {
   const home = tmpHome('Datos Tannia ');
