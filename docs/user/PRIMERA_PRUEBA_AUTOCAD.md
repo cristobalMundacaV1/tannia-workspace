@@ -20,10 +20,13 @@ Pide: **«Lista las entidades del dibujo abierto en AutoCAD»** y luego **«Mide
 ## 4. Prueba C — edición solo en copia
 1. **«Crea el proyecto Prueba AutoCAD»**. Copia tu DWG de prueba a `Documentos\Tannia Workspace\Proyectos\Prueba AutoCAD\02 Originales`.
 2. **«Registra los originales»** → **«Crea una copia de trabajo de <archivo>.dwg»**.
-3. **«Abre esa copia en AutoCAD»**, luego **«Agrega una línea de (0,0) a (5,5) en la copia»**.
+3. **«Abre esa copia en AutoCAD»**, luego **«Agrega 4 líneas en la copia que formen un rectángulo de 6000 × 4000 en la capa TW_PRUEBA»** (usa `tannia_cad_agregar_lineas`; si falla algo se revierte todo).
    Esperado: la línea aparece **solo en la copia**.
 4. **«Verifica la integridad de los originales»** → debe decir íntegros.
 5. Con el **original** como dibujo activo pide agregar una línea → debe ser **rechazado** (ORIGINAL_PROTEGIDO).
+
+### Si algo falla
+Pide **«Usa tannia_cad_estado»**: ahora informa por separado el registro de Windows y la conexión COM, con la **etapa** y el código de error (sin rutas). Envíame ese resultado.
 
 ## 5. Qué enviarme
 Para cada prueba: ✅/❌, versión exacta de AutoCAD (`ACADVER`/Ayuda → Acerca de), y el texto del error si falla. Capturas solo si son reales. Con eso actualizo la matriz `docs/qa/CAD_CAPABILITY_MATRIX.md`.

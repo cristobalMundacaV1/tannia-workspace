@@ -49,3 +49,14 @@ La columna SHA indica el commit que **introdujo** la capacidad y su prueba; la *
 
 ## CI (GitHub Actions, ubuntu-latest y windows-latest)
 Los resultados de cada ejecución se enlazan en el PR. Hallazgos reales de Windows corregidos durante el desarrollo: ruta `/D:/…` en helper de pruebas, `import()` con ruta absoluta, invocación de `mcpb.cmd` con espacios. Estado de la última ejecución: ver PR.
+
+## Issue #8 (rc.2)
+| ID | Capacidad | Estado | Evidencia | SHA |
+|---|---|---|---|---|
+| E-I8-1 | Ruta Unicode con apóstrofo viaja Node→PowerShell→Node idéntica (PowerShell 5.1 real) | VER CI Windows del SHA final | `test/tw09_windows_powershell.test.js` | (SHA final) |
+| E-I8-2 | Autorización de copia/ORIGINAL_PROTEGIDO con causas separadas; fallo cerrado; enlaces | TEST_AUTOMATIZADO_APROBADO (Linux local) + CI | `test/tw06_cad.test.js` | (SHA final) |
+| E-I8-3 | Registro fallido no impide COM; causas separadas | TEST_AUTOMATIZADO_APROBADO | `test/tw06_cad.test.js` | (SHA final) |
+| E-I8-4 | Capa antes de dibujar; todo-o-nada con reversión; sin guardado ante fallo (AutoCAD **simulado en PowerShell**) | VER CI Windows | `tw09` | (SHA final) |
+| E-I8-5 | `TANNIA_HOME`: reinicio con otra carpeta; advertencias | TEST_INTEGRACIÓN_APROBADO | `test/tw10_config.test.js` | (SHA final) |
+| E-I8-6 | Todo lo anterior contra **AutoCAD 2027 real** | NO VERIFICADO — aceptación pendiente | `docs/qa/ISSUE_8_FIX.md` | — |
+| E-I8-7 | Cambio de `TANNIA_HOME` en la UI de Claude Desktop | NO VERIFICADO | `MANUAL_TESTS_TANNIA_PC.md` §H | — |

@@ -3,7 +3,7 @@
 ## Bloqueantes de "VALIDADO FINAL" (no de la entrega técnica)
 | ID | Límite | Estado |
 |---|---|---|
-| L-01 | Nunca se ejecutó contra AutoCAD real (COM, DWG, sólidos) | NO VERIFICADO EN AUTOCAD REAL |
+| L-01 | Contra AutoCAD real solo se observó (issue #8) conexión COM y lectura de estado en AutoCAD 2027; edición, capas, lote, sólidos y DWG siguen sin verificar. rc.2 corrige los defectos del issue #8 pendientes de repetir la prueba | NO VERIFICADO EN AUTOCAD REAL (parcial) |
 | L-02 | Nunca se instaló desde la interfaz de Claude Desktop (solo protocolo MCP automatizado) | NO VERIFICADO |
 | L-03 | No se probó con planos/DXF/PDF reales de Tannia (solo fixtures sintéticos) | PILOTO TANNIA PENDIENTE |
 | L-04 | Pruebas en Windows: solo el CI de GitHub (`windows-latest`); no en el PC de Tannia ni con usuario estándar/rutas >260 | PARCIAL (ver EVIDENCE_MATRIX) |
