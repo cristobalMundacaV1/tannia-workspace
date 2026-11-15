@@ -14,3 +14,8 @@ Cada fila indica el SHA sobre el que se ejecutó. Estados: ver `docs/implementat
 | E-01-3 | Duplicados excluidos, abiertas, autointersección, unidades ausentes/discrepantes → needs_review/bloqueo | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
 | E-01-4 | DXF corrupto/binario/no-DXF/vacío con error codificado | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
 | E-01-5 | Compatibilidad con DXF reales de AutoCAD (todas las versiones) | NO VERIFICADO | Fixtures sintéticos generados con ezdxf R2010; DXF real de Tannia pendiente | — |
+| E-02-1 | APU/presupuesto CLP: totales calculados a mano (GG, utilidades, IVA, redondeo) | TEST_AUTOMATIZADO_APROBADO | `test/tw02_budget.test.js` (precios ficticios `TEST`, solo aritmética) | (ver commit) |
+| E-02-2 | XLSX con fórmulas vivas; recalculado SIN caché por LibreOffice 24.x headless == cálculo JS | TEST_INTEGRACIÓN_APROBADO | idem | (ver commit) |
+| E-02-3 | Bloqueo de estado FINAL: precio faltante, cantidad no verificada, unidad distinta, sin APU, needs_review | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
+| E-02-4 | Apertura del XLSX en Microsoft Excel real | NO VERIFICADO | Solo exceljs + LibreOffice | — |
+| E-02-5 | Precios/rendimientos de mercado chilenos | NO INCLUIDO | Nunca se inventan; los aporta la usuaria con fuente y fecha | — |
