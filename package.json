@@ -11,6 +11,7 @@
     "test:ci": "node --test --test-concurrency=1 --test-reporter=tap \"test/*.test.js\"",
     "build": "node scripts/build.mjs",
     "pack": "node scripts/pack.mjs",
+    "docs": "node scripts/gen-docs.mjs",
     "fixtures": "python3 tools/gen_fixtures.py"
   },
   "dependencies": {

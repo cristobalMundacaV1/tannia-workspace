@@ -13,6 +13,7 @@ export const REGLAS = {
   longitud_por_altura: { magnitud: 'longitud', params: ['altura_m'], unidad: 'm2', formula: 'Σ longitudes × altura' },
   longitud_por_altura_por_espesor: { magnitud: 'longitud', params: ['altura_m', 'espesor_m'], unidad: 'm3', formula: 'Σ longitudes × altura × espesor' },
   longitud_por_seccion: { magnitud: 'longitud', params: ['seccion_m2'], unidad: 'm3', formula: 'Σ longitudes × sección' },
+  directa_volumen: { magnitud: 'volumen', params: [], unidad: 'm3', formula: 'Σ volúmenes de mallas cerradas (geometría pura; no implica material ni partida)' },
   conteo: { magnitud: 'conteo', params: [], unidad: 'un', formula: 'Nº de elementos' },
 };
 
@@ -45,7 +46,7 @@ export function computeQuantity({ medicion, archivo, sha256, capas, regla, param
     if (inst.some((m) => m.estado === 'needs_review')) { needsReview = true; warnings.push('Hay bloques con problemas (needs_review).'); }
     if (!inst.length) warnings.push('No se encontraron bloques (INSERT) en esas capas.');
   } else {
-    const dim = R.magnitud === 'area' ? f * f : f;
+    const dim = R.magnitud === 'area' ? f * f : R.magnitud === 'volumen' ? f * f * f : f;
     for (const m of usadas) {
       if (m.valor === null || m.estado === 'needs_review') { needsReview = true; continue; }
       base += m.valor * dim;

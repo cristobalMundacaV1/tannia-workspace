@@ -1,9 +1,10 @@
 // Motor de medición geométrica DXF (2D, con longitudes 3D de LINE/3DPOLYLINE).
 // Mide GEOMETRÍA; no interpreta partidas ni inventa alturas/espesores.
 import { METERS_PER_UNIT } from './reader.js';
+import { analyzeSurface } from './mesh3d.js';
 import {
   apply, compose, insertTransform, IDENTITY, similarityScale, det2, dist3,
-  polyLength, polySignedArea, selfIntersects, arcSweep, bulgeSeg,
+  polyLength, polySignedArea, selfIntersects, arcSweep, bulgeSeg, det3,
 } from './geometry.js';
 
 const MAX_DEPTH = 8;
@@ -42,6 +43,7 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
   const warnings = [];
   const unsupported = {};
   const seen = new Map();
+  const faceGroups = new Map(); // capa -> caras 3DFACE (se analizan como un conjunto por capa)
   let nextId = 1;
   const units = resolveUnits(dxf, unidad_confirmada);
 
@@ -126,13 +128,12 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
       }
       case '3DFACE': {
         const pts = e.pts.map((p) => apply(T, p));
-        const tri = (a, b, c) => { const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z, vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z; return 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx); };
         const quad = Math.hypot(pts[3].x - pts[2].x, pts[3].y - pts[2].y, pts[3].z - pts[2].z) > 1e-12;
-        const area = quad ? tri(pts[0], pts[1], pts[2]) + tri(pts[0], pts[2], pts[3]) : tri(pts[0], pts[1], pts[2]);
-        const it = add(e, path, 'area', '3DFACE', area, quad ? 'Σ 2 triángulos' : 'Área del triángulo');
-        review(it, 'Cara 3D suelta: es área de superficie, no una partida; agrupe en un sólido cerrado para volumen (ver tannia_cad3d_*).');
+        const face = quad ? pts : pts.slice(0, 3);
+        (faceGroups.get(e.layer) || faceGroups.set(e.layer, { faces: [], e }).get(e.layer)).faces.push(det3(T) < 0 ? [...face].reverse() : face);
         return;
       }
+      case 'MESH': return meshItems(e, e.verts, e.faces, T, path, 'MESH');
       case 'INSERT': return expandInsert(e, T, path, ctx);
       case 'TEXT': case 'MTEXT': return; // anotaciones: no medibles
       default:
@@ -142,8 +143,27 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
   }
 
   function measureMesh(e, T, path) {
-    // Mallas se tratan con el módulo 3D (mesh3d.js) desde tannia_cad3d_*; aquí solo se registran.
-    unsupported[`${e.type}(malla)`] = (unsupported[`${e.type}(malla)`] || 0) + 1;
+    if (!e.polyface) { unsupported['POLYLINE(malla poligonal)'] = (unsupported['POLYLINE(malla poligonal)'] || 0) + 1; return; }
+    meshItems(e, e.verts, e.faces, T, path, 'POLYFACE');
+  }
+
+  function meshItems(e, verts, faceIdx, T, path, tipo) {
+    const P = verts.map((v) => apply(T, v));
+    const flip = det3(T) < 0;
+    const bad = faceIdx.some((f) => f.some((i) => !(i >= 0 && i < P.length)));
+    if (bad) { review(add(e, path, 'area', tipo, null, 'Σ triángulos'), 'Índices de cara fuera de rango: malla corrupta.'); return; }
+    const faces = faceIdx.filter((f) => f.length >= 3).map((f) => { const q = f.map((i) => P[i]); return flip ? q.reverse() : q; });
+    surfaceItems(e, faces, path, tipo);
+  }
+
+  function surfaceItems(e, faces, path, tipo) {
+    const r = analyzeSurface(faces);
+    const a = add(e, path, 'area', tipo, r.area, `Σ área de ${r.triangulos} triángulos`, { caras: faces.length });
+    if (r.cerrada) add(e, path, 'volumen', tipo, r.volumen, 'Teorema de la divergencia sobre malla cerrada y orientada', { caras: faces.length, advertencias: [...r.advertencias] });
+    else { const v = add(e, path, 'volumen', tipo, null, 'no definido (malla no cerrada)'); review(v, r.advertencias.join(' ') || 'Malla no cerrada.'); }
+    for (const w of r.advertencias) a.advertencias.push(w);
+    if (r.necesita_revision && r.cerrada) review(a, 'Revise las advertencias de la malla.');
+    a.advertencias.push('Área de superficie 3D: no es una partida por sí sola.');
   }
 
   function expandInsert(e, T, path, ctx) {
@@ -169,6 +189,10 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
   }
 
   for (const e of dxf.entities) measureEntity(e, IDENTITY, [], { stack: [] });
+  for (const [layer, g] of faceGroups) {
+    if (g.faces.length === 1) { const it = add({ ...g.e, layer }, [], 'area', '3DFACE', analyzeSurface(g.faces).area, 'Área de la cara 3D'); review(it, 'Cara 3D aislada: no define un volumen.'); }
+    else surfaceItems({ ...g.e, layer, handle: null }, g.faces, [], '3DFACE_GRUPO');
+  }
 
   // Totales por capa (solo items 'ok' y 'needs_review' con valor; duplicadas excluidas)
   const layers = {};
@@ -176,12 +200,12 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
   for (const it of items) {
     if (it.estado === 'needs_review') reviewCount++;
     if (it.magnitud === 'conteo' || it.estado === 'duplicada' || it.valor === null) continue;
-    const L = (layers[it.capa] ||= { longitud: 0, perimetro: 0, area: 0, items_para_revision: 0 });
+    const L = (layers[it.capa] ||= { longitud: 0, perimetro: 0, area: 0, volumen: 0, items_para_revision: 0 });
     L[it.magnitud] += it.valor;
     if (it.estado === 'needs_review') L.items_para_revision++;
   }
   const f = units.factor_a_metros;
-  const converted = f ? Object.fromEntries(Object.entries(layers).map(([k, v]) => [k, { longitud_m: v.longitud * f, perimetro_m: v.perimetro * f, area_m2: v.area * f * f }])) : null;
+  const converted = f ? Object.fromEntries(Object.entries(layers).map(([k, v]) => [k, { longitud_m: v.longitud * f, perimetro_m: v.perimetro * f, area_m2: v.area * f * f, volumen_m3: v.volumen * f * f * f }])) : null;
   if (Object.keys(unsupported).length) warnings.push(`Entidades no medidas (no soportadas en 2D): ${JSON.stringify(unsupported)}.`);
   const dups = items.filter((i) => i.estado === 'duplicada').length;
   if (dups) warnings.push(`${dups} medición(es) duplicada(s) excluida(s) de los totales.`);

@@ -35,6 +35,8 @@
     "cube_volume": 24.0,
     "cube_area": 52.0,
     "poly3d_length": 17.0,
-    "pyramid_volume": 0.3333333333333333
+    "pyramid_volume": 0.3333333333333333,
+    "polyface_volume": 2.0,
+    "polyface_area": 10.0
   }
 }

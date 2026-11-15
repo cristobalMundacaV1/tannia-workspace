@@ -11,3 +11,5 @@ Estados: ✅ hecho y probado en este entorno · 🟡 parcial · ⬜ pendiente ·
 | TW-03 PDF + informes | ✅ | extracción vectorial, calibración verificada, escaneados, memoria PDF; OpenTakeoff evaluado (AGPL-3.0, no incorporado) |
 | TW-04 flujo MCP de producto | ✅ | ~28 herramientas, máquina de estados con gates, persistencia/recuperación, huellas de originales, partidas desactualizadas, normativa orientativa; e2e contra fuente Y bundle |
 | TW-05 paquete Windows | ✅ decisión `.mcpb` (UI Claude Desktop / Windows real 🔒) | actualización/rollback/desinstalación/logs/reparación probados; sin `.exe` por decisión documentada |
+| TW-06 adaptador AutoCAD + 2D | ✅ contrato / 🔒 AutoCAD real | detección por registro, adaptador COM con guardas por código, matriz por entidad×operación; todo COM `UNVERIFIED` |
+| TW-06A geometría 3D | ✅ DXF (mallas) / 🔒 sólidos ACIS | 3DFACE/MESH/POLYFACE con área y volumen verificados analíticamente; 3DSOLID/REGION/SURFACE detectados sin volumen inventado |

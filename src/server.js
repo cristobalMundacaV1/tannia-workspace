@@ -3,6 +3,7 @@ import { NAME, VERSION } from './version.js';
 import { Sandbox } from './security/sandbox.js';
 import { guard } from './mcp/util.js';
 import { registerTools } from './tools/index.js';
+import { AutoCadCom } from './cad/autocad_com.js';
 
 export const INSTRUCCIONES = `Tannia Workspace: asistente local para AutoCAD 2D/3D, cubicaciones, presupuestos y normativa chilena.
 Reglas obligatorias:
@@ -13,9 +14,10 @@ Reglas obligatorias:
 5) No marque cantidades como verificadas ni apruebe el proyecto sin una confirmación explícita de la usuaria.
 6) Informe siempre las advertencias y los needs_review; distinga implementado, probado y validado.`;
 
-export function createServer({ home, log = () => {} }) {
+export function createServer({ home, log = () => {}, cadRunner, platform }) {
   const sandbox = new Sandbox(home);
   const server = new McpServer({ name: NAME, version: VERSION }, { instructions: INSTRUCCIONES });
-  registerTools(server, { sandbox, log, g: (fn) => guard(fn, log) });
+  const cad = new AutoCadCom({ sandbox, ...(cadRunner ? { runner: cadRunner } : {}), ...(platform ? { platform } : {}) });
+  registerTools(server, { sandbox, log, g: (fn) => guard(fn, log), cad });
   return { server, sandbox };
 }

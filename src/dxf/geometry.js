@@ -34,6 +34,11 @@ export function insertTransform(ins, base, ci = 0, ri = 0) {
   return compose(place, compose(R, compose(S, compose(unbase, arr))));
 }
 
+export function det3(T) {
+  const [a, b, c, d, e, f, g, h, i] = T.m;
+  return a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+}
+
 export function det2(T) { return T.m[0] * T.m[4] - T.m[1] * T.m[3]; }
 
 /** ¿La parte 2D es una similitud (escala uniforme + rotación, con o sin espejo)? Devuelve factor de escala o null. */

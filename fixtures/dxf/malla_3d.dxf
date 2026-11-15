@@ -489,7 +489,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2461360.8811689815
+2461360.8931597224
   9
 $TDUCREATE
  40
@@ -497,7 +497,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461360.8811689815
+2461360.8931597224
   9
 $TDUUPDATE
  40
@@ -549,7 +549,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-46
+67
   9
 $SURFTAB1
  70
@@ -929,11 +929,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{3B95C64B-66D4-45BF-A1D5-06D5ABF59FC9}
+{139C132F-DB5E-446E-881C-AE784CA61EBB}
   9
 $VERSIONGUID
   2
-{61E19080-27B0-46B5-897A-5FDE04CC7A8B}
+{AA98FB55-1075-4691-81CA-7D00A16C8562}
   9
 $EXTNAMES
 290
@@ -1549,7 +1549,7 @@ LAYER
 100
 AcDbSymbolTable
  70
-10
+11
   0
 LAYER
   5
@@ -1793,6 +1793,30 @@ Continuous
 347
 21
   0
+LAYER
+  5
+63
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+PF
+ 70
+0
+ 62
+7
+  6
+Continuous
+370
+-3
+390
+13
+347
+21
+  0
 ENDTAB
   0
 TABLE
@@ -1893,7 +1917,7 @@ ACAD
   0
 APPID
   5
-43
+64
 330
 3
 100
@@ -1907,7 +1931,7 @@ HATCHBACKGROUNDCOLOR
   0
 APPID
   5
-44
+65
 330
 3
 100
@@ -2628,6 +2652,386 @@ AcDbSubDMesh
 0
  90
 0
+  0
+POLYLINE
+  5
+43
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbPolyFaceMesh
+ 66
+1
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 70
+64
+ 71
+8
+ 72
+6
+  0
+VERTEX
+  5
+45
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbVertex
+100
+AcDbPolyFaceMeshVertex
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 70
+192
+  0
+VERTEX
+  5
+46
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbVertex
+100
+AcDbPolyFaceMeshVertex
+ 10
+0.0
+ 20
+1.0
+ 30
+0.0
+ 70
+192
+  0
+VERTEX
+  5
+47
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbVertex
+100
+AcDbPolyFaceMeshVertex
+ 10
+1.0
+ 20
+1.0
+ 30
+0.0
+ 70
+192
+  0
+VERTEX
+  5
+48
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbVertex
+100
+AcDbPolyFaceMeshVertex
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+ 70
+192
+  0
+VERTEX
+  5
+4A
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbVertex
+100
+AcDbPolyFaceMeshVertex
+ 10
+0.0
+ 20
+0.0
+ 30
+2.0
+ 70
+192
+  0
+VERTEX
+  5
+4B
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbVertex
+100
+AcDbPolyFaceMeshVertex
+ 10
+1.0
+ 20
+0.0
+ 30
+2.0
+ 70
+192
+  0
+VERTEX
+  5
+4C
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbVertex
+100
+AcDbPolyFaceMeshVertex
+ 10
+1.0
+ 20
+1.0
+ 30
+2.0
+ 70
+192
+  0
+VERTEX
+  5
+4D
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbVertex
+100
+AcDbPolyFaceMeshVertex
+ 10
+0.0
+ 20
+1.0
+ 30
+2.0
+ 70
+192
+  0
+VERTEX
+  5
+49
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbFaceRecord
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 70
+128
+ 71
+1
+ 72
+2
+ 73
+3
+ 74
+4
+  0
+VERTEX
+  5
+4E
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbFaceRecord
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 70
+128
+ 71
+5
+ 72
+6
+ 73
+7
+ 74
+8
+  0
+VERTEX
+  5
+53
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbFaceRecord
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 70
+128
+ 71
+1
+ 72
+4
+ 73
+6
+ 74
+5
+  0
+VERTEX
+  5
+58
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbFaceRecord
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 70
+128
+ 71
+4
+ 72
+3
+ 73
+7
+ 74
+6
+  0
+VERTEX
+  5
+5D
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbFaceRecord
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 70
+128
+ 71
+3
+ 72
+2
+ 73
+8
+ 74
+7
+  0
+VERTEX
+  5
+62
+330
+17
+100
+AcDbEntity
+  8
+PF
+100
+AcDbFaceRecord
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 70
+128
+ 71
+2
+ 72
+1
+ 73
+5
+ 74
+8
+  0
+SEQEND
+  5
+44
+330
+43
+100
+AcDbEntity
+  8
+PF
   0
 ENDSEC
   0
@@ -3619,7 +4023,7 @@ CREATED_BY_EZDXF
   3
 WRITTEN_BY_EZDXF
 350
-45
+66
   0
 DICTIONARYVAR
   5
@@ -3631,11 +4035,11 @@ DictionaryVariables
 280
 0
   1
-1.4.5 @ 2026-11-15T21:08:53.771020+00:00
+1.4.5 @ 2026-11-15T21:26:09.700198+00:00
   0
 DICTIONARYVAR
   5
-45
+66
 330
 2D
 100
@@ -3643,7 +4047,7 @@ DictionaryVariables
 280
 0
   1
-1.4.5 @ 2026-11-15T21:08:53.773090+00:00
+1.4.5 @ 2026-11-15T21:26:09.702883+00:00
   0
 ENDSEC
   0

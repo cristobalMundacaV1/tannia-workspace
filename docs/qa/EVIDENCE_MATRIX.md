@@ -34,3 +34,10 @@ Cada fila indica el SHA sobre el que se ejecutó. Estados: ver `docs/implementat
 | E-05-2 | Logs sin rutas/nombres/contenido; código propio sin módulos de red; reparación de proyecto | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
 | E-05-3 | Carpeta sin permiso de escritura → diagnóstico claro | NO EJECUTADO en este entorno (corre como root; test se omite) | `test/tw05_install.test.js` (skip si root/Windows) | — |
 | E-05-4 | Instalación desde la UI de Claude Desktop; usuario estándar Windows; rutas >260 caracteres | NO VERIFICADO | `docs/implementation/TW05_PACKAGING_DECISION.md` | — |
+| E-06-1 | Matriz entidad×operación×backend con integridad automática (cada SUPPORTED apunta a un test existente; `autocad_com` sin SUPPORTED) y doc generado al día | TEST_AUTOMATIZADO_APROBADO | `test/tw06_cad.test.js` → `docs/qa/CAD_CAPABILITY_MATRIX.md` | (ver commit) |
+| E-06-2 | Adaptador COM: scripts sin comandos destructivos, entrada solo por JSON base64, edición únicamente en copias de `03 Trabajo`, inyección en handle/capa rechazada, errores traducidos | TEST_AUTOMATIZADO_APROBADO (ejecutor simulado) | idem | (ver commit) |
+| E-06-3 | **Comportamiento real del adaptador COM en AutoCAD** (listar, medir, abrir copia, agregar línea) por versión | NO VERIFICADO EN AUTOCAD REAL | `docs/qa/MANUAL_TESTS_TANNIA_PC.md` | — |
+| E-06-4 | Detección de AutoCAD/LT por registro (parser) | TEST_AUTOMATIZADO_APROBADO (salida de `reg query` simulada) | idem | (ver commit) |
+| E-06A-1 | 3DFACE (cubo 2×3×4: V=24, A=52), MESH (pirámide V=1/3), POLYFACE (prisma V=2, A=10), POLYLINE3D L=17 vs oráculo analítico | TEST_AUTOMATIZADO_APROBADO | `test/tw06a_3d.test.js` | (ver commit) |
+| E-06A-2 | Malla abierta/orientación inconsistente/duplicada → sin volumen + needs_review; normales invertidas con aviso; espejo correcto; conversión cúbica de unidades | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
+| E-06A-3 | Volumen/área de 3DSOLID, REGION, SURFACE | NO SOPORTADO en DXF; `UNVERIFIED` vía COM | matriz | — |

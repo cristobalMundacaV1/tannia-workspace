@@ -98,8 +98,15 @@ mesh = m.add_mesh(dxfattribs={"layer": "3D"})
 with mesh.edit_data() as md:
     md.vertices = [(0,0,0),(1,0,0),(1,1,0),(0,1,0),(0.5,0.5,1)]  # pirámide base 1x1, h=1 -> V=1/3
     md.faces = [(0,3,2,1),(0,1,4),(1,2,4),(2,3,4),(3,0,4)]
+# polyface (POLYLINE con bit 64): prisma 1x1x2 -> V=2, A=10
+pf = m.add_polyface(dxfattribs={"layer": "PF"})
+vv = [(0,0,0),(1,0,0),(1,1,0),(0,1,0),(0,0,2),(1,0,2),(1,1,2),(0,1,2)]
+for q in [(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)]:
+    pf.append_face([vv[i] for i in q])
+pf.optimize()
+d.layers.add("PF")
 d.saveas(os.path.join(OUT, "dxf", "malla_3d.dxf"))
-expected["malla_3d"] = {"cube_volume": 24.0, "cube_area": 52.0, "poly3d_length": 17.0, "pyramid_volume": 1/3}
+expected["malla_3d"] = {"cube_volume": 24.0, "cube_area": 52.0, "poly3d_length": 17.0, "pyramid_volume": 1/3, "polyface_volume": 2.0, "polyface_area": 10.0}
 
 # sólido ACIS: ezdxf crea 3DSOLID vacío; sirve para detección (volumen NO calculable desde DXF)
 d, m = new(6)
