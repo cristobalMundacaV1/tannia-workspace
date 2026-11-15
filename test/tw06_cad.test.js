@@ -28,7 +28,7 @@ test('matriz: completa, sin SUPPORTED sin evidencia real en tests, y autocad_com
 });
 
 test('docs/qa/CAD_CAPABILITY_MATRIX.md está al día con el código', () => {
-  assert.equal(fs.readFileSync(path.join(ROOT, 'docs', 'qa', 'CAD_CAPABILITY_MATRIX.md'), 'utf8'), `${matrizMarkdown()}\n`);
+  assert.equal(fs.readFileSync(path.join(ROOT, 'docs', 'qa', 'CAD_CAPABILITY_MATRIX.md'), 'utf8').replace(/\r\n/g, '\n'), `${matrizMarkdown()}\n`);
 });
 
 test('detección: parseo del registro, LT, y sistemas no Windows', () => {
