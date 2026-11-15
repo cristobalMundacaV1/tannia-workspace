@@ -31,3 +31,10 @@ Construir un asistente práctico y confiable para una usuaria de **AutoCAD 2D y 
 
 ## Comunicación con Product Owner
 Comunicar en pasos concretos y breves, distinguir `implementado`, `probado`, `validado con usuaria` y `pendiente`. Evitar exigirle que repita contexto.
+
+## Macrofase de ejecución autónoma aprobada como dirección técnica
+La orden de ingeniería completa está en `docs/implementation/TW_FULL_DELIVERY_MACROPHASE.md` y el punto de arranque para Claude Code en `CLAUDE.md`.
+
+El implementador **no debe detener el trabajo** por ausencia de AutoCAD en el equipo del desarrollador ni por la imposibilidad de ejecutar una sesión con Tannia. Debe completar todo lo automatizable con evidencia y continuar hacia un release candidate transferible. Esos gates reales permanecen `NO VERIFICADO` hasta que ocurran. No usar ausencia de hardware para justificar falsas aprobaciones, ni para omitir herramientas, instalador, documentos y tests realizables.
+
+Separar piloto 2D TW-07A del piloto 3D TW-07B. TW-00A exige paquete provisional reproducible y el adaptador 3D exige matriz de entidad × operación × evidencia.
