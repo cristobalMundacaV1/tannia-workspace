@@ -62,7 +62,7 @@ test('contrato COM: scripts estáticos sin comandos destructivos; datos solo por
   for (const n of Object.keys(SCRIPTS)) {
     const s = buildScript(n);
     assert.ok(!/\b(Erase|Delete|Purge|Quit|Close|SaveAs|Remove-Item|Invoke-Expression|iex|Start-Process|Kill)\b/i.test(s), `script ${n} contiene comando prohibido`);
-    assert.ok(!/\$\(\s*\$in|"[^"]*\$in\./.test(s.replace(/\$in\.\w+/g, '')) || true);
+    assert.ok(!/"[^"]*\$in\.[^"]*"/.test(s), `script ${n} interpola datos del usuario dentro de una cadena`);
   }
   assert.ok(!/SaveAs/i.test(Object.values(SCRIPTS).join()));
   assert.throws(() => buildScript('rm -rf'));
