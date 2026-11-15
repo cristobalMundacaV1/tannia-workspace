@@ -87,6 +87,11 @@ export function registerTools(server, { sandbox, log, g }) {
     return ok(`Estado: ${m.estado}.`, { proyecto: m.nombre, estado: m.estado, estados_posibles: ESTADOS, historial: m.historial.slice(-10), integridad_originales: integ, partidas: partidas.length, pendientes: pend });
   });
 
+  reg('tannia_proyecto_reparar', {
+    title: 'Reparar proyecto', description: 'Recrea carpetas faltantes y restaura archivos internos dañados desde su respaldo. No modifica ni borra originales ni entregables.',
+    inputSchema: { proyecto }, annotations: RW,
+  }, async ({ proyecto: n }) => { const r = P(n).repair(); return ok(r.acciones.length || r.problemas.length ? 'Reparación ejecutada (ver detalle).' : 'No se encontraron problemas.', r); });
+
   reg('tannia_proyecto_avanzar', {
     title: 'Cambiar estado del proyecto',
     description: 'Avanza o retrocede el estado (nuevo → analisis → borrador → revision → aprobado → entregable). "aprobado" SOLO con aprobación explícita de la usuaria: pregúntele antes y registre su nombre. No apruebe por iniciativa propia.',

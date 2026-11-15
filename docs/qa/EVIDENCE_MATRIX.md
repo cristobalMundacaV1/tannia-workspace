@@ -30,3 +30,7 @@ Cada fila indica el SHA sobre el que se ejecutó. Estados: ver `docs/implementat
 | E-04-4 | Texto malicioso en DXF/PDF devuelto como DATO; originales intactos; rutas fuera de proyecto rechazadas | TEST_INTEGRACIÓN_APROBADO | idem + `tw03_pdf` | (ver commit) |
 | E-04-5 | Resistencia a prompt injection del modelo real (Claude) | NO VERIFICADO | Las defensas son estructurales (herramientas, gates); el comportamiento del modelo no se midió | — |
 | E-04-6 | Enlaces BCN en índice normativo | NO VERIFICADO | BCN devolvió HTTP 401 al proxy del entorno; MINVU/SEC/INN/MOP 200 | — |
+| E-05-1 | Actualización 0.1.0→0.2.0 conserva proyectos y huellas; desinstalar no borra datos; reinstalar recupera | TEST_INTEGRACIÓN_APROBADO | `test/tw05_install.test.js` | (ver commit) |
+| E-05-2 | Logs sin rutas/nombres/contenido; código propio sin módulos de red; reparación de proyecto | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
+| E-05-3 | Carpeta sin permiso de escritura → diagnóstico claro | NO EJECUTADO en este entorno (corre como root; test se omite) | `test/tw05_install.test.js` (skip si root/Windows) | — |
+| E-05-4 | Instalación desde la UI de Claude Desktop; usuario estándar Windows; rutas >260 caracteres | NO VERIFICADO | `docs/implementation/TW05_PACKAGING_DECISION.md` | — |

@@ -45,6 +45,27 @@ export class Project {
   saveCalibraciones(x) { atomicWriteJson(this.p('.tannia', 'calibraciones.json'), x); }
   originales() { return readJson(this.p('.tannia', 'originales.json'), {}); }
 
+  /** Reparación segura: recrea carpetas faltantes y valida/recupera los JSON internos. No toca originales. */
+  repair() {
+    const acciones = [];
+    for (const f of Object.values(FOLDERS)) if (!fs.existsSync(this.p(f))) { fs.mkdirSync(this.p(f), { recursive: true }); acciones.push(`Carpeta recreada: ${f}`); }
+    fs.mkdirSync(this.p('.tannia'), { recursive: true });
+    const files = [[this.p('.tannia', 'project.json'), null], [this.p('.tannia', 'originales.json'), {}], [this.p('.tannia', 'calibraciones.json'), []], [this.p(FOLDERS.cubicaciones, 'partidas.json'), []], [this.p(FOLDERS.presupuestos, 'apus.json'), []], [this.p(FOLDERS.presupuestos, 'config.json'), {}]];
+    const problemas = [];
+    for (const [file, def] of files) {
+      if (!fs.existsSync(file)) continue;
+      const bak = fs.existsSync(`${file}.bak`);
+      try { JSON.parse(fs.readFileSync(file, 'utf8')); } catch {
+        if (bak) { try { JSON.parse(fs.readFileSync(`${file}.bak`, 'utf8')); fs.copyFileSync(`${file}.bak`, file); acciones.push(`Restaurado desde respaldo: ${path.basename(file)}`); continue; } catch { /* sigue */ } }
+        problemas.push(`${path.basename(file)} dañado y sin respaldo utilizable`); void def;
+      }
+    }
+    const integ = this.verifyOriginals();
+    if (!integ.ok) problemas.push(`Originales alterados: ${integ.problemas.map((x) => `${x.archivo} (${x.problema})`).join(', ')}`);
+    this.audit('reparacion', { acciones: acciones.length, problemas: problemas.length });
+    return { acciones, problemas, originales_ok: integ.ok };
+  }
+
   audit(evento, datos = {}) {
     fs.appendFileSync(this.p('.tannia', 'auditoria.jsonl'), `${JSON.stringify({ t: new Date().toISOString(), evento, ...datos })}\n`);
   }
