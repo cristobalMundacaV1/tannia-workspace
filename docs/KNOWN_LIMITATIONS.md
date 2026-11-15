@@ -27,3 +27,10 @@
 - `buffers@0.1.1` (transitiva de `exceljs`): sin licencia declarada → pendiente de revisión legal (`docs/LICENSES.md`).
 - La versión del paquete es `0.1.0-rc.1`; el ejecutable no está firmado.
 - **Reproducibilidad:** el contenido interno del `.mcpb` es idéntico entre compilaciones (verificado), pero el hash del archivo `.mcpb` varía por marcas de tiempo del zip. Use `release-manifest.json → contenido_sha256` para comparar compilaciones; el hash del archivo entregado sí identifica esa entrega concreta.
+
+## Asistente de anteproyecto (TW-DESIGN, primera entrega)
+- **Es un anteproyecto**: sin cálculo estructural, térmico ni acústico; sin proyecto de instalaciones; **no apto para construcción**. Los espesores por sistema constructivo, tamaños de recintos, anchos de puerta, alturas y relaciones ventana/piso son **criterios iniciales de práctica de diseño** (editables), no valores normativos. No se citan artículos ni valores de la OGUC/NCh: el servidor no tiene red y no pudo verificar el texto vigente (BCN devolvió HTTP 401 desde el entorno de desarrollo).
+- **Alcance geométrico:** planta rectangular de un piso; 2–3 dormitorios, 1–2 baños, 55–130 m²; muros ortogonales; sin L/U, pendientes, terreno, retranqueos, rasantes ni orientación solar (se preguntan). Sin mobiliario ni equipamiento sanitario/cocina dibujado. Cotas como geometría (no entidades DIMENSION asociativas). Muros como contorno de líneas (no polilíneas cerradas por muro).
+- **Edición:** catálogo de operaciones acotado; la interpretación del lenguaje natural la hace Claude y puede equivocarse: por eso cada cambio muestra *qué cambió* y se puede deshacer.
+- **DXF/DWG en AutoCAD real: NO VERIFICADO.** El DXF es AC1009 (R12) y se validó con el motor DXF propio y con ezdxf; la unidad (mm) se fija al guardar el DWG por COM (`INSUNITS`). `SaveAs` con el tipo 64 (DWG 2018) no se ejecutó contra AutoCAD real.
+- **Indicadores sísmicos** (densidad y balance de muros): referencia de anteproyecto sin umbral normativo.

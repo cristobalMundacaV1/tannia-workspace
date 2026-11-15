@@ -1,0 +1,48 @@
+{
+  "nombre": "Casa 80",
+  "creado": "2026-11-15T23:25:44.593Z",
+  "head": "v005",
+  "redo": [],
+  "versiones": [
+    {
+      "id": "v001",
+      "padre": null,
+      "creada": "2026-11-15T23:25:44.593Z",
+      "descripcion": "Versión inicial generada a partir de la solicitud",
+      "resumen": "Versión inicial",
+      "construida_m2": 79.75
+    },
+    {
+      "id": "v002",
+      "padre": "v001",
+      "creada": "2026-11-15T23:25:44.627Z",
+      "descripcion": "Dormitorio 2 más ancho (~3 m)",
+      "resumen": "DORMITORIO 2: ancho útil 2.76 → 3.00 m; compensa DORMITORIO 3",
+      "construida_m2": 79.75
+    },
+    {
+      "id": "v003",
+      "padre": "v002",
+      "creada": "2026-11-15T23:25:44.654Z",
+      "descripcion": "Ventana oeste en dormitorio principal; dormitorio 3 → escritorio",
+      "resumen": "Se agrega ventana V-9 (1500 mm) en DORMITORIO PRINCIPAL, lado O; DORMITORIO 3 → ESCRITORIO",
+      "construida_m2": 79.75
+    },
+    {
+      "id": "v004",
+      "padre": "v003",
+      "creada": "2026-11-15T23:25:44.675Z",
+      "descripcion": "Walk-in closet en el dormitorio principal",
+      "resumen": "DORMITORIO PRINCIPAL se divide: nuevo WALK-IN CLOSET de 1200 mm (con puerta). Se retiraron aberturas que ya no tienen muro: ventana V-5 (El recinto R-DP no tiene muro exterior en el lado N.); ventana V-9 (La abertura de 1500 mm no cabe en un muro de 1650 mm.)",
+      "construida_m2": 79.75
+    },
+    {
+      "id": "v005",
+      "padre": "v003",
+      "creada": "2026-11-15T23:25:44.691Z",
+      "descripcion": "Sistema constructivo: hormigón armado",
+      "resumen": "Sistema constructivo: Muros de hormigón armado (muros 200/150 mm). Requiere proyecto de cálculo estructural.",
+      "construida_m2": 79.75
+    }
+  ]
+}

@@ -16,3 +16,4 @@ Estados: ✅ hecho y probado en este entorno · 🟡 parcial · ⬜ pendiente ·
 | TW-07A piloto 2D | 🔒 protocolo listo | `docs/pilot/PILOTO_2D_TW07A.md`; **no ejecutado** (requiere a Tannia) |
 | TW-07B piloto 3D | 🔒 protocolo listo | `docs/pilot/PILOTO_3D_TW07B.md`; **no ejecutado** |
 | TW-08 release candidate | ✅ RC técnico | dossier `scripts/release.mjs`, hashes, manual, limitaciones, riesgos, handoff |
+| TW-DESIGN (rama feat/tw-design-assistant) | ✅ primera entrega 2D | generador + DXF/SVG + versiones + operaciones + cubicación + conocimiento; DWG real y validación profesional 🔒 |

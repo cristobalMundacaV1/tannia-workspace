@@ -17,6 +17,9 @@ Trabaja desde **Claude Desktop** escribiendo en español. Sus planos originales 
 
 Para planos **PDF**: «Inspecciona planta.pdf», «Calibra la página 1 con esta cota de 5 m» y «mide ese recinto». **3D**: «¿Qué capacidades 3D tienes?» (ver `AUTOCAD_COMPATIBILITY.md`).
 
+## Diseñar una casa
+Pide un resultado, no líneas: «Diseña una casa de un piso de ~80 m², 3 dormitorios, 2 baños, living-comedor y cocina americana». Se genera un **anteproyecto editable** (DXF/SVG) que refinas conversando y puedes guardar como DWG. Ver `DISENAR_UNA_CASA.md`. Siempre es un anteproyecto, **no apto para construcción**.
+
 ## Cómo leer los resultados
 - **needs_review**: hay algo dudoso (unidad, geometría abierta, duplicados…). No use esa cifra como final sin revisar.
 - **BORRADOR / PENDIENTE**: faltan precios o usted no ha verificado las cantidades.

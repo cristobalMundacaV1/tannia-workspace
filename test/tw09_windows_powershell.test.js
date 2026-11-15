@@ -56,6 +56,8 @@ $global:TW_DOC = $doc
 $global:TW_DOCS = New-Object System.Collections.ArrayList
 [void]$global:TW_DOCS.Add($doc)
 Add-Member -InputObject $acad -MemberType NoteProperty -Name Documents -Value $global:TW_DOCS
+Add-Member -InputObject $doc -MemberType ScriptMethod -Name SaveAs -Value { param($p, $t) if ($t -ne 64 -and $null -ne $t) { throw 'tipo inválido' }; [IO.File]::WriteAllBytes($p, ([Text.Encoding]::ASCII.GetBytes('AC1032') + (New-Object byte[] 3000))); TW-L ('SAVEAS ' + $t) }
+Add-Member -InputObject $doc -MemberType ScriptMethod -Name SetVariable -Value { param($n, $v) TW-L ('SETVAR ' + $n + ' ' + $v) }
 Add-Member -InputObject $global:TW_DOCS -MemberType ScriptMethod -Name Open -Value { param($p, $ro) if ($env:TANNIA_TEST_REOPENFAIL -eq '1') { throw 'no se pudo reabrir' }; TW-L 'OPEN'; if ($env:TANNIA_TEST_LOSE -eq '1') { $global:TW_MS.Clear() }; [void]$global:TW_DOCS.Add($global:TW_DOC); $global:TW_DOC.Saved = $true; return $global:TW_DOC }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name Close -Value { param($guardar) TW-L ('CLOSE ' + $guardar); $global:TW_DOCS.Remove($this) }
 if ($env:TANNIA_TEST_RECT) { $rp = $env:TANNIA_TEST_RECT -split ','; $w = [double]$rp[0]; $h = [double]$rp[1]; $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @($w, 0.0, 0.0)); $null = $global:TW_MS.AddLine(@($w, 0.0, 0.0), @($w, $h, 0.0)); $null = $global:TW_MS.AddLine(@($w, $h, 0.0), @(0.0, $h, 0.0)); $null = $global:TW_MS.AddLine(@(0.0, $h, 0.0), @(0.0, 0.0, 0.0)); $global:TW_N = 0; Set-Content -LiteralPath $global:TW_LOG -Value '' }
@@ -228,5 +230,20 @@ test('PowerShell real: persistencia por cierre y reapertura (Close($false) + Ope
     fs.writeFileSync(e.log, '');
     await assert.rejects(() => adaptador(e, e.orig, { TANNIA_TEST_RECT: '6000,4000' }).verificarPersistencia(e.P, f), (x) => x.code === 'ORIGINAL_PROTEGIDO');
     assert.deepEqual(leer(e.log), [], 'sin Close ni Open'); assert.equal(fs.readFileSync(e.orig, 'utf8'), 'ORIGINAL');
+  } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
+});
+
+
+test('PowerShell real: DXF→DWG en ruta con ó ñ y apóstrofo: INSUNITS=4, SaveAs al DWG nuevo, cabecera verificada en disco', opts, async () => {
+  const e = entorno();
+  try {
+    const dir = path.join(e.root, '03 Trabajo', 'Anteproyectos', "Casa ñ'"); fs.mkdirSync(dir, { recursive: true });
+    const dxf = path.join(dir, 'v001.dxf'); fs.writeFileSync(dxf, '0\nEOF\n');
+    const com = adaptador(e, e.work);
+    const r = await com.dxfADwg(e.P, `03 Trabajo/Anteproyectos/Casa ñ'/v001.dxf`);
+    assert.equal(r.archivo_dwg.cabecera_dwg_valida, true); assert.equal(r.archivo_dwg.cabecera, 'AC1032'); assert.ok(fs.existsSync(path.join(dir, 'v001.dwg')));
+    assert.deepEqual(leer(e.log).filter((x) => /^(SETVAR|SAVEAS)/.test(x)), ['SETVAR INSUNITS 4', 'SAVEAS 64']);
+    await assert.rejects(() => adaptador(e, e.work).dxfADwg(e.P, `03 Trabajo/Anteproyectos/Casa ñ'/v001.dxf`), (x) => x.code === 'DWG_YA_EXISTE');
+    assert.equal(fs.readFileSync(e.orig, 'utf8'), 'ORIGINAL');
   } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
 });

@@ -1,0 +1,408 @@
+{
+  "id": "v001",
+  "numero": 1,
+  "padre": null,
+  "creada": "2026-11-15T23:25:44.593Z",
+  "descripcion": "Versión inicial generada a partir de la solicitud",
+  "solicitud": "Diseña una propuesta de casa de un piso de aproximadamente 80 m², tres dormitorios, dos baños, living-comedor y cocina americana",
+  "operaciones": [],
+  "resumen": "Versión inicial",
+  "modelo_sha256": "8f058db90f07d4811b3c45d26e6db2e2fa57ae02d2e6baa5018e97495ecfed5b",
+  "generado_por": "tannia-workspace 0.1.0-rc.3",
+  "modelo": {
+    "version_modelo": 1,
+    "programa": {
+      "superficie_objetivo_m2": 80,
+      "dormitorios": 3,
+      "banos": 2,
+      "cocina": "americana",
+      "sistema_constructivo": "albanileria_confinada",
+      "variante": "A"
+    },
+    "sistema": "albanileria_confinada",
+    "espesores": {
+      "ext": 200,
+      "int": 140
+    },
+    "ejes": {
+      "ancho": 10800,
+      "profundidad": 7050
+    },
+    "arbol": {
+      "tipo": "h",
+      "hijos": [
+        {
+          "tipo": "v",
+          "hijos": [
+            {
+              "tipo": "recinto",
+              "id": "R-LIV"
+            },
+            {
+              "tipo": "recinto",
+              "id": "R-COC"
+            },
+            {
+              "tipo": "recinto",
+              "id": "R-BC"
+            }
+          ],
+          "tamanos": [
+            6200,
+            3000,
+            1600
+          ]
+        },
+        {
+          "tipo": "recinto",
+          "id": "R-PAS"
+        },
+        {
+          "tipo": "v",
+          "hijos": [
+            {
+              "tipo": "recinto",
+              "id": "R-DP"
+            },
+            {
+              "tipo": "recinto",
+              "id": "R-BP"
+            },
+            {
+              "tipo": "recinto",
+              "id": "R-D2"
+            },
+            {
+              "tipo": "recinto",
+              "id": "R-D3"
+            }
+          ],
+          "tamanos": [
+            3300,
+            1700,
+            2900,
+            2900
+          ]
+        }
+      ],
+      "tamanos": [
+        3100,
+        1100,
+        2850
+      ]
+    },
+    "recintos": {
+      "R-LIV": {
+        "id": "R-LIV",
+        "nombre": "LIVING-COMEDOR",
+        "tipo": "living_comedor"
+      },
+      "R-COC": {
+        "id": "R-COC",
+        "nombre": "COCINA AMERICANA",
+        "tipo": "cocina"
+      },
+      "R-BC": {
+        "id": "R-BC",
+        "nombre": "BAÑO 1",
+        "tipo": "bano"
+      },
+      "R-PAS": {
+        "id": "R-PAS",
+        "nombre": "PASILLO",
+        "tipo": "pasillo"
+      },
+      "R-DP": {
+        "id": "R-DP",
+        "nombre": "DORMITORIO PRINCIPAL",
+        "tipo": "dormitorio_principal"
+      },
+      "R-BP": {
+        "id": "R-BP",
+        "nombre": "BAÑO PRINCIPAL",
+        "tipo": "bano"
+      },
+      "R-D2": {
+        "id": "R-D2",
+        "nombre": "DORMITORIO 2",
+        "tipo": "dormitorio"
+      },
+      "R-D3": {
+        "id": "R-D3",
+        "nombre": "DORMITORIO 3",
+        "tipo": "dormitorio"
+      }
+    },
+    "separaciones": [
+      {
+        "a": "R-LIV",
+        "b": "R-COC",
+        "tipo": "abierta"
+      }
+    ],
+    "aberturas": [
+      {
+        "id": "P-1",
+        "tipo": "puerta",
+        "funcion": "acceso",
+        "recinto": "R-LIV",
+        "lado": "S",
+        "ancho_mm": 900,
+        "alto_mm": 2100,
+        "ancla": "inicio",
+        "distancia_mm": 1100,
+        "abre_hacia": "R-LIV"
+      },
+      {
+        "id": "V-1",
+        "tipo": "ventana",
+        "recinto": "R-LIV",
+        "lado": "S",
+        "ancho_mm": 2400,
+        "alto_mm": 1300,
+        "antepecho_mm": 800,
+        "ancla": "fin",
+        "distancia_mm": 1900
+      },
+      {
+        "id": "V-2",
+        "tipo": "ventana",
+        "recinto": "R-LIV",
+        "lado": "O",
+        "ancho_mm": 1500,
+        "alto_mm": 1300,
+        "antepecho_mm": 800,
+        "ancla": "centro",
+        "distancia_mm": 0
+      },
+      {
+        "id": "P-2",
+        "tipo": "paso",
+        "entre": [
+          "R-LIV",
+          "R-PAS"
+        ],
+        "ancho_mm": 1000,
+        "alto_mm": 2100,
+        "ancla": "inicio",
+        "distancia_mm": 3300
+      },
+      {
+        "id": "V-3",
+        "tipo": "ventana",
+        "recinto": "R-COC",
+        "lado": "S",
+        "ancho_mm": 1200,
+        "alto_mm": 1200,
+        "antepecho_mm": 1000,
+        "ancla": "centro",
+        "distancia_mm": 0
+      },
+      {
+        "id": "P-3",
+        "tipo": "puerta",
+        "entre": [
+          "R-BC",
+          "R-PAS"
+        ],
+        "ancho_mm": 700,
+        "alto_mm": 2100,
+        "ancla": "centro",
+        "distancia_mm": 0,
+        "abre_hacia": "R-BC"
+      },
+      {
+        "id": "V-4",
+        "tipo": "ventana",
+        "recinto": "R-BC",
+        "lado": "S",
+        "ancho_mm": 600,
+        "alto_mm": 600,
+        "antepecho_mm": 1500,
+        "ancla": "centro",
+        "distancia_mm": 0
+      },
+      {
+        "id": "P-4",
+        "tipo": "puerta",
+        "entre": [
+          "R-DP",
+          "R-PAS"
+        ],
+        "ancho_mm": 800,
+        "alto_mm": 2100,
+        "ancla": "inicio",
+        "distancia_mm": 700,
+        "abre_hacia": "R-DP"
+      },
+      {
+        "id": "V-5",
+        "tipo": "ventana",
+        "recinto": "R-DP",
+        "lado": "N",
+        "ancho_mm": 1500,
+        "alto_mm": 1200,
+        "antepecho_mm": 900,
+        "ancla": "centro",
+        "distancia_mm": 0
+      },
+      {
+        "id": "P-5",
+        "tipo": "puerta",
+        "entre": [
+          "R-D2",
+          "R-PAS"
+        ],
+        "ancho_mm": 800,
+        "alto_mm": 2100,
+        "ancla": "inicio",
+        "distancia_mm": 700,
+        "abre_hacia": "R-D2"
+      },
+      {
+        "id": "V-6",
+        "tipo": "ventana",
+        "recinto": "R-D2",
+        "lado": "N",
+        "ancho_mm": 1500,
+        "alto_mm": 1200,
+        "antepecho_mm": 900,
+        "ancla": "centro",
+        "distancia_mm": 0
+      },
+      {
+        "id": "P-6",
+        "tipo": "puerta",
+        "entre": [
+          "R-D3",
+          "R-PAS"
+        ],
+        "ancho_mm": 800,
+        "alto_mm": 2100,
+        "ancla": "inicio",
+        "distancia_mm": 700,
+        "abre_hacia": "R-D3"
+      },
+      {
+        "id": "V-7",
+        "tipo": "ventana",
+        "recinto": "R-D3",
+        "lado": "N",
+        "ancho_mm": 1500,
+        "alto_mm": 1200,
+        "antepecho_mm": 900,
+        "ancla": "centro",
+        "distancia_mm": 0
+      },
+      {
+        "id": "P-7",
+        "tipo": "puerta",
+        "entre": [
+          "R-DP",
+          "R-BP"
+        ],
+        "ancho_mm": 700,
+        "alto_mm": 2100,
+        "ancla": "fin",
+        "distancia_mm": 700,
+        "abre_hacia": "R-BP"
+      },
+      {
+        "id": "V-8",
+        "tipo": "ventana",
+        "recinto": "R-BP",
+        "lado": "N",
+        "ancho_mm": 600,
+        "alto_mm": 600,
+        "antepecho_mm": 1500,
+        "ancla": "centro",
+        "distancia_mm": 0
+      }
+    ],
+    "altura_piso_cielo_mm": 2500,
+    "supuestos": [
+      "Sistema constructivo no indicado: se parte con albañilería confinada (el más habitual en vivienda de un piso); es modificable."
+    ],
+    "fundamentos": [
+      {
+        "decision": "Sistema constructivo: Albañilería confinada (ladrillo cerámico, pilares y cadenas de hormigón armado); muros exteriores 200 mm e interiores 140 mm (totales, con revestimientos)",
+        "criterio": "Espesores iniciales por sistema; los define el proyecto de cálculo",
+        "origen": "practica_de_diseno",
+        "confirmar_en": [
+          "nch2123",
+          "nch433",
+          "nch1537",
+          "nch3171"
+        ]
+      },
+      {
+        "decision": "Planta rectangular, ortogonal y regular, con muros alineados en ambas direcciones",
+        "criterio": "Regularidad en planta favorece el comportamiento sísmico y simplifica la construcción",
+        "origen": "practica_de_diseno",
+        "confirmar_en": [
+          "nch433"
+        ]
+      },
+      {
+        "decision": "Altura piso–cielo inicial 2.5 m",
+        "criterio": "Valor de partida de práctica de diseño",
+        "origen": "practica_de_diseno",
+        "confirmar_en": [
+          "oguc"
+        ]
+      },
+      {
+        "decision": "Recintos húmedos (baños, cocina) agrupados; franja de día al frente y de noche al fondo",
+        "criterio": "Simplifica instalaciones y separa zonas de uso",
+        "origen": "practica_de_diseno",
+        "confirmar_en": [
+          "ridaa"
+        ]
+      },
+      {
+        "decision": "Ventanas en muros exteriores; baños con ventana pequeña alta",
+        "criterio": "Iluminación y ventilación natural de recintos habitables",
+        "origen": "practica_de_diseno",
+        "confirmar_en": [
+          "oguc",
+          "ridaa"
+        ]
+      }
+    ],
+    "preguntas": [
+      "¿Dimensiones, forma y orientación del terreno, y comuna? (determinan retranqueos, rasantes, coeficientes y zona térmica)",
+      "¿Prefiere otro sistema constructivo (hormigón armado, entramado de madera)?"
+    ]
+  },
+  "coherencia": {
+    "errores": [],
+    "advertencias": [],
+    "origen_criterios": "practica_de_diseno",
+    "estado": "ok"
+  },
+  "verificacion_dxf": {
+    "ok": true,
+    "recintos_dxf": 8,
+    "area_util_dxf_m2": 68.1062,
+    "area_util_modelo_m2": 68.1062,
+    "capas_medidas": [
+      "TW_MURO_EXT",
+      "TW_MURO_INT",
+      "TW_RECINTO",
+      "TW_PUERTA",
+      "TW_VENTANA",
+      "TW_EJES",
+      "TW_COTA"
+    ],
+    "textos": 30,
+    "motor_dxf_necesita_revision": false,
+    "discrepancias": []
+  },
+  "areas": {
+    "construida_m2": 79.75,
+    "util_neta_m2": 68.11,
+    "muros_m2": 11.64,
+    "muros_union_bruta_m2": 11.64,
+    "vanos_m2": 3.01
+  }
+}

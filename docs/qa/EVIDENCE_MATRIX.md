@@ -69,3 +69,16 @@ Los resultados de cada ejecución se enlazan en el PR. Hallazgos reales de Windo
 | E-I9-3 | Lectura de StartPoint/EndPoint y persistencia (Close(false)+Open) con scripts reales en PowerShell 5.1 y AutoCAD simulado | VER CI Windows del SHA final | `test/tw09_windows_powershell.test.js` |
 | E-I9-4 | LINE.longitud y LINE.editar_en_copia en AutoCAD 2027 real (rc.2) | EVIDENCIA REAL del usuario (sin logs adjuntos) | issue #8 comentario 6902750822 |
 | E-I9-5 | Lectura real de extremos, cierre del rectángulo y persistencia tras reabrir en AutoCAD real | NO VERIFICADO — repetición final pendiente | `docs/qa/ISSUE_9_FIX.md` §Protocolo |
+
+## TW-DESIGN — asistente de anteproyecto (rama `feat/tw-design-assistant`)
+| ID | Capacidad | Estado | Evidencia |
+|---|---|---|---|
+| E-D-1 | Caso de aceptación 80 m², 3D/2B, living-comedor y cocina americana: distribución coherente (sin solapes, áreas cuadran, aberturas dentro del muro, barridos dentro del recinto, todos los recintos con acceso) para 5 variantes de programa y sistema | TEST_AUTOMATIZADO_APROBADO | `test/tw13_diseno.test.js` |
+| E-D-2 | DXF AC1009 generado: re-medido con el motor DXF del producto (áreas = modelo) y con **ezdxf** como oráculo externo (auditoría sin errores, 8 recintos, áreas iguales) | TEST_AUTOMATIZADO_APROBADO (ezdxf local; se omite si no está) | idem |
+| E-D-3 | Refinamiento: solo cambia lo declarado; rechazo atómico ante geometría inconsistente; undo/redo/restaurar; ramas; versiones inmutables; originales intactos | TEST_AUTOMATIZADO_APROBADO | idem |
+| E-D-4 | Experiencia completa por MCP (crear → refinar → deshacer → verificar → cubicar → conocimiento) contra fuente y bundle `.mcpb` | TEST_INTEGRACIÓN_APROBADO | `test/tw14_diseno_mcp.test.js` |
+| E-D-5 | Cubicación desde la geometría construida (fórmulas verificadas; altura entregada por la usuaria) | TEST_AUTOMATIZADO_APROBADO | `test/tw13_diseno.test.js` |
+| E-D-6 | Capa de conocimiento: sin números de artículo ni valores normativos; criterios `practica_de_diseno` con "dónde confirmar" | TEST_AUTOMATIZADO_APROBADO | idem |
+| E-D-7 | DXF→DWG por COM (guardas de ruta, sin sobrescribir, cabecera DWG verificada en disco): simulado y PowerShell real con AutoCAD simulado | TEST_AUTOMATIZADO_APROBADO (simulado) — **NO VERIFICADO EN AUTOCAD REAL** | `tw06_cad`, `tw09` |
+| E-D-8 | Apertura del DXF R12 con capas/TEXT Unicode en AutoCAD 2027 real; DWG real; edición posterior por Tannia | NO VERIFICADO — pendiente | `docs/qa/ISSUE_8_FIX.md` (protocolo) |
+| E-D-9 | Calidad del diseño arquitectónico según el criterio profesional de Tannia (distribución, circulaciones, proporciones) | NO VERIFICADO — la valida Tannia | caso demostrable en `examples/anteproyecto-casa-80/` |

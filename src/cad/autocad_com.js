@@ -107,6 +107,11 @@ Start-Sleep -Milliseconds 400
 try { $nuevo = $acad.Documents.Open($ruta, $false) } catch { $ex = Inner $_.Exception; Emit @{ ok = $false; etapa = 'reabrir'; codigo = 'REAPERTURA_FALLIDA'; hresult = (HR $ex); antes = $antes }; exit 0 }
 $despues = @(& $leer $nuevo $in.handles)
 Emit @{ ok = $true; data = @{ antes = $antes; despues = $despues; documento = [string]$nuevo.Name; guardado = [bool]$nuevo.Saved; unidades_insunits = $nuevo.GetVariable('INSUNITS') } }`,
+  dxf_a_dwg: `$d = $acad.Documents.Open([string]$in.dxf, $false)
+try { $d.SetVariable('INSUNITS', 4) } catch { }
+try { $d.SaveAs([string]$in.dwg, 64) } catch { $d.SaveAs([string]$in.dwg) }
+$capas = @(); foreach ($l in $d.Layers) { $capas += [string]$l.Name }
+Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; entidades = [int]$d.ModelSpace.Count; capas = $capas; unidades_insunits = $d.GetVariable('INSUNITS') } }`,
   agregar_lineas: `if ($doc.FullName -ne $in.ruta_esperada) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
 $capaObj = $null; $creada = $false
 if ($in.capa) {
@@ -379,6 +384,25 @@ export class AutoCadCom {
       lecturas_tras_reabrir: r.despues, unidades_insunits: r.unidades_insunits,
       independencia: 'Releído desde el DWG en disco tras cerrar y reabrir en AutoCAD. El contenido del DWG no se interpreta fuera de AutoCAD.',
     };
+  }
+
+  /**
+   * Abre un DXF GENERADO (en 03 Trabajo) en AutoCAD y lo guarda como DWG nuevo junto a él. Nunca sobrescribe: el DWG no debe existir.
+   * Verificación independiente: el archivo .dwg debe existir en disco con cabecera "AC10xx" (la escribe solo AutoCAD).
+   */
+  async dxfADwg(project, dxfRel) {
+    const { abs, root } = this.sandbox.resolve(project, dxfRel);
+    if (!/\.dxf$/i.test(abs)) throw new UserError('TIPO_NO_PERMITIDO', 'Se espera un archivo .dxf generado por Tannia Workspace.');
+    if (!isInside(path.join(root, FOLDERS.trabajo), abs)) throw new UserError('ORIGEN_FUERA_DE_TRABAJO', 'Solo se convierten archivos de "03 Trabajo".');
+    const dwgAbs = abs.replace(/\.dxf$/i, '.dwg');
+    const dwgRel = path.relative(root, dwgAbs).split(path.sep).join('/');
+    this.sandbox.resolveWritable(project, dwgRel); // debe quedar en una carpeta de escritura y nunca en originales
+    if (fs.existsSync(dwgAbs)) throw new UserError('DWG_YA_EXISTE', 'Ya existe un DWG de esa versión; no se sobrescribe.', 'Genere una nueva versión del anteproyecto o renombre el DWG existente.');
+    const r = await this.#exec('dxf_a_dwg', { dxf: abs, dwg: dwgAbs });
+    let cabecera = null; let bytes = 0;
+    try { const st = fs.statSync(dwgAbs); bytes = st.size; const fd = fs.openSync(dwgAbs, 'r'); const b = Buffer.alloc(6); fs.readSync(fd, b, 0, 6, 0); fs.closeSync(fd); cabecera = b.toString('latin1'); } catch { /* se informa abajo */ }
+    const valido = !!cabecera && /^AC10\d\d$/.test(cabecera) && bytes > 1000;
+    return { ...r, dwg: dwgRel, archivo_dwg: { bytes, cabecera, cabecera_dwg_valida: valido, sha256: valido ? sha256File(dwgAbs) : null }, verificacion: valido ? 'El archivo DWG existe en disco y tiene cabecera de DWG de AutoCAD.' : 'ATENCIÓN: AutoCAD respondió, pero el .dwg no está en disco o no tiene cabecera válida.' };
   }
 
   agregarLinea(project, { x1, y1, x2, y2, capa }) { return this.agregarLineas(project, { lineas: [{ x1, y1, x2, y2 }], capa }); }

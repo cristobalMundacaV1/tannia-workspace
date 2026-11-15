@@ -77,12 +77,14 @@ test('normalizarRuta: prefijo \\\\?\\ y NFC sin alterar el contenido Unicode', (
 test('contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/Close/Open solo donde corresponde', () => {
   for (const n of Object.keys(SCRIPTS)) {
     const s = buildScript(n);
-    assert.ok(!/\b(Erase|Purge|Quit|SaveAs|SendCommand|Remove-Item|Invoke-Expression|iex|Start-Process|Kill)\b/i.test(s), `script ${n} contiene comando prohibido`);
+    assert.ok(!/\b(Erase|Purge|Quit|SendCommand|Remove-Item|Invoke-Expression|iex|Start-Process|Kill)\b/i.test(s), `script ${n} contiene comando prohibido`);
+    // SaveAs solo al convertir un DXF generado en un DWG NUEVO (ruta validada en Node, nunca sobrescribe); jamás en otra operación
+    if (n !== 'dxf_a_dwg') assert.ok(!/SaveAs/i.test(s), `${n}: SaveAs no permitido`);
     assert.ok(!/"[^"]*\$in\.[^"]*"/.test(SCRIPTS[n]), `script ${n} interpola datos del usuario dentro de una cadena`);
     if (n !== 'agregar_lineas') { assert.ok(!/\.Delete\(/.test(s), `${n}: Delete no permitido`); assert.ok(!/\.Save\(/.test(s), `${n}: Save no permitido`); }
     // Close solo en 'persistencia' y SIEMPRE con SaveChanges=false; nunca se escribe al cerrar
     if (n !== 'persistencia') assert.ok(!/\.Close\(/.test(s), `${n}: Close no permitido`);
-    if (!['persistencia', 'abrir_copia'].includes(n)) assert.ok(!/Documents\.Open\(/.test(s), `${n}: Open no permitido`);
+    if (!['persistencia', 'abrir_copia', 'dxf_a_dwg'].includes(n)) assert.ok(!/Documents\.Open\(/.test(s), `${n}: Open no permitido`);
   }
   const a = SCRIPTS.agregar_lineas;
   assert.deepEqual([...new Set([...a.matchAll(/\$(\w+)\.Delete\(/g)].map((m) => m[1]))].sort(), ['capaObj', 'e']);
@@ -94,6 +96,9 @@ test('contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/C
   assert.ok(p.indexOf('Saved') < p.indexOf('.Close('), 'se exige Saved=true ANTES de cerrar');
   assert.ok(p.indexOf('ruta_esperada') < p.indexOf('.Close('), 'se localiza el documento exacto antes de cerrar');
   assert.ok(p.indexOf('.Close(') < p.indexOf('Documents.Open('), 'cierra y luego reabre');
+  const g = SCRIPTS.dxf_a_dwg;
+  assert.deepEqual([...g.matchAll(/SaveAs\(([^)]*)\)/g)].map((m) => m[1]), ['[string]$in.dwg, 64', '[string]$in.dwg'], 'SaveAs solo hacia la ruta nueva indicada por Node');
+  assert.ok(!/\.Delete\(|\.Close\(/.test(g));
   assert.throws(() => buildScript('rm -rf'));
 });
 
@@ -300,4 +305,25 @@ test('MCP: herramientas de geometría y persistencia registradas con esquemas es
   const malo = await client.callTool({ name: 'tannia_cad_leer_geometria', arguments: { handles: ["39A'; Erase"] } }); assert.equal(malo.isError, true);
   const ok = await client.callTool({ name: 'tannia_cad_verificar_contorno', arguments: { handles: ['39A', '39B'], ancho: 6000 } }); assert.ok(!ok.isError); assert.equal(ok.structuredContent.analisis.cerrado, false);
   await client.close(); fs.rmSync(home, { recursive: true, force: true });
+});
+
+
+test('DXF→DWG: solo DXF de 03 Trabajo, nunca sobrescribe, y verifica en disco la cabecera real del DWG', async () => {
+  const home = tmpHome("Tannia 'ñ "); const sb = new Sandbox(home); createProject(sb, 'P'); const root = path.join(home, 'Proyectos', 'P');
+  const dir = path.join(root, '03 Trabajo', 'Anteproyectos', 'Casa'); fs.mkdirSync(dir, { recursive: true });
+  const dxf = path.join(dir, 'v001.dxf'); fs.writeFileSync(dxf, '0\nEOF\n'); fs.writeFileSync(path.join(root, '02 Originales', 'o.dxf'), 'x'); fs.writeFileSync(path.join(dir, 'nota.txt'), 'x');
+  const mk = (escribe) => { const calls = []; return { calls, com: new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async (script, input) => { const name = Object.keys(SCRIPTS).find((k) => script.includes(SCRIPTS[k])); calls.push({ name, input }); if (escribe) fs.writeFileSync(input.dwg, Buffer.concat([Buffer.from('AC1032'), Buffer.alloc(3000)])); return JSON.stringify({ ok: true, data: { documento: 'v001.dwg', ruta: input.dwg, entidades: 232, capas: ['0', 'TW_MURO_EXT', 'TW_RECINTO'], unidades_insunits: 4 } }); } }) }; };
+  let t = mk(true); const r = await t.com.dxfADwg('P', '03 Trabajo/Anteproyectos/Casa/v001.dxf');
+  assert.equal(r.dwg, '03 Trabajo/Anteproyectos/Casa/v001.dwg'); assert.equal(r.archivo_dwg.cabecera_dwg_valida, true); assert.equal(r.archivo_dwg.cabecera, 'AC1032'); assert.match(r.archivo_dwg.sha256, /^[0-9a-f]{64}$/);
+  assert.equal(t.calls[0].input.dxf, fs.realpathSync.native(dxf)); assert.equal(t.calls[0].input.dwg, fs.realpathSync.native(dxf).replace(/\.dxf$/, '.dwg'));
+  await assert.rejects(() => t.com.dxfADwg('P', '03 Trabajo/Anteproyectos/Casa/v001.dxf'), (e) => e.code === 'DWG_YA_EXISTE');
+  fs.unlinkSync(dxf.replace(/\.dxf$/, '.dwg'));
+  t = mk(false); const sin = await t.com.dxfADwg('P', '03 Trabajo/Anteproyectos/Casa/v001.dxf');
+  assert.equal(sin.archivo_dwg.cabecera_dwg_valida, false); assert.match(sin.verificacion, /ATENCIÓN/, 'AutoCAD "respondió" pero no hay DWG: no se da por bueno');
+  t = mk(true);
+  await assert.rejects(() => t.com.dxfADwg('P', '02 Originales/o.dxf'), (e) => e.code === 'ORIGEN_FUERA_DE_TRABAJO');
+  await assert.rejects(() => t.com.dxfADwg('P', '03 Trabajo/Anteproyectos/Casa/nota.txt'), (e) => e.code === 'TIPO_NO_PERMITIDO');
+  await assert.rejects(() => t.com.dxfADwg('P', '../x.dxf'), (e) => /RUTA_/.test(e.code));
+  assert.equal(t.calls.length, 0, 'las rutas prohibidas no llegaron a AutoCAD');
+  fs.rmSync(home, { recursive: true, force: true });
 });
