@@ -1,5 +1,7 @@
 # Issue #8 — análisis de causa y corrección (RC 0.1.0-rc.2)
 
+> CI sobre `ef061bf`: ubuntu-latest y windows-latest en verde ([run #20](https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43769926759)). Primera ejecución en Windows (`cb35d2a`): 68/70 pasaban; el único fallo era un error del propio test (handles hexadecimales), corregido en `ef061bf`.
+>
 > Estado: **corregido en código y probado con PowerShell real + AutoCAD simulado en CI Windows. NO aceptado funcionalmente**: la aceptación exige repetir la prueba real en AutoCAD 2027 (ver §Aceptación).
 
 | # | Síntoma / hipótesis | Causa raíz identificada | Corrección | Prueba de regresión |
