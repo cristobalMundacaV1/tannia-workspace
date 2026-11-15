@@ -106,7 +106,7 @@ test('PowerShell real: 4 líneas 6000×4000 mm en capa TW_PRUEBA inexistente (se
     assert.equal(r.cantidad, 4); assert.equal(r.capa_creada, true); assert.deepEqual(r.handles, H(4));
     const log = leer(e.log);
     assert.deepEqual(log.filter((x) => !x.startsWith('ADD ')), ['ADDLAYER TW_PRUEBA', 'UNDO_START', 'UNDO_END', 'SAVE'], 'orden: capa → marca → líneas → fin → guardar una vez');
-    assert.ok(log.indexOf('ADDLAYER TW_PRUEBA') < log.findIndex((x) => x.startsWith('ADD H')));
+    assert.ok(log.indexOf('ADDLAYER TW_PRUEBA') < log.findIndex((x) => /^ADD [0-9A-F]+ /.test(x)));
     assert.deepEqual(log.filter((x) => x.startsWith('ADD ')).map((x) => x.split(' ').slice(1).join(' ')), [`${H(1)[0]} TW_PRUEBA 6000`, `${H(2)[1]} TW_PRUEBA 4000`, `${H(3)[2]} TW_PRUEBA 6000`, `${H(4)[3]} TW_PRUEBA 4000`]);
     // capa ya existente: se selecciona, no se vuelve a crear
     fs.writeFileSync(e.log, '');
