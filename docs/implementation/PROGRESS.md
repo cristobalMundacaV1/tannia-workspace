@@ -6,3 +6,4 @@ Estados: ✅ hecho y probado en este entorno · 🟡 parcial · ⬜ pendiente ·
 | Fase | Estado | Notas |
 |---|---|---|
 | TW-00A vertical + paquete provisional | ✅ (UI Claude Desktop 🔒) | MCP stdio Node, `.mcpb` empaquetado/validado/desempaquetado/ejecutado en limpio |
+| TW-01 motor DXF 2D | ✅ | `src/dxf/{reader,geometry,measure}.js`, 8+1 pruebas vs oráculo analítico (ezdxf para fixtures) |

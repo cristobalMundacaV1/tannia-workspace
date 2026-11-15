@@ -9,3 +9,8 @@ Cada fila indica el SHA sobre el que se ejecutó. Estados: ver `docs/implementat
 | E-00A-2 | `.mcpb` construido con CLI oficial, validado, desempaquetado en ruta con espacios/acentos sin `node_modules` y ejecutado | TEST_INTEGRACIÓN_APROBADO | `test/tw00a_package.test.js` | (ver commit) |
 | E-00A-3 | Sandbox: traversal, absolutas, UNC, ADS, nombres reservados, symlinks, proyecto enlazado, escritura en originales | TEST_AUTOMATIZADO_APROBADO | `test/security.test.js` (symlinks POSIX; uniones/junction de Windows NO VERIFICADO) | (ver commit) |
 | E-00A-4 | Uso desde Claude Desktop (UI) | NO VERIFICADO | Requiere Claude Desktop en Windows/macOS; procedimiento en `docs/qa/MANUAL_TESTS_TANNIA_PC.md` | — |
+| E-01-1 | Longitud/perímetro/área por capa (LINE, ARC, CIRCLE, LWPOLYLINE con bulge) vs valores analíticos | TEST_AUTOMATIZADO_APROBADO | `test/tw01_dxf.test.js` | (ver commit) |
+| E-01-2 | INSERT: escala, rotación, espejo, arreglos, anidado, recursivo, inexistente | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
+| E-01-3 | Duplicados excluidos, abiertas, autointersección, unidades ausentes/discrepantes → needs_review/bloqueo | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
+| E-01-4 | DXF corrupto/binario/no-DXF/vacío con error codificado | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
+| E-01-5 | Compatibilidad con DXF reales de AutoCAD (todas las versiones) | NO VERIFICADO | Fixtures sintéticos generados con ezdxf R2010; DXF real de Tannia pendiente | — |

@@ -7,6 +7,7 @@ import { Sandbox } from './security/sandbox.js';
 import { ok, guard } from './mcp/util.js';
 import { createProject, listProjects } from './project/projects.js';
 import { readDxfFile, summarize } from './dxf/inspect.js';
+import { measureDxf } from './dxf/measure.js';
 
 const RO = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 
@@ -59,6 +60,24 @@ export function createServer({ home, log = () => {} }) {
     const { abs } = sandbox.resolve(proyecto, archivo);
     const dxf = readDxfFile(abs);
     return ok(`DXF leído: ${Object.values(summarize(dxf).entidades_por_tipo).reduce((a, b) => a + b, 0)} entidades.`, summarize(dxf));
+  }));
+
+  server.registerTool('tannia_dxf_medir', {
+    title: 'Medir geometría DXF 2D (solo lectura)',
+    description: 'Mide longitudes, perímetros y áreas de un DXF por capa (líneas, arcos, círculos, polilíneas con arcos, bloques transformados). Mide GEOMETRÍA, no partidas: no asume alturas ni materiales. Para convertir a metros hay que confirmar la unidad real del dibujo.',
+    inputSchema: {
+      proyecto: z.string(), archivo: z.string().describe('Ruta relativa dentro del proyecto'),
+      unidad_confirmada: z.enum(['mm', 'cm', 'dm', 'm', 'pulgadas', 'pies']).optional().describe('Unidad real del dibujo, confirmada por la usuaria (no por INSUNITS)'),
+      capas: z.array(z.string()).optional().describe('Limitar a estas capas'),
+      incluir_detalle: z.boolean().optional().describe('Incluir cada medición (por defecto solo totales y problemas)'),
+    }, annotations: RO,
+  }, g(async ({ proyecto, archivo, unidad_confirmada, capas, incluir_detalle }) => {
+    const { abs } = sandbox.resolve(proyecto, archivo);
+    const r = measureDxf(readDxfFile(abs), { unidad_confirmada });
+    let med = r.mediciones;
+    if (capas) med = med.filter((m) => capas.includes(m.capa));
+    const out = { ...r, mediciones: incluir_detalle ? med : med.filter((m) => m.estado !== 'ok'), mediciones_total: med.length, mediciones_ok: med.filter((m) => m.estado === 'ok').length };
+    return ok(r.necesita_revision ? 'Medición lista, PERO requiere revisión o confirmar unidades (ver advertencias).' : 'Medición lista.', out);
   }));
 
   return { server, sandbox };
