@@ -34,7 +34,7 @@ const insumoSchema = z.object({
 
 export const TOOL_NAMES = [];
 
-export function registerTools(server, { sandbox, log, g, cad }) {
+export function registerTools(server, { sandbox, log, g, cad, config, detectar }) {
   const reg = (name, def, fn) => { TOOL_NAMES.push(name); server.registerTool(name, def, g(fn)); };
   const P = (name) => new Project(sandbox, name);
   const srcHash = (proj, rel) => { const { abs } = sandbox.resolve(proj.name, rel); return { abs, sha: sha256File(abs) }; };
@@ -51,8 +51,11 @@ export function registerTools(server, { sandbox, log, g, cad }) {
     const { detectarAutoCad } = await import('../cad/detect.js');
     const data = {
       version: VERSION, sistema: `${os.platform()} ${os.release()} (${os.arch()})`, node: process.version,
-      carpeta_tannia: sandbox.home, carpeta_escribible: escritura, proyectos: listProjects(sandbox).length,
-      autocad: detectarAutoCad(),
+      carpeta_tannia: sandbox.home, origen_carpeta: config?.origen || null, advertencias_configuracion: config?.advertencias || [],
+      servidor_iniciado: config?.servidor_iniciado || null, pid_servidor: config?.pid || null,
+      nota_configuracion: 'La carpeta la fija Claude Desktop al iniciar la extensión: si la cambia, desactive y active la extensión y vuelva a ejecutar este diagnóstico para ver el valor vigente.',
+      carpeta_escribible: escritura, proyectos: listProjects(sandbox).length,
+      autocad_registro: (detectar || detectarAutoCad)(),
       privacidad: 'Los archivos se procesan localmente, pero lo que Claude lee de ellos pasa al servicio de Claude.',
     };
     return ok(escritura ? 'Todo en orden.' : 'PROBLEMA: no se puede escribir en la carpeta de Tannia Workspace.', data);
@@ -362,7 +365,7 @@ export function registerTools(server, { sandbox, log, g, cad }) {
   }, async ({ consulta }) => ok('Orientación (no certifica cumplimiento).', consultarNormativa(consulta)));
 
   // ---------- CAD ----------
-  registerCad(reg, { cad });
+  registerCad(reg, { cad, detectar });
 }
 
 // La verificación es el acto de revisión: no invalida el estado (sí invalida cualquier cambio de datos).

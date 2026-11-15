@@ -2,7 +2,7 @@ import { SecurityError } from '../security/sandbox.js';
 import { DxfError } from '../dxf/reader.js';
 
 export class UserError extends Error {
-  constructor(code, message, hint) { super(message); this.code = code; this.hint = hint; }
+  constructor(code, message, hint, detalle) { super(message); this.code = code; this.hint = hint; this.detalle = detalle; }
 }
 
 /** Respuesta estándar: resumen en español + datos estructurados (JSON). */
@@ -13,9 +13,9 @@ export function ok(summary, data = {}) {
   };
 }
 
-export function fail(code, message, hint) {
+export function fail(code, message, hint, detalle) {
   const text = `ERROR ${code}: ${message}${hint ? `\nQué hacer: ${hint}` : ''}`;
-  return { isError: true, content: [{ type: 'text', text }], structuredContent: { error: code, mensaje: message, que_hacer: hint || null } };
+  return { isError: true, content: [{ type: 'text', text }], structuredContent: { error: code, mensaje: message, que_hacer: hint || null, ...(detalle ? { detalle } : {}) } };
 }
 
 /** Envuelve un manejador: traduce errores a mensajes simples sin filtrar rutas internas ni trazas. */
@@ -25,7 +25,7 @@ export function guard(fn, log = () => {}) {
     catch (e) {
       if (e instanceof SecurityError) return fail(e.code, e.message, 'Use solo archivos del proyecto seleccionado.');
       if (e instanceof DxfError) return fail(e.code, e.message, 'Verifique que el archivo sea un DXF válido o exporte nuevamente desde AutoCAD.');
-      if (e instanceof UserError) return fail(e.code, e.message, e.hint);
+      if (e instanceof UserError) return fail(e.code, e.message, e.hint, e.detalle);
       log('error_interno', { name: e && e.name, code: e && e.code, ...(process.env.TANNIA_DEBUG ? { mensaje: String(e && e.message), pila: String(e && e.stack).split('\n').slice(0, 4) } : {}) });
       return fail('ERROR_INTERNO', 'Ocurrió un error inesperado. No se modificó ningún original.', 'Ejecute el diagnóstico (tannia_diagnostico) y comparta el resultado con soporte.');
     }

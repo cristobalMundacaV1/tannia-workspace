@@ -14,10 +14,12 @@ Reglas obligatorias:
 5) No marque cantidades como verificadas ni apruebe el proyecto sin una confirmación explícita de la usuaria.
 6) Informe siempre las advertencias y los needs_review; distinga implementado, probado y validado.`;
 
-export function createServer({ home, log = () => {}, cadRunner, platform }) {
+const INICIO = new Date().toISOString();
+
+export function createServer({ home, homeInfo, log = () => {}, cadRunner, platform, cadConnect, detectar }) {
   const sandbox = new Sandbox(home);
   const server = new McpServer({ name: NAME, version: VERSION }, { instructions: INSTRUCCIONES });
-  const cad = new AutoCadCom({ sandbox, ...(cadRunner ? { runner: cadRunner } : {}), ...(platform ? { platform } : {}) });
-  registerTools(server, { sandbox, log, g: (fn) => guard(fn, log), cad });
+  const cad = new AutoCadCom({ sandbox, ...(cadRunner ? { runner: cadRunner } : {}), ...(cadConnect ? { connect: cadConnect } : {}), ...(platform ? { platform } : {}) });
+  registerTools(server, { sandbox, log, config: { ...(homeInfo || { home, origen: 'indicada_por_el_llamador', advertencias: [] }), servidor_iniciado: INICIO, pid: process.pid }, g: (fn) => guard(fn, log), cad, detectar });
   return { server, sandbox };
 }
