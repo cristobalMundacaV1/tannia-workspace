@@ -2,7 +2,7 @@
 import { build } from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
@@ -19,8 +19,8 @@ await build({
 });
 
 fs.writeFileSync(path.join(out, 'server', 'package.json'), '{"type":"commonjs"}\n');
-const { createServer } = await import(path.join(root, 'src', 'server.js'));
-const { VERSION } = await import(path.join(root, 'src', 'version.js'));
+const { createServer } = await import(pathToFileURL(path.join(root, 'src', 'server.js')).href);
+const { VERSION } = await import(pathToFileURL(path.join(root, 'src', 'version.js')).href);
 const tmp = fs.mkdtempSync(path.join(root, '.tmp-build-'));
 const { server } = createServer({ home: tmp });
 const [a, b] = InMemoryTransport.createLinkedPair();
