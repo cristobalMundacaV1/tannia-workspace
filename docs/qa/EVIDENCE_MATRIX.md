@@ -24,3 +24,9 @@ Cada fila indica el SHA sobre el que se ejecutó. Estados: ver `docs/implementat
 | E-03-3 | Memoria PDF: reabrible, acentos, paginación, trazabilidad, BORRADOR | TEST_AUTOMATIZADO_APROBADO | `test/tw03_report.test.js` | (ver commit) |
 | E-03-4 | Planos PDF reales de Tannia (escaneos, escalas mixtas, capas OCG) | NO VERIFICADO | Solo fixtures sintéticos | — |
 | E-03-5 | Evaluación OpenTakeoff: licencia AGPL-3.0 confirmada; código no auditado | DOCUMENTADO | `docs/evaluations/THIRD_PARTY_EVALUATION.md` | (ver commit) |
+| E-04-1 | Flujo completo (crear → originales → copia → cubicar → APU → XLSX → verificar → aprobar → exportar) por MCP stdio, contra código fuente y contra el bundle `.mcpb` | TEST_INTEGRACIÓN_APROBADO | `test/tw04_workflow.test.js` | (ver commit) |
+| E-04-2 | Gates: salto de estado, aprobación sin confirmación explícita, cantidades sin verificar, datos modificados invalidan aprobación | TEST_INTEGRACIÓN_APROBADO | idem | (ver commit) |
+| E-04-3 | Persistencia tras reinicio del servidor; recuperación de `project.json` dañado desde `.bak` | TEST_INTEGRACIÓN_APROBADO | idem | (ver commit) |
+| E-04-4 | Texto malicioso en DXF/PDF devuelto como DATO; originales intactos; rutas fuera de proyecto rechazadas | TEST_INTEGRACIÓN_APROBADO | idem + `tw03_pdf` | (ver commit) |
+| E-04-5 | Resistencia a prompt injection del modelo real (Claude) | NO VERIFICADO | Las defensas son estructurales (herramientas, gates); el comportamiento del modelo no se midió | — |
+| E-04-6 | Enlaces BCN en índice normativo | NO VERIFICADO | BCN devolvió HTTP 401 al proxy del entorno; MINVU/SEC/INN/MOP 200 | — |

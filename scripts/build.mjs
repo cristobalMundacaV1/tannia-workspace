@@ -18,6 +18,7 @@ await build({
   logLevel: 'warning',
 });
 
+fs.writeFileSync(path.join(out, 'server', 'package.json'), '{"type":"commonjs"}\n');
 const { createServer } = await import(path.join(root, 'src', 'server.js'));
 const { VERSION } = await import(path.join(root, 'src', 'version.js'));
 const tmp = fs.mkdtempSync(path.join(root, '.tmp-build-'));

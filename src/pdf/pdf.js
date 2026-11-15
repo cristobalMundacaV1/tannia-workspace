@@ -1,10 +1,25 @@
 // Lectura y medición calibrada de PDF (solo lectura). Sin inferir escala: la calibración es explícita y verificable.
 import { UserError } from '../mcp/util.js';
 
+// pdf.js (Node) espera DOMMatrix/ImageData/Path2D solo para RENDERIZAR (no lo hacemos). Al empaquetar en un solo
+// archivo no está disponible el paquete opcional que los provee: se definen stubs mínimos para poder cargar la librería.
+function ensureDomStubs() {
+  const g = globalThis;
+  if (!g.DOMMatrix) {
+    g.DOMMatrix = class DOMMatrix {
+      constructor(init) { const m = Array.isArray(init) && init.length >= 6 ? init : [1, 0, 0, 1, 0, 0]; [this.a, this.b, this.c, this.d, this.e, this.f] = m; }
+      multiplySelf() { return this; } preMultiplySelf() { return this; } translate() { return this; } scale() { return this; } invertSelf() { return this; }
+    };
+  }
+  if (!g.ImageData) g.ImageData = class ImageData { constructor(w, h) { this.width = w; this.height = h; this.data = new Uint8ClampedArray(w * h * 4); } };
+  if (!g.Path2D) g.Path2D = class Path2D {};
+}
+
 let pdfjsP;
 async function pdfjs() {
   if (!pdfjsP) {
     pdfjsP = (async () => {
+      ensureDomStubs();
       const lib = await import('pdfjs-dist/legacy/build/pdf.mjs');
       // Worker "falso" embebido en el mismo proceso (necesario al empaquetar en un solo archivo).
       if (!globalThis.pdfjsWorker) globalThis.pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
