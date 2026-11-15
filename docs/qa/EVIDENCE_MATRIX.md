@@ -19,3 +19,8 @@ Cada fila indica el SHA sobre el que se ejecutó. Estados: ver `docs/implementat
 | E-02-3 | Bloqueo de estado FINAL: precio faltante, cantidad no verificada, unidad distinta, sin APU, needs_review | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
 | E-02-4 | Apertura del XLSX en Microsoft Excel real | NO VERIFICADO | Solo exceljs + LibreOffice | — |
 | E-02-5 | Precios/rendimientos de mercado chilenos | NO INCLUIDO | Nunca se inventan; los aporta la usuaria con fuente y fecha | — |
+| E-03-1 | PDF vectorial: extracción de trazos, calibración por cota con verificación cruzada, longitud/área reales (1:100), curvas Bézier (círculo ≈ πr²), varias páginas | TEST_AUTOMATIZADO_APROBADO | `test/tw03_pdf.test.js` (fixtures reportlab) | (ver commit) |
+| E-03-2 | PDF escaneado / corrupto / no-PDF / texto con instrucciones maliciosas tratado como dato | TEST_AUTOMATIZADO_APROBADO | idem | (ver commit) |
+| E-03-3 | Memoria PDF: reabrible, acentos, paginación, trazabilidad, BORRADOR | TEST_AUTOMATIZADO_APROBADO | `test/tw03_report.test.js` | (ver commit) |
+| E-03-4 | Planos PDF reales de Tannia (escaneos, escalas mixtas, capas OCG) | NO VERIFICADO | Solo fixtures sintéticos | — |
+| E-03-5 | Evaluación OpenTakeoff: licencia AGPL-3.0 confirmada; código no auditado | DOCUMENTADO | `docs/evaluations/THIRD_PARTY_EVALUATION.md` | (ver commit) |
