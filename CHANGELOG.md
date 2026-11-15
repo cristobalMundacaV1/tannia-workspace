@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-rc.3 (candidato — cierra issue #9 y prepara la validación 2D final; no validado por Tannia)
+- Originales: política allow/deny explícita; `.dwl/.dwl2/.bak/temporales` no se registran ni se protegen; manifiesto v2 con migración segura; advertencia de captura inestable.
+- COM: `tannia_cad_leer_geometria`, `tannia_cad_verificar_contorno` (cierre/rectángulo), `tannia_cad_verificar_persistencia` (cierre y reapertura segura).
+- Matriz de capacidades con la evidencia real aportada (AutoCAD 2027, rc.2) y solo para las celdas ejecutadas.
+
 ## 0.1.0-rc.2 (candidato — corrige issue #8; no validado por Tannia)
 - Unicode PowerShell↔Node: salida en base64 UTF-8 (`TANNIA_OUT`), `-EncodedCommand`; rutas con `ó ñ`, espacios y apóstrofo.
 - Autorización de copia con causas separadas y re-verificación dentro de PowerShell; originales siguen protegidos.

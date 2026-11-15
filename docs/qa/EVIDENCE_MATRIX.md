@@ -60,3 +60,12 @@ Los resultados de cada ejecución se enlazan en el PR. Hallazgos reales de Windo
 | E-I8-5 | `TANNIA_HOME`: reinicio con otra carpeta; advertencias | TEST_INTEGRACIÓN_APROBADO | `test/tw10_config.test.js` | ef061bf |
 | E-I8-6 | Todo lo anterior contra **AutoCAD 2027 real** | NO VERIFICADO — aceptación pendiente | `docs/qa/ISSUE_8_FIX.md` | — |
 | E-I8-7 | Cambio de `TANNIA_HOME` en la UI de Claude Desktop | NO VERIFICADO | `MANUAL_TESTS_TANNIA_PC.md` §H | — |
+
+## Issue #9 y validación 2D (rc.3)
+| ID | Capacidad | Estado | Evidencia |
+|---|---|---|---|
+| E-I9-1 | Política de originales: residuos excluidos, DWG/DXF/PDF nunca excluibles, locks sin hash/permisos, verificación sin falsos positivos, captura inestable, migración desde rc.2 | TEST_AUTOMATIZADO_APROBADO | `test/tw11_originals_policy.test.js` |
+| E-I9-2 | Análisis de cierre/rectángulo desde extremos (huecos, sueltas, duplicadas, no rectángulo, orden/sentido) | TEST_AUTOMATIZADO_APROBADO | `test/tw12_geometry_check.test.js` |
+| E-I9-3 | Lectura de StartPoint/EndPoint y persistencia (Close(false)+Open) con scripts reales en PowerShell 5.1 y AutoCAD simulado | VER CI Windows del SHA final | `test/tw09_windows_powershell.test.js` |
+| E-I9-4 | LINE.longitud y LINE.editar_en_copia en AutoCAD 2027 real (rc.2) | EVIDENCIA REAL del usuario (sin logs adjuntos) | issue #8 comentario 6902750822 |
+| E-I9-5 | Lectura real de extremos, cierre del rectángulo y persistencia tras reabrir en AutoCAD real | NO VERIFICADO — repetición final pendiente | `docs/qa/ISSUE_9_FIX.md` §Protocolo |
