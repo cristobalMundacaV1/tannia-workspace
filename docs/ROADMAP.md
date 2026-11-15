@@ -1,7 +1,7 @@
 # Roadmap de ingeniería — Tannia Workspace
 
 > Estado: ingeniería aún no validada. Producto objetivo: **AutoCAD 2D y 3D, cubicaciones, APU/presupuestos, PDF, XLSX, informes y normativa chilena** desde Claude Desktop. **No BIM/IFC**.
-> Directiva de entrega: [Macrofase integral TW-FULL](docs/implementation/TW_FULL_DELIVERY_MACROPHASE.md).
+> Directiva de entrega: [Macrofase integral TW-FULL](implementation/TW_FULL_DELIVERY_MACROPHASE.md).
 
 | Fase | Resultado | Evidencia mínima para cierre |
 |---|---|---|
