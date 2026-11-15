@@ -18,6 +18,17 @@
 | **TW-07B** | Piloto final 3D y aceptación de Tannia | Sesión 3D real sin asistencia, resultados revisados, aceptación del PO |
 | **TW-08** | Candidato de distribución integral y handoff | Paquete comprobable, SHA/checksums, instalación, desinstalación, guía de una página, matriz de cobertura y pendientes hardware |
 
+## Ampliación: asistente de anteproyecto arquitectónico (TW-DESIGN)
+Macrofase [TW-DESIGN](implementation/TW_DESIGN_MACROPHASE.md): Tannia pide una vivienda y recibe una **primera versión funcional, editable en AutoCAD**, que refina por conversación (historial, deshacer, recuperación). Incluye una **capa de conocimiento técnico chileno integrada** (criterios de diseño + registro de fuentes oficiales + consulta guiada); **no** es un motor de cumplimiento normativo. Persistencia transversal de criterios aprobados: futura **TW-04K**. Rama: `feat/tw-design-assistant`.
+
+| Hito | Resultado | Cierre |
+|---|---|---|
+| TW-D0 | Propuesta, historias, gates | Este documento |
+| TW-D1 | Conocimiento técnico + generador + derivación + coherencia | Pruebas de geometría y variantes de programa |
+| TW-D2 | DXF editable + SVG + vista; versiones y operaciones | DXF re-medido = modelo; ediciones sin regresión |
+| TW-D3 | DXF → DWG por COM; cubicación desde geometría construida | DWG: NO VERIFICADO hasta AutoCAD real |
+| TW-D4 | 3D geométrico, presupuesto desde cubicación | Siguiente incremento |
+
 ## Orden y autonomía
 - TW-00A **antes** de expandir TW-01. Para TW-00A usar paquete provisional **reproducible**, por ejemplo extensión `.mcpb` de prueba con dependencias fijas; no supone instalador definitivo ni build autoaprobado.
 - TW-07A puede ocurrir tras TW-06 **2D** y antes de TW-06A. Si AutoCAD real no está accesible, mantenerlo como pendiente de hardware y **seguir con TW-06A/TW-08**.
