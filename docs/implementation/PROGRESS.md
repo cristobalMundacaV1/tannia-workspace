@@ -13,3 +13,6 @@ Estados: ✅ hecho y probado en este entorno · 🟡 parcial · ⬜ pendiente ·
 | TW-05 paquete Windows | ✅ decisión `.mcpb` (UI Claude Desktop / Windows real 🔒) | actualización/rollback/desinstalación/logs/reparación probados; sin `.exe` por decisión documentada |
 | TW-06 adaptador AutoCAD + 2D | ✅ contrato / 🔒 AutoCAD real | detección por registro, adaptador COM con guardas por código, matriz por entidad×operación; todo COM `UNVERIFIED` |
 | TW-06A geometría 3D | ✅ DXF (mallas) / 🔒 sólidos ACIS | 3DFACE/MESH/POLYFACE con área y volumen verificados analíticamente; 3DSOLID/REGION/SURFACE detectados sin volumen inventado |
+| TW-07A piloto 2D | 🔒 protocolo listo | `docs/pilot/PILOTO_2D_TW07A.md`; **no ejecutado** (requiere a Tannia) |
+| TW-07B piloto 3D | 🔒 protocolo listo | `docs/pilot/PILOTO_3D_TW07B.md`; **no ejecutado** |
+| TW-08 release candidate | ✅ RC técnico | dossier `scripts/release.mjs`, hashes, manual, limitaciones, riesgos, handoff |

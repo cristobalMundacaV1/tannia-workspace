@@ -1,0 +1,22 @@
+// Ejecuta la suite completa con cobertura y escribe docs/qa/TEST_REPORT.md (resultados REALES de esta ejecución).
+import { spawnSync, execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const sha = (() => { try { return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(); } catch { return 'desconocido'; } })();
+const dirty = (() => { try { return execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim() ? ' (con cambios sin commitear)' : ''; } catch { return ''; } })();
+const files = fs.readdirSync(path.join(root, 'test')).filter((f) => f.endsWith('.test.js')).map((f) => path.join('test', f));
+const t0 = Date.now();
+const r = spawnSync(process.execPath, ['--test', '--test-concurrency=1', '--experimental-test-coverage', '--test-coverage-include=src/**', '--test-reporter=spec', ...files], { cwd: root, encoding: 'utf8', maxBuffer: 100 * 1024 * 1024 });
+const out = `${r.stdout}\n${r.stderr}`;
+const num = (k) => Number((out.match(new RegExp(`ℹ ${k} (\\d+)`)) || [])[1] ?? NaN);
+const tests = num('tests'), pass = num('pass'), fail = num('fail'), skipped = num('skipped');
+const cov = out.split('\n').filter((l) => /^ℹ (file|all files|\s+\S+\.js)/.test(l) || /^ℹ\s+(src|test)/.test(l) || /^ℹ [\w/.-]+\.js\s+\|/.test(l)).map((l) => l.replace(/^ℹ /, ''));
+const covStart = out.indexOf('start of coverage report'); const covEnd = out.indexOf('end of coverage report');
+const covText = covStart >= 0 ? out.slice(covStart, covEnd).split('\n').map((l) => l.replace(/^ℹ ?/, '')).join('\n') : cov.join('\n');
+const md = ['# Reporte de pruebas y cobertura', '', `> Generado por \`scripts/qa-report.mjs\` el ${new Date().toISOString()}.`, '', `- **SHA:** \`${sha}\`${dirty}`, `- **Entorno:** ${os.type()} ${os.release()} ${os.arch()} · Node ${process.version}`, `- **Comando:** \`node --test --test-concurrency=1 --experimental-test-coverage ${files.join(' ')}\``, `- **Duración:** ${((Date.now() - t0) / 1000).toFixed(1)} s · **exit code:** ${r.status}`, `- **Resultado:** ${tests} pruebas · ${pass} OK · ${fail} fallas · ${skipped} omitidas`, '', '## Omitidas', '', skipped ? '- "carpeta sin permiso de escritura" se omite al ejecutar como root/Windows (no hay evidencia de esa prueba en este entorno).' : '- ninguna', '', '## Cobertura de líneas (cobertura experimental de Node, solo `src/` y `test/`)', '', '```', covText.trim() || '(sin tabla de cobertura)', '```', '', '## Salida de pruebas', '', '```', out.split('\n').filter((l) => /^(✔|✖|﹣|▶)/.test(l.trim())).join('\n'), '```', ''].join('\n');
+fs.writeFileSync(path.join(root, 'docs', 'qa', 'TEST_REPORT.md'), md);
+console.log(`tests=${tests} pass=${pass} fail=${fail} skipped=${skipped} exit=${r.status}`);
+process.exit(r.status === 0 ? 0 : 1);

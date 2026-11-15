@@ -56,4 +56,8 @@ const manifest = {
 };
 fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest, null, 2));
 for (const f of ['LICENSE-THIRD-PARTY.txt']) if (fs.existsSync(path.join(root, f))) fs.copyFileSync(path.join(root, f), path.join(out, f));
+// Reproducibilidad: fechas fijas para que el .mcpb sea idéntico bit a bit con las mismas entradas.
+const FIXED = new Date('2026-01-01T00:00:00Z');
+const fix = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const f = path.join(d, e.name); if (e.isDirectory()) fix(f); fs.utimesSync(f, FIXED, FIXED); } fs.utimesSync(d, FIXED, FIXED); };
+fix(out);
 console.log(`build OK -> ${out} (${tools.length} herramientas, ${(fs.statSync(path.join(out, 'server', 'index.js')).size / 1024).toFixed(0)} KB)`);
