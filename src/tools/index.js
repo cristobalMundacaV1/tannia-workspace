@@ -160,7 +160,7 @@ export function registerTools(server, { sandbox, log, g, cad }) {
     description: 'Mide longitudes, perímetros y áreas por capa (líneas, arcos, círculos, polilíneas con arcos, bloques transformados). Mide GEOMETRÍA, no partidas. Para convertir a metros hay que confirmar la unidad real del dibujo con la usuaria.',
     inputSchema: {
       proyecto, archivo: z.string(), unidad_confirmada: unidadEnum.optional().describe('Unidad real del dibujo confirmada por la usuaria (no basta INSUNITS)'),
-      capas: z.array(z.string()).optional(), incluir_detalle: z.boolean().optional(),
+      capas: z.array(z.string().max(255)).max(200).optional(), incluir_detalle: z.boolean().optional(),
     }, annotations: RO,
   }, async ({ proyecto: n, archivo, unidad_confirmada, capas, incluir_detalle }) => {
     const { abs } = sandbox.resolve(n, archivo);
@@ -184,9 +184,9 @@ export function registerTools(server, { sandbox, log, g, cad }) {
     description: `Calcula la cantidad de una partida a partir de capas de un DXF con una regla constructiva explícita (${Object.keys(REGLAS).join(', ')}). Los parámetros (altura, espesor, sección, pérdida, descuentos) NUNCA se suponen: pídaselos a la usuaria. Requiere unidad confirmada. La partida queda sin verificar.`,
     inputSchema: {
       proyecto, archivo: z.string(), unidad_confirmada: unidadEnum, codigo: z.string().min(1), descripcion: z.string().min(1),
-      capas: z.array(z.string()).min(1), regla: z.enum(Object.keys(REGLAS)),
+      capas: z.array(z.string().max(255)).min(1).max(200), regla: z.enum(Object.keys(REGLAS)),
       parametros: z.object({ altura_m: z.number().positive().optional(), espesor_m: z.number().positive().optional(), seccion_m2: z.number().positive().optional() }).optional(),
-      descuentos: z.array(z.object({ motivo: z.string().optional(), cantidad: z.number().positive() })).optional(),
+      descuentos: z.array(z.object({ motivo: z.string().max(200).optional(), cantidad: z.number().positive() })).max(100).optional(),
       perdida_pct: z.number().min(0).max(100).optional(), instancia_bloque: z.string().optional(), apu: z.string().optional(),
     }, annotations: RW,
   }, async (a) => {
@@ -239,7 +239,7 @@ export function registerTools(server, { sandbox, log, g, cad }) {
   reg('tannia_apu_definir', {
     title: 'Definir/actualizar un APU',
     description: 'Crea o reemplaza un análisis de precio unitario. Los precios, rendimientos y fuentes los entrega la usuaria; si un precio no se conoce, déjelo vacío (queda PENDIENTE; nunca se inventa).',
-    inputSchema: { proyecto, codigo: z.string().min(1), descripcion: z.string().optional(), unidad: z.string().min(1), insumos: z.array(insumoSchema).min(1) }, annotations: RW,
+    inputSchema: { proyecto, codigo: z.string().min(1), descripcion: z.string().optional(), unidad: z.string().min(1), insumos: z.array(insumoSchema).min(1).max(200) }, annotations: RW,
   }, async ({ proyecto: n, ...apu }) => {
     const pr = P(n); const all = pr.apus(); const i = all.findIndex((a) => a.codigo === apu.codigo);
     if (i >= 0) all[i] = apu; else all.push(apu);
@@ -332,7 +332,7 @@ export function registerTools(server, { sandbox, log, g, cad }) {
   reg('tannia_pdf_medir', {
     title: 'Medir en PDF con calibración', description: 'Mide longitud/área de un trazo (id de tannia_pdf_trazos) o de puntos dados, usando una calibración. Opcionalmente guarda el resultado como partida.',
     inputSchema: {
-      proyecto, archivo: z.string(), calibracion: z.string(), trazo: z.number().int().min(0).optional(), puntos: z.array(z.object({ x: z.number(), y: z.number() })).optional(), cerrado: z.boolean().optional(),
+      proyecto, archivo: z.string(), calibracion: z.string(), trazo: z.number().int().min(0).optional(), puntos: z.array(z.object({ x: z.number(), y: z.number() })).max(10000).optional(), cerrado: z.boolean().optional(),
       guardar_como: z.object({ codigo: z.string(), descripcion: z.string(), magnitud: z.enum(['longitud', 'area']) }).optional(),
     }, annotations: RW,
   }, async (a) => {

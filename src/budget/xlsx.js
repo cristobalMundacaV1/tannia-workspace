@@ -117,6 +117,7 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   for (const b of B.bloqueos) wl.addRow([b]);
   wl.addRow([]); wl.addRow(['Redondeo: ' + B.redondeo]);
   wl.addRow(['Este archivo es una herramienta de apoyo: precios, rendimientos y cantidades deben ser revisados por un profesional responsable.']);
+  for (const w of wb.worksheets) w.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 };
   return { workbook: wb, budget: B };
 }
 

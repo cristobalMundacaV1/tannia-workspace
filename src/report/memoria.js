@@ -4,12 +4,20 @@ import PDFDocument from 'pdfkit/js/pdfkit.standalone.js';
 const clp = (n) => (n === null || n === undefined ? 'PENDIENTE' : `$${Math.round(n).toLocaleString('es-CL')}`);
 const num = (n, d = 3) => (n === null || n === undefined ? '—' : Number(n).toLocaleString('es-CL', { minimumFractionDigits: d, maximumFractionDigits: d }));
 
+// Las fuentes PDF estándar solo cubren WinAnsi (Latin-1 + algunos signos). Se translitera lo demás para no producir texto corrupto.
+const MAP = { 'Σ': 'Suma de', '×': 'x', '−': '-', '–': '-', 'π': 'pi', '≈': '~', '≤': '<=', '≥': '>=', '→': '->', '·': '·', '≠': '!=', 'Δ': 'delta', 'θ': 'theta', '∑': 'Suma de', 'ø': 'diam.', 'Ø': 'diam.' };
+const WIN = new Set('—–‘’“”•…€™'.split(''));
+export function latin(s) {
+  return String(s).replace(/[^\u0000-\u00ff]/gu, (ch) => (MAP[ch] !== undefined ? MAP[ch] : WIN.has(ch) ? ch : '?'));
+}
+
 /**
  * data: {proyecto, generado, partidas[], presupuesto?, archivos[], advertencias[], estado}
  */
 export function buildMemoriaPdf(data) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50, info: { Title: `Memoria de cálculo — ${data.proyecto}`, Author: 'Tannia Workspace', Creator: 'Tannia Workspace' }, bufferPages: true });
+    const rawText = doc.text.bind(doc); doc.text = (t, ...r) => rawText(typeof t === 'string' ? latin(t) : t, ...r);
     const chunks = [];
     doc.on('data', (c) => chunks.push(c)); doc.on('end', () => resolve(Buffer.concat(chunks))); doc.on('error', reject);
     const H = (t) => { doc.moveDown(0.8).font('Helvetica-Bold').fontSize(13).fillColor('#1F3864').text(t).moveDown(0.3).fillColor('black').font('Helvetica').fontSize(10); };

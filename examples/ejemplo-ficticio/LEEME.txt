@@ -1,0 +1,2 @@
+DATOS FICTICIOS. Plano sintético, espesor y precios de EJEMPLO ("TEST"): solo muestran el formato de los resultados.
+Estos archivos son BORRADOR: la cantidad no fue verificada por una persona, por eso el presupuesto no es final.

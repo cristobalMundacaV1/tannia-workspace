@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Tannia Workspace: servidor MCP local para AutoCAD 2D/3D, cubicaciones, presupuestos y documentos.",
   "license": "UNLICENSED",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test --test-concurrency=1 --test-reporter=spec \"test/*.test.js\"",
     "test:ci": "node --test --test-concurrency=1 --test-reporter=tap \"test/*.test.js\"",
@@ -19,7 +21,7 @@
     "exceljs": "4.4.0",
     "pdfjs-dist": "5.4.149",
     "pdfkit": "0.17.2",
-    "zod": "3.25.76"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@anthropic-ai/mcpb": "2.1.2",

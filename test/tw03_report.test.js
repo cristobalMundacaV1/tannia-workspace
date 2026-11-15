@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMemoriaPdf } from '../src/report/memoria.js';
+import { buildMemoriaPdf, latin } from '../src/report/memoria.js';
 import { inspectPdf, openPdf } from '../src/pdf/pdf.js';
 import { computeBudget } from '../src/budget/calc.js';
 
@@ -18,7 +18,12 @@ test('memoria PDF: válida, reabrible, con acentos, trazabilidad, advertencias y
   assert.equal(buf.subarray(0, 5).toString(), '%PDF-');
   const { t, pages } = await textOf(buf);
   assert.ok(pages >= 2, 'paginación');
-  for (const s of ['Casa Peñalolén', 'ñandú', 'BORRADOR', 'aaaaaaaaaa', 'NEEDS_REVIEW', 'TOTAL PARCIAL', 'Unidad no confirmada', 'no es un documento final']) assert.ok(t.includes(s), s);
+  for (const s of ['Casa Peñalolén', 'ñandú', 'BORRADOR', 'aaaaaaaaaa', 'NEEDS_REVIEW', 'TOTAL PARCIAL', 'Unidad no confirmada', 'no es un documento final', 'Suma de áreas']) assert.ok(t.includes(s), s);
   assert.ok(/página 1 de/.test(t));
   const info = await inspectPdf(buf); assert.equal(info.paginas, pages);
+});
+
+test('latin(): transliteración de símbolos fuera de WinAnsi', () => {
+  assert.equal(latin('Σ áreas × 0.1 − π≈3'), 'Suma de áreas × 0.1 - pi~3');
+  assert.equal(latin('ñandú — “ok” ✓'), 'ñandú — “ok” ?');
 });
