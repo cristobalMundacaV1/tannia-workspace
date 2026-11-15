@@ -13,6 +13,8 @@ import fs from 'node:fs';
 import { UserError } from '../mcp/util.js';
 import { FOLDERS, isInside } from '../security/sandbox.js';
 import { sanitizar } from './sanitize.js';
+import { analizarContornoDeLineas, compararLecturas } from './geometry_check.js';
+import { sha256File } from '../security/sandbox.js';
 
 const PS_PRELUDE = `$ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -60,10 +62,51 @@ Emit @{ ok = $true; data = @{ entidades = $items; truncado = $trunc } }`,
   medir: `$e = $doc.HandleToObject([string]$in.handle)
 $o = @{ handle = [string]$in.handle; tipo = [string]$e.ObjectName; capa = [string]$e.Layer }
 foreach ($p in 'Length', 'Area', 'Radius', 'TotalAngle') { try { $o[$p] = $e.$p } catch { } }
+try { $o['StartPoint'] = @([double[]]$e.StartPoint) } catch { }
+try { $o['EndPoint'] = @([double[]]$e.EndPoint) } catch { }
 if ($e.ObjectName -eq 'AcDb3dSolid' -or $e.ObjectName -eq 'AcDbRegion') { try { $o['Volume'] = $e.Volume } catch { }; try { $o['Centroid'] = @($e.Centroid) } catch { } }
 Emit @{ ok = $true; data = $o }`,
   abrir_copia: `$d = $acad.Documents.Open([string]$in.ruta, $false)
 Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName } }`,
+  geometria: `$leer = {
+  param($d, $handles)
+  foreach ($h in $handles) {
+    try {
+      $e = $d.HandleToObject([string]$h)
+      $o = @{ handle = [string]$h; tipo = [string]$e.ObjectName; capa = [string]$e.Layer }
+      try { $o.longitud = [double]$e.Length } catch { }
+      try { $o.inicio = @([double[]]$e.StartPoint) } catch { }
+      try { $o.fin = @([double[]]$e.EndPoint) } catch { }
+      $o
+    } catch { @{ handle = [string]$h; error = 'no_encontrada' } }
+  }
+}
+$lineas = @(& $leer $doc $in.handles)
+Emit @{ ok = $true; data = @{ entidades = $lineas; unidades_insunits = $doc.GetVariable('INSUNITS'); documento = [string]$doc.Name } }`,
+  persistencia: `$objetivo = $null
+foreach ($d in $acad.Documents) { if ($d.FullName -eq $in.ruta_esperada) { $objetivo = $d; break } }
+if ($null -eq $objetivo) { Emit @{ ok = $false; etapa = 'localizar'; codigo = 'DOCUMENTO_NO_ABIERTO' }; exit 0 }
+if (-not $objetivo.Saved) { Emit @{ ok = $false; etapa = 'verificar_guardado'; codigo = 'CAMBIOS_SIN_GUARDAR' }; exit 0 }
+$leer = {
+  param($d, $handles)
+  foreach ($h in $handles) {
+    try {
+      $e = $d.HandleToObject([string]$h)
+      $o = @{ handle = [string]$h; tipo = [string]$e.ObjectName; capa = [string]$e.Layer }
+      try { $o.longitud = [double]$e.Length } catch { }
+      try { $o.inicio = @([double[]]$e.StartPoint) } catch { }
+      try { $o.fin = @([double[]]$e.EndPoint) } catch { }
+      $o
+    } catch { @{ handle = [string]$h; error = 'no_encontrada' } }
+  }
+}
+$antes = @(& $leer $objetivo $in.handles)
+$ruta = [string]$objetivo.FullName
+try { $objetivo.Close($false) } catch { Fail 'cerrar' $_; exit 0 }
+Start-Sleep -Milliseconds 400
+try { $nuevo = $acad.Documents.Open($ruta, $false) } catch { $ex = Inner $_.Exception; Emit @{ ok = $false; etapa = 'reabrir'; codigo = 'REAPERTURA_FALLIDA'; hresult = (HR $ex); antes = $antes }; exit 0 }
+$despues = @(& $leer $nuevo $in.handles)
+Emit @{ ok = $true; data = @{ antes = $antes; despues = $despues; documento = [string]$nuevo.Name; guardado = [bool]$nuevo.Saved; unidades_insunits = $nuevo.GetVariable('INSUNITS') } }`,
   agregar_lineas: `if ($doc.FullName -ne $in.ruta_esperada) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
 $capaObj = $null; $creada = $false
 if ($in.capa) {
@@ -196,6 +239,9 @@ export class AutoCadCom {
         acceso ? 'AutoCAD y Claude Desktop deben ejecutarse con el mismo nivel de permisos (ambos normales; no "como administrador").' : 'Abra AutoCAD y un dibujo. Si ya está abierto, puede estar ejecutándose "como administrador": ábralo normalmente.',
         { ...detalle, intentos: r.intentos || [] });
     }
+    if (r.codigo === 'CAMBIOS_SIN_GUARDAR') return new UserError('CAMBIOS_SIN_GUARDAR', 'La copia tiene cambios sin guardar: no se cierra para no perderlos.', 'Guárdela en AutoCAD y repita.', detalle);
+    if (r.codigo === 'DOCUMENTO_NO_ABIERTO') return new UserError('DOCUMENTO_NO_ABIERTO', 'La copia indicada no está abierta en AutoCAD.', 'Ábrala con tannia_cad_abrir_copia.', detalle);
+    if (r.codigo === 'REAPERTURA_FALLIDA') return new UserError('REAPERTURA_FALLIDA', 'Se cerró la copia pero no se pudo reabrir. El archivo en disco no se modificó.', 'Ábrala manualmente desde 03 Trabajo y repita la verificación.', { ...detalle, lecturas_previas: r.antes || [] });
     if (r.codigo === 'SIN_DOCUMENTO') return new UserError('AUTOCAD_SIN_DOCUMENTO', 'AutoCAD no tiene un dibujo activo.', 'Abra o cree un dibujo en AutoCAD.', detalle);
     if (r.codigo === 'DOCUMENTO_CAMBIO') return new UserError('DOCUMENTO_CAMBIO', 'El dibujo activo cambió antes de dibujar; no se escribió nada.', 'Deje activa la copia de trabajo y repita.', detalle);
     if (r.codigo === 'GUARDADO_FALLO') return new UserError('GUARDADO_FALLO', 'Las líneas se crearon en la copia pero no se pudo guardar.', 'Guarde manualmente la COPIA en AutoCAD (no el original). Handles creados en el detalle.', { ...detalle, handles: r.handles || [] });
@@ -280,7 +326,59 @@ export class AutoCadCom {
     this.#assertWorkCopy(project, st.ruta); // el documento ACTIVO debe ser copia de trabajo (verificación 1, en Node)
     const r = await this.#exec('agregar_lineas', { lineas: lineas.map(({ x1, y1, x2, y2 }) => ({ x1, y1, x2, y2 })), capa: capa || null, ruta_esperada: st.ruta }); // verificación 2, en PowerShell
     const handles = r.handles || [];
-    return { ...r, handles, cantidad: handles.length };
+    return { ...r, handles, cantidad: handles.length, creado_en: new Date().toISOString() };
+  }
+
+  /** Lee StartPoint/EndPoint/Length/capa de las entidades indicadas (solo lectura). */
+  async leerGeometria(handles) {
+    if (!Array.isArray(handles) || handles.length < 1 || handles.length > 200 || !handles.every((h) => HANDLE.test(String(h)))) throw new UserError('DATO_INVALIDO', 'Indique de 1 a 200 handles válidos (hexadecimales).');
+    return this.#exec('geometria', { handles: handles.map(String) });
+  }
+
+  /** Lee los extremos desde AutoCAD y comprueba cierre/rectangularidad/medidas con un cálculo independiente en Node. */
+  async verificarContorno(handles, { ancho, alto, tolerancia } = {}) {
+    const lectura = await this.leerGeometria(handles);
+    const noLineas = lectura.entidades.filter((e) => !e.error && e.tipo && !/Line$/i.test(e.tipo));
+    const analisis = analizarContornoDeLineas(lectura.entidades, { tol: tolerancia ?? 1e-6, ancho, alto });
+    if (noLineas.length) { analisis.discrepancias.push(`Entidades que no son líneas: ${noLineas.map((e) => `${e.handle}=${e.tipo}`).join(', ')}.`); analisis.estado = 'needs_review'; }
+    return { unidades_insunits: lectura.unidades_insunits, lecturas: lectura.entidades, analisis };
+  }
+
+  /**
+   * Comprobación INDEPENDIENTE de persistencia: con la copia de trabajo activa y guardada, lee las entidades, CIERRA el
+   * documento sin guardar (Close($false): no hay nada pendiente porque se exige Saved=true), lo REABRE desde disco y
+   * vuelve a leer. Además compara huella/tamaño/fecha del archivo en disco antes y después y, si se indica `creado_en`,
+   * que el archivo se haya escrito después de crear las líneas. Solo sobre copias de "03 Trabajo".
+   */
+  async verificarPersistencia(project, { archivo, handles, creado_en, tolerancia = 1e-6 }) {
+    if (!Array.isArray(handles) || handles.length < 1 || handles.length > 200 || !handles.every((h) => HANDLE.test(String(h)))) throw new UserError('DATO_INVALIDO', 'Indique de 1 a 200 handles válidos (hexadecimales).');
+    const { abs } = this.sandbox.resolve(project, archivo);
+    const objetivo = this.#assertWorkCopy(project, abs);
+    const st = await this.estado();
+    const activo = this.#assertWorkCopy(project, st.ruta); // el documento ACTIVO también debe ser una copia de trabajo
+    if (activo !== objetivo) throw new UserError('DOCUMENTO_ACTIVO_DISTINTO', 'El dibujo activo en AutoCAD no es la copia indicada; no se cierra nada.', 'Active la copia de trabajo indicada y repita.');
+    const stat = (f) => { const s0 = fs.statSync(f); return { bytes: s0.size, modificado: new Date(s0.mtimeMs).toISOString(), mtime_ms: s0.mtimeMs, sha256: sha256File(f) }; };
+    const disco0 = stat(objetivo);
+    if (creado_en && !(disco0.mtime_ms + 2000 >= Date.parse(creado_en))) {
+      throw new UserError('NO_GUARDADO_EN_DISCO', 'El archivo en disco es anterior a la creación de las líneas: los cambios NO están guardados en el DWG.', 'Guarde la copia en AutoCAD y repita.', { archivo_modificado: disco0.modificado, creado_en });
+    }
+    let r;
+    try { r = await this.#exec('persistencia', { handles: handles.map(String), ruta_esperada: st.ruta }); }
+    catch (e) {
+      if (e.detalle?.codigo === 'CAMBIOS_SIN_GUARDAR' || e.code === 'CAMBIOS_SIN_GUARDAR') throw new UserError('CAMBIOS_SIN_GUARDAR', 'La copia tiene cambios sin guardar: no se cierra para no perderlos.', 'Guárdela en AutoCAD y repita.');
+      throw e;
+    }
+    const disco1 = stat(objetivo);
+    const diferencias = compararLecturas(r.antes, r.despues, { tol: tolerancia });
+    const archivoIntacto = disco0.sha256 === disco1.sha256;
+    return {
+      persistencia: diferencias.length === 0 ? 'verificada' : 'fallida',
+      entidades_verificadas: r.antes.length, diferencias,
+      archivo_en_disco: { antes: { bytes: disco0.bytes, modificado: disco0.modificado, sha256: disco0.sha256 }, despues: { bytes: disco1.bytes, modificado: disco1.modificado, sha256: disco1.sha256 }, sin_cambios_por_el_cierre_y_reapertura: archivoIntacto },
+      guardado_posterior_a_la_creacion: creado_en ? disco0.mtime_ms + 2000 >= Date.parse(creado_en) : null,
+      lecturas_tras_reabrir: r.despues, unidades_insunits: r.unidades_insunits,
+      independencia: 'Releído desde el DWG en disco tras cerrar y reabrir en AutoCAD. El contenido del DWG no se interpreta fuera de AutoCAD.',
+    };
   }
 
   agregarLinea(project, { x1, y1, x2, y2, capa }) { return this.agregarLineas(project, { lineas: [{ x1, y1, x2, y2 }], capa }); }

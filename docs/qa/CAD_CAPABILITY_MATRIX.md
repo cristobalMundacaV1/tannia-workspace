@@ -24,12 +24,12 @@ Lector DXF propio (solo lectura) de Tannia Workspace. **Entorno de evidencia:** 
 
 ## Backend `autocad_com`
 
-Automatización COM de AutoCAD (PowerShell) — contrato + pruebas con ejecutor simulado. **Entorno de evidencia:** Sin AutoCAD en el entorno de desarrollo: NINGUNA operación verificada contra AutoCAD real.  
-**Versión probada:** ninguna
+Automatización COM de AutoCAD (PowerShell) — contrato + pruebas con ejecutor simulado. **Entorno de evidencia:** Contrato probado con ejecutor simulado y AutoCAD simulado en PowerShell (CI). Contra AutoCAD real solo hay evidencia aportada por el usuario para las celdas marcadas (ver `real`); sin artefactos de log adjuntos aún.  
+**Versión probada:** AutoCAD 2027 español R26.0 (sesión 26.0s), Windows — SOLO las celdas con evidencia real indicada; el resto, ninguna
 
 | Entidad | detectar | leer | longitud | superficie | volumen | editar_en_copia | exportar |
 |---|---|---|---|---|---|---|---|
-| LINE | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNSUPPORTED | UNSUPPORTED | UNVERIFIED | UNVERIFIED |
+| LINE | UNVERIFIED | UNVERIFIED | SUPPORTED | UNSUPPORTED | UNSUPPORTED | SUPPORTED | UNVERIFIED |
 | LWPOLYLINE | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNSUPPORTED | UNVERIFIED | UNVERIFIED |
 | ARC | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNSUPPORTED | UNSUPPORTED | UNVERIFIED | UNVERIFIED |
 | CIRCLE | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNSUPPORTED | UNVERIFIED | UNVERIFIED |
@@ -71,6 +71,11 @@ Automatización COM de AutoCAD (PowerShell) — contrato + pruebas con ejecutor 
 - MESH · superficie: `test/tw06a_3d.test.js :: 3DFACE: cubo`
 - MESH · volumen: `test/tw06a_3d.test.js :: MESH: pirámide` — Solo malla CERRADA y orientada; si no, needs_review sin volumen. También 3DFACE agrupadas por capa y POLYFACE.
 
+## Evidencia REAL contra AutoCAD (autocad_com)
+
+- LINE · longitud: AutoCAD 2027 español R26.0 (sesión 26.0s), extensión 0.1.0-rc.2, 2026-11-15. Length leído por COM en 4 líneas (6000, 4000, 6000, 4000 mm). Fuente: issue #8, comentario 6902750822 (reporte del usuario; artefactos de log pendientes). Reproducible en CI: no.
+- LINE · editar_en_copia: AutoCAD 2027 español R26.0 (sesión 26.0s), extensión 0.1.0-rc.2, 2026-11-15. AddLine en una copia de 03 Trabajo, con capa nueva, handles 39A–39D; original íntegro (hash). Fuente: issue #8, comentario 6902750822 (reporte del usuario; artefactos de log pendientes). Reproducible en CI: no.
+
 ## Notas de las celdas UNSUPPORTED relevantes (dxf_archivo)
 
 - 3DSOLID · leer: Datos ACIS/SAT cifrados: no se interpretan.
@@ -87,5 +92,5 @@ Automatización COM de AutoCAD (PowerShell) — contrato + pruebas con ejecutor 
 
 ## autocad_com
 
-Todas las operaciones con sentido geométrico están **UNVERIFIED**: el adaptador existe como contrato y está probado solo con un ejecutor simulado (`test/tw06_cad.test.js`). Se marcarán SUPPORTED únicamente tras ejecutar `docs/qa/MANUAL_TESTS_TANNIA_PC.md` en un AutoCAD real, registrando versión y resultado.
+Solo las celdas listadas arriba como SUPPORTED tienen evidencia real (reportada por el usuario). Todas las demás operaciones con sentido geométrico siguen **UNVERIFIED**: el adaptador existe como contrato y está probado con ejecutores simulados (`test/tw06_cad.test.js`, `test/tw09_windows_powershell.test.js`). Pendiente de la siguiente repetición real: lectura de `StartPoint`/`EndPoint`, cierre del rectángulo y persistencia tras reabrir (`tannia_cad_verificar_contorno`, `tannia_cad_verificar_persistencia`). Se marcarán SUPPORTED únicamente tras ejecutar `docs/qa/MANUAL_TESTS_TANNIA_PC.md` en un AutoCAD real, registrando versión y resultado.
 

@@ -4,7 +4,7 @@ export const OPERACIONES = ['detectar', 'leer', 'longitud', 'superficie', 'volum
 export const ENTIDADES = ['LINE', 'LWPOLYLINE', 'ARC', 'CIRCLE', 'BLOCK/INSERT', '3DPOLY', '3DSOLID', 'REGION', 'SURFACE', 'MESH'];
 export const BACKENDS = {
   dxf_archivo: { descripcion: 'Lector DXF propio (solo lectura) de Tannia Workspace', entorno: 'Fixtures sintéticos generados con ezdxf (DXF R2010). NO se probó con DXF reales exportados por AutoCAD.', version_probada: 'DXF R2010 (AC1024) sintético' },
-  autocad_com: { descripcion: 'Automatización COM de AutoCAD (PowerShell) — contrato + pruebas con ejecutor simulado', entorno: 'Sin AutoCAD en el entorno de desarrollo: NINGUNA operación verificada contra AutoCAD real.', version_probada: 'ninguna' },
+  autocad_com: { descripcion: 'Automatización COM de AutoCAD (PowerShell) — contrato + pruebas con ejecutor simulado', entorno: 'Contrato probado con ejecutor simulado y AutoCAD simulado en PowerShell (CI). Contra AutoCAD real solo hay evidencia aportada por el usuario para las celdas marcadas (ver `real`); sin artefactos de log adjuntos aún.', version_probada: 'AutoCAD 2027 español R26.0 (sesión 26.0s), Windows — SOLO las celdas con evidencia real indicada; el resto, ninguna' },
 };
 
 const S = (evidencia, nota) => ({ estado: 'SUPPORTED', evidencia, nota: nota || null });
@@ -15,6 +15,9 @@ const T1 = 'test/tw01_dxf.test.js :: longitudes, perímetros y áreas';
 const T1b = 'test/tw01_dxf.test.js :: bloques: transformaciones';
 const T6 = 'test/tw06a_3d.test.js';
 const NA = 'No aplica a esta entidad.';
+// Evidencia REAL contra AutoCAD (ejecutada por el usuario, no por el CI). Fuente: issue #8, comentario 6902750822.
+const REAL_RC2 = { producto: 'AutoCAD 2027 español R26.0 (sesión 26.0s)', extension: '0.1.0-rc.2', fuente: 'issue #8, comentario 6902750822 (reporte del usuario; artefactos de log pendientes)', fecha: '2026-11-15', reproducible_en_ci: false };
+const SR = (nota) => ({ estado: 'SUPPORTED', evidencia: null, nota, real: REAL_RC2 });
 const RO = 'El lector DXF es de solo lectura: no edita.';
 const EXP = 'El lector DXF no exporta/guarda DXF ni DWG.';
 
@@ -38,6 +41,10 @@ for (const e of ENTIDADES) {
 }
 // Combinaciones sin sentido geométrico (no dependen del backend)
 for (const [e, op] of [['LINE', 'superficie'], ['LINE', 'volumen'], ['ARC', 'superficie'], ['ARC', 'volumen'], ['LWPOLYLINE', 'volumen'], ['CIRCLE', 'volumen'], ['MESH', 'longitud'], ['REGION', 'volumen']]) com[e][op] = N(NA);
+// Evidencia real (rc.2): 4 AcDbLine creadas con tannia_cad_agregar_lineas en una COPIA de 03 Trabajo, capa nueva TW_PRUEBA (handles 39A–39D);
+// tannia_cad_medir_entidad devolvió Length 6000/4000/6000/4000 mm; originales íntegros. NO se leyeron StartPoint/EndPoint ni se reabrió el DWG.
+com.LINE.longitud = SR('Length leído por COM en 4 líneas (6000, 4000, 6000, 4000 mm).');
+com.LINE.editar_en_copia = SR('AddLine en una copia de 03 Trabajo, con capa nueva, handles 39A–39D; original íntegro (hash).');
 com['3DSOLID'].volumen = U('MassProperties/Volume del objeto COM: contrato implementado; NO verificado en AutoCAD real.');
 com.REGION.superficie = U('Propiedad Area del objeto COM; NO verificado.');
 com.SURFACE.superficie = U('Depende del tipo de superficie; NO verificado.');
@@ -60,8 +67,10 @@ export function matrizMarkdown() {
   }
   lines.push('## Evidencia y notas de las celdas SUPPORTED (dxf_archivo)', '');
   for (const e of ENTIDADES) for (const op of OPERACIONES) { const c = MATRIZ.dxf_archivo[e][op]; if (c.estado === 'SUPPORTED') lines.push(`- ${e} · ${op}: \`${c.evidencia}\`${c.nota ? ` — ${c.nota}` : ''}`); }
+  lines.push('', '## Evidencia REAL contra AutoCAD (autocad_com)', '');
+  for (const e of ENTIDADES) for (const op of OPERACIONES) { const c = MATRIZ.autocad_com[e][op]; if (c.estado === 'SUPPORTED') lines.push(`- ${e} · ${op}: ${c.real.producto}, extensión ${c.real.extension}, ${c.real.fecha}. ${c.nota} Fuente: ${c.real.fuente}. Reproducible en CI: ${c.real.reproducible_en_ci ? 'sí' : 'no'}.`); }
   lines.push('', '## Notas de las celdas UNSUPPORTED relevantes (dxf_archivo)', '');
   for (const e of ['3DSOLID', 'REGION', 'SURFACE']) for (const op of OPERACIONES) { const c = MATRIZ.dxf_archivo[e][op]; if (c.estado === 'UNSUPPORTED' && c.nota !== NA && c.nota !== RO && c.nota !== EXP) lines.push(`- ${e} · ${op}: ${c.nota}`); }
-  lines.push('', '## autocad_com', '', 'Todas las operaciones con sentido geométrico están **UNVERIFIED**: el adaptador existe como contrato y está probado solo con un ejecutor simulado (`test/tw06_cad.test.js`). Se marcarán SUPPORTED únicamente tras ejecutar `docs/qa/MANUAL_TESTS_TANNIA_PC.md` en un AutoCAD real, registrando versión y resultado.', '');
+  lines.push('', '## autocad_com', '', 'Solo las celdas listadas arriba como SUPPORTED tienen evidencia real (reportada por el usuario). Todas las demás operaciones con sentido geométrico siguen **UNVERIFIED**: el adaptador existe como contrato y está probado con ejecutores simulados (`test/tw06_cad.test.js`, `test/tw09_windows_powershell.test.js`). Pendiente de la siguiente repetición real: lectura de `StartPoint`/`EndPoint`, cierre del rectángulo y persistencia tras reabrir (`tannia_cad_verificar_contorno`, `tannia_cad_verificar_persistencia`). Se marcarán SUPPORTED únicamente tras ejecutar `docs/qa/MANUAL_TESTS_TANNIA_PC.md` en un AutoCAD real, registrando versión y resultado.', '');
   return lines.join('\n');
 }

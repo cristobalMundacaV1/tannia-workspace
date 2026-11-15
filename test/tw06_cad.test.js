@@ -16,14 +16,20 @@ import { ROOT, tmpHome } from './helpers.js';
 test('matriz: completa, sin SUPPORTED sin evidencia real en tests, y autocad_com sin SUPPORTED', () => {
   for (const b of Object.keys(MATRIZ)) for (const e of ENTIDADES) for (const op of OPERACIONES) {
     const c = MATRIZ[b][e][op]; assert.ok(c && ['SUPPORTED', 'UNSUPPORTED', 'UNVERIFIED'].includes(c.estado), `${b}/${e}/${op}`);
-    if (c.estado === 'SUPPORTED') {
-      assert.equal(b, 'dxf_archivo');
+    if (c.estado === 'SUPPORTED' && b === 'dxf_archivo') {
       const [file, frag] = c.evidencia.split(' :: ');
       const body = fs.readFileSync(path.join(ROOT, file), 'utf8');
       assert.ok(frag && body.includes(frag), `evidencia inexistente: ${c.evidencia}`);
     }
   }
-  for (const e of ENTIDADES) for (const op of OPERACIONES) assert.notEqual(MATRIZ.autocad_com[e][op].estado, 'SUPPORTED');
+  // autocad_com: SUPPORTED solo con evidencia REAL documentada (producto, versión de la extensión, fuente, fecha) y solo las celdas ejecutadas
+  const soportadas = [];
+  for (const e of ENTIDADES) for (const op of OPERACIONES) {
+    const c = MATRIZ.autocad_com[e][op];
+    if (c.estado === 'SUPPORTED') { soportadas.push(`${e}.${op}`); assert.ok(c.real && c.real.producto && c.real.extension && c.real.fuente && c.real.fecha, `evidencia real incompleta: ${e}.${op}`); assert.equal(c.real.reproducible_en_ci, false); }
+  }
+  assert.deepEqual(soportadas.sort(), ['LINE.editar_en_copia', 'LINE.longitud'], 'no se declaran verificadas operaciones no ejecutadas');
+  for (const k of [['LINE', 'leer'], ['LINE', 'detectar'], ['LWPOLYLINE', 'longitud'], ['3DSOLID', 'volumen'], ['LINE', 'exportar']]) assert.equal(MATRIZ.autocad_com[k[0]][k[1]].estado, 'UNVERIFIED');
   // 3D ACIS: volumen NO soportado en DXF (nunca inventado)
   for (const t of ['3DSOLID', 'REGION', 'SURFACE']) assert.equal(MATRIZ.dxf_archivo[t].volumen.estado, 'UNSUPPORTED');
 });
@@ -68,20 +74,26 @@ test('normalizarRuta: prefijo \\\\?\\ y NFC sin alterar el contenido Unicode', (
   assert.equal(normalizarRuta('C:\\Prueba de integración \'ñ\\a.dwg'), 'C:\\Prueba de integración \'ñ\\a.dwg');
 });
 
-test('contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save solo donde corresponde', () => {
+test('contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/Close/Open solo donde corresponde', () => {
   for (const n of Object.keys(SCRIPTS)) {
     const s = buildScript(n);
-    assert.ok(!/\b(Erase|Purge|Quit|Close|SaveAs|SendCommand|Remove-Item|Invoke-Expression|iex|Start-Process|Kill)\b/i.test(s), `script ${n} contiene comando prohibido`);
+    assert.ok(!/\b(Erase|Purge|Quit|SaveAs|SendCommand|Remove-Item|Invoke-Expression|iex|Start-Process|Kill)\b/i.test(s), `script ${n} contiene comando prohibido`);
     assert.ok(!/"[^"]*\$in\.[^"]*"/.test(SCRIPTS[n]), `script ${n} interpola datos del usuario dentro de una cadena`);
     if (n !== 'agregar_lineas') { assert.ok(!/\.Delete\(/.test(s), `${n}: Delete no permitido`); assert.ok(!/\.Save\(/.test(s), `${n}: Save no permitido`); }
+    // Close solo en 'persistencia' y SIEMPRE con SaveChanges=false; nunca se escribe al cerrar
+    if (n !== 'persistencia') assert.ok(!/\.Close\(/.test(s), `${n}: Close no permitido`);
+    if (!['persistencia', 'abrir_copia'].includes(n)) assert.ok(!/Documents\.Open\(/.test(s), `${n}: Open no permitido`);
   }
   const a = SCRIPTS.agregar_lineas;
   assert.deepEqual([...new Set([...a.matchAll(/\$(\w+)\.Delete\(/g)].map((m) => m[1]))].sort(), ['capaObj', 'e']);
   assert.equal([...a.matchAll(/\.Save\(/g)].length, 1);
-  // la capa se resuelve ANTES de abrir la marca de deshacer y de dibujar
   assert.ok(a.indexOf('Layers.Add') < a.indexOf('StartUndoMark') && a.indexOf('StartUndoMark') < a.indexOf('AddLine'));
-  // el documento se re-verifica antes de cualquier escritura
   assert.ok(a.indexOf('ruta_esperada') < a.indexOf('Layers'));
+  const p = SCRIPTS.persistencia;
+  assert.deepEqual([...p.matchAll(/\.Close\(([^)]*)\)/g)].map((m) => m[1]), ['$false'], 'un único Close, sin guardar');
+  assert.ok(p.indexOf('Saved') < p.indexOf('.Close('), 'se exige Saved=true ANTES de cerrar');
+  assert.ok(p.indexOf('ruta_esperada') < p.indexOf('.Close('), 'se localiza el documento exacto antes de cerrar');
+  assert.ok(p.indexOf('.Close(') < p.indexOf('Documents.Open('), 'cierra y luego reabre');
   assert.throws(() => buildScript('rm -rf'));
 });
 
@@ -96,6 +108,8 @@ function fakeRunner({ activePath, calls, onScript }) {
       medir: { handle: input.handle, tipo: 'AcDb3dSolid', capa: '3D', Volume: 24 },
       abrir_copia: { documento: path.basename(input.ruta || ''), ruta: input.ruta },
       agregar_lineas: { handles: input.lineas?.map((_, i) => `H${i}`), capa_creada: !!input.capa },
+      geometria: { unidades_insunits: 4, documento: 'x.dwg', entidades: input.handles?.map((h) => ({ handle: h, tipo: 'AcDbLine', capa: 'TW_PRUEBA', longitud: 1, inicio: [0, 0, 0], fin: [1, 0, 0] })) },
+      persistencia: { antes: [], despues: [], documento: 'x.dwg', guardado: true, unidades_insunits: 4 },
     }[name];
     return JSON.stringify({ ok: true, data });
   };
@@ -210,7 +224,7 @@ test('MCP: herramientas CAD (matriz, listado, lote) y validación de esquema', a
   const [a, b] = InMemoryTransport.createLinkedPair(); const client = new Client({ name: 't', version: '1' });
   await Promise.all([server.connect(a), client.connect(b)]);
   const cap = (await client.callTool({ name: 'tannia_cad_capacidades', arguments: {} })).structuredContent;
-  assert.equal(cap.autocad_com.conteo.SUPPORTED, 0); assert.ok(cap.dxf_archivo.conteo.SUPPORTED > 20);
+  assert.equal(cap.autocad_com.conteo.SUPPORTED, 2); assert.ok(cap.dxf_archivo.conteo.SUPPORTED > 20);
   const l = await client.callTool({ name: 'tannia_cad_listar_entidades', arguments: { con_medidas: true } });
   assert.equal(l.structuredContent.entidades[0].longitud, 6000);
   const bad = await client.callTool({ name: 'tannia_cad_medir_entidad', arguments: { handle: 'ZZ;' } });
@@ -218,5 +232,72 @@ test('MCP: herramientas CAD (matriz, listado, lote) y validación de esquema', a
   const tools = (await client.listTools()).tools.map((t) => t.name); assert.ok(tools.includes('tannia_cad_agregar_lineas'));
   const vacio = await client.callTool({ name: 'tannia_cad_agregar_lineas', arguments: { proyecto: 'P', lineas: [] } });
   assert.equal(vacio.isError, true);
+  await client.close(); fs.rmSync(home, { recursive: true, force: true });
+});
+
+
+const RECT = (h = ['39A', '39B', '39C', '39D']) => [
+  { handle: h[0], tipo: 'AcDbLine', capa: 'TW_PRUEBA', longitud: 6000, inicio: [0, 0, 0], fin: [6000, 0, 0] },
+  { handle: h[1], tipo: 'AcDbLine', capa: 'TW_PRUEBA', longitud: 4000, inicio: [6000, 0, 0], fin: [6000, 4000, 0] },
+  { handle: h[2], tipo: 'AcDbLine', capa: 'TW_PRUEBA', longitud: 6000, inicio: [6000, 4000, 0], fin: [0, 4000, 0] },
+  { handle: h[3], tipo: 'AcDbLine', capa: 'TW_PRUEBA', longitud: 4000, inicio: [0, 4000, 0], fin: [0, 0, 0] }];
+
+test('verificar contorno: lee extremos por COM y concluye cierre del rectángulo 6000×4000 (cálculo independiente)', async () => {
+  const sb = new Sandbox(tmpHome());
+  const calls = [];
+  const com = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: '/x/a.dwg', calls, onScript: (n, i) => (n === 'geometria' ? JSON.stringify({ ok: true, data: { unidades_insunits: 4, documento: 'a.dwg', entidades: RECT().filter((e) => i.handles.includes(e.handle)) } }) : undefined) }) });
+  const r = await com.verificarContorno(['39A', '39B', '39C', '39D'], { ancho: 6000, alto: 4000 });
+  assert.equal(r.analisis.cerrado, true); assert.equal(r.analisis.es_rectangulo, true); assert.equal(r.analisis.estado, 'ok');
+  assert.equal(r.analisis.area, 24000000); assert.equal(r.analisis.perimetro, 20000); assert.equal(r.analisis.dimensiones_coinciden_con_lo_esperado, true);
+  assert.deepEqual(calls.at(-1).input.handles, ['39A', '39B', '39C', '39D']);
+  const mal = await com.verificarContorno(['39A', '39B', '39C'], { ancho: 6000, alto: 4000 });
+  assert.equal(mal.analisis.cerrado, false); assert.equal(mal.analisis.estado, 'needs_review');
+  await assert.rejects(() => com.leerGeometria(["39A'; Erase"]), (e) => e.code === 'DATO_INVALIDO');
+  await assert.rejects(() => com.leerGeometria([]), (e) => e.code === 'DATO_INVALIDO');
+});
+
+test('persistencia: autorización (solo copia activa en 03 Trabajo), no guardado, cambios pendientes, diferencias y archivo en disco', async () => {
+  const home = tmpHome("'Tannia ñ "); const sb = new Sandbox(home); createProject(sb, 'P');
+  const root = path.join(home, 'Proyectos', 'P'); const orig = path.join(root, '02 Originales', 'o.dwg'); const work = path.join(root, '03 Trabajo', 'o - copia de trabajo.dwg'); const otra = path.join(root, '03 Trabajo', 'otra.dwg');
+  fs.writeFileSync(orig, 'ORIG'); fs.writeFileSync(work, 'COPIA-GUARDADA'); fs.writeFileSync(otra, 'OTRA');
+  const H = ['39A', '39B', '39C', '39D'];
+  const mk = (active, persist) => { const calls = []; return { calls, com: new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: active, calls, onScript: (n) => (n === 'persistencia' ? persist : undefined) }) }) }; };
+  const ok = JSON.stringify({ ok: true, data: { antes: RECT(), despues: RECT(), documento: 'c.dwg', guardado: true, unidades_insunits: 4 } });
+  // éxito: persistió idéntico; el archivo en disco no cambió por cerrar/reabrir
+  let t = mk(work, ok); const r = await t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H, creado_en: new Date(Date.now() - 1000).toISOString() });
+  assert.equal(r.persistencia, 'verificada'); assert.equal(r.entidades_verificadas, 4); assert.equal(r.archivo_en_disco.sin_cambios_por_el_cierre_y_reapertura, true); assert.equal(r.guardado_posterior_a_la_creacion, true);
+  assert.equal(r.archivo_en_disco.antes.sha256, r.archivo_en_disco.despues.sha256);
+  assert.ok(t.calls.some((c) => c.name === 'persistencia' && c.input.ruta_esperada === work), 'la ruta exacta viaja a PowerShell');
+  // entidad perdida / geometría distinta tras reabrir => fallida
+  const perdida = JSON.stringify({ ok: true, data: { antes: RECT(), despues: RECT().slice(0, 3), documento: 'c.dwg', guardado: true, unidades_insunits: 4 } });
+  t = mk(work, perdida); let f = await t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H });
+  assert.equal(f.persistencia, 'fallida'); assert.deepEqual(f.diferencias.map((d) => d.problema), ['desaparecio_tras_reabrir']);
+  const movida = RECT(); movida[1] = { ...movida[1], fin: [6000, 3999, 0] };
+  t = mk(work, JSON.stringify({ ok: true, data: { antes: RECT(), despues: movida, documento: 'c.dwg', guardado: true, unidades_insunits: 4 } })); f = await t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H });
+  assert.equal(f.persistencia, 'fallida'); assert.ok(f.diferencias.some((d) => d.problema === 'fin_distinto'));
+  // no guardado en disco (archivo anterior a la creación) => no se cierra nada
+  t = mk(work, ok); await assert.rejects(() => t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H, creado_en: new Date(Date.now() + 3600e3).toISOString() }), (e) => e.code === 'NO_GUARDADO_EN_DISCO');
+  assert.ok(!t.calls.some((c) => c.name === 'persistencia'));
+  // cambios pendientes en AutoCAD => no se cierra
+  t = mk(work, JSON.stringify({ ok: false, etapa: 'verificar_guardado', codigo: 'CAMBIOS_SIN_GUARDAR' })); await assert.rejects(() => t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H }), (e) => e.code === 'CAMBIOS_SIN_GUARDAR');
+  t = mk(work, JSON.stringify({ ok: false, etapa: 'reabrir', codigo: 'REAPERTURA_FALLIDA', hresult: '0x80020009', antes: RECT() })); await assert.rejects(() => t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H }), (e) => e.code === 'REAPERTURA_FALLIDA' && /no se modific/.test(e.message));
+  // seguridad: original (pedido o activo) y copia distinta NUNCA llegan a cerrar
+  for (const [active, archivo, code] of [[orig, '02 Originales/o.dwg', 'ORIGINAL_PROTEGIDO'], [orig, '03 Trabajo/o - copia de trabajo.dwg', 'ORIGINAL_PROTEGIDO'], [otra, '03 Trabajo/o - copia de trabajo.dwg', 'DOCUMENTO_ACTIVO_DISTINTO'], [work, '02 Originales/o.dwg', 'ORIGINAL_PROTEGIDO']]) {
+    t = mk(active, ok); await assert.rejects(() => t.com.verificarPersistencia('P', { archivo, handles: H }), (e) => e.code === code, `${code}: ${path.basename(active)} / ${archivo}`);
+    assert.ok(!t.calls.some((c) => c.name === 'persistencia'), `no se cerró nada (${code})`);
+  }
+  assert.equal(fs.readFileSync(orig, 'utf8'), 'ORIG');
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test('MCP: herramientas de geometría y persistencia registradas con esquemas estrictos', async () => {
+  const home = tmpHome();
+  const { server } = createServer({ home, cadRunner: fakeRunner({ activePath: '/x.dwg', calls: [] }), platform: 'win32', detectar: () => ({ estado: 'instalado' }) });
+  const [a, b] = InMemoryTransport.createLinkedPair(); const client = new Client({ name: 't', version: '1' });
+  await Promise.all([server.connect(a), client.connect(b)]);
+  const names = (await client.listTools()).tools.map((t) => t.name);
+  for (const n of ['tannia_cad_leer_geometria', 'tannia_cad_verificar_contorno', 'tannia_cad_verificar_persistencia']) assert.ok(names.includes(n), n);
+  const malo = await client.callTool({ name: 'tannia_cad_leer_geometria', arguments: { handles: ["39A'; Erase"] } }); assert.equal(malo.isError, true);
+  const ok = await client.callTool({ name: 'tannia_cad_verificar_contorno', arguments: { handles: ['39A', '39B'], ancho: 6000 } }); assert.ok(!ok.isError); assert.equal(ok.structuredContent.analisis.cerrado, false);
   await client.close(); fs.rmSync(home, { recursive: true, force: true });
 });

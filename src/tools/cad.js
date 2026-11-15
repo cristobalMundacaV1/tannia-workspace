@@ -53,4 +53,28 @@ export function registerCad(reg, { cad, detectar = detectarAutoCad }) {
     title: 'Agregar varias líneas en la copia de trabajo activa (todo o nada)', description: 'Hasta 100 líneas en una sola operación sobre la copia de "03 Trabajo" activa, opcionalmente en una capa (se crea si no existe, p. ej. TW_PRUEBA). Si cualquier línea falla se revierte todo lo creado en la operación (incluida la capa nueva). Guarda la copia una vez.',
     inputSchema: { proyecto, lineas: z.array(z.object({ x1: z.number(), y1: z.number(), x2: z.number(), y2: z.number() })).min(1).max(100), capa: capaSchema.optional() }, annotations: RW,
   }, async ({ proyecto: p, lineas, capa }) => ok('Líneas agregadas a la copia.', await cad.agregarLineas(p, { lineas, capa })));
+
+  const handlesSchema = z.array(z.string().regex(/^[0-9A-Fa-f]{1,16}$/)).min(1).max(200);
+  reg('tannia_cad_leer_geometria', {
+    title: 'Leer extremos de líneas en AutoCAD (solo lectura)', description: 'Devuelve StartPoint/EndPoint, longitud, capa y tipo de las entidades indicadas (por handle) leídos por COM.',
+    inputSchema: { handles: handlesSchema }, annotations: RO,
+  }, async ({ handles }) => ok('Geometría leída desde AutoCAD.', await cad.leerGeometria(handles)));
+
+  reg('tannia_cad_verificar_contorno', {
+    title: 'Verificar cierre y medidas de un contorno de líneas (solo lectura)',
+    description: 'Lee los extremos de las líneas por COM y comprueba con un cálculo independiente si forman un contorno CERRADO, si es un rectángulo (ángulos 90°, lados opuestos iguales) y sus medidas/área. ancho/alto esperados son opcionales y en UNIDADES DEL DIBUJO (no se convierten).',
+    inputSchema: { handles: handlesSchema, ancho: z.number().positive().optional(), alto: z.number().positive().optional(), tolerancia: z.number().positive().optional() }, annotations: RO,
+  }, async ({ handles, ...o }) => {
+    const r = await cad.verificarContorno(handles, o);
+    return ok(r.analisis.estado === 'ok' ? 'Contorno cerrado y medidas verificadas.' : 'Contorno con discrepancias (needs_review): ver analisis.discrepancias.', r);
+  });
+
+  reg('tannia_cad_verificar_persistencia', {
+    title: 'Verificar que el DWG guardado conserva las entidades (cierra y reabre la copia)',
+    description: 'Con la COPIA de trabajo activa y ya guardada: lee las entidades, cierra el documento (sin guardar; se exige que no haya cambios pendientes), lo reabre desde disco y vuelve a leer; compara y registra huella/fecha del archivo antes y después. Solo copias de "03 Trabajo"; nunca originales.',
+    inputSchema: { proyecto, archivo: z.string().describe('Ruta relativa de la copia, ej. "03 Trabajo/plano - copia de trabajo.dwg"'), handles: handlesSchema, creado_en: z.string().optional().describe('Marca de tiempo devuelta por tannia_cad_agregar_lineas, para comprobar que el archivo se guardó después'), tolerancia: z.number().positive().optional() }, annotations: RW,
+  }, async ({ proyecto: p, ...rest }) => {
+    const r = await cad.verificarPersistencia(p, rest);
+    return ok(r.persistencia === 'verificada' ? 'Persistencia verificada: las entidades siguen en el DWG tras cerrar y reabrir.' : 'PERSISTENCIA FALLIDA: hay diferencias tras reabrir (ver diferencias).', r);
+  });
 }

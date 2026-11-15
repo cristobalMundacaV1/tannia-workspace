@@ -41,17 +41,24 @@ Add-Member -InputObject $global:TW_MS -MemberType ScriptMethod -Name AddLine -Va
   $global:TW_N++
   if ($global:TW_FAILAT -gt 0 -and $global:TW_N -eq $global:TW_FAILAT) { throw 'fallo simulado al dibujar' }
   $len = [math]::Sqrt([math]::Pow($b[0] - $a[0], 2) + [math]::Pow($b[1] - $a[1], 2))
-  $e = New-Object PSObject -Property @{ Handle = ('{0:X}' -f (26 + $global:TW_N)); ObjectName = 'AcDbLine'; Layer = $global:TW_ACTIVE.Name; Length = $len }
+  $e = New-Object PSObject -Property @{ Handle = ('{0:X}' -f (26 + $global:TW_N)); ObjectName = 'AcDbLine'; Layer = $global:TW_ACTIVE.Name; Length = $len; StartPoint = $a; EndPoint = $b }
   Add-Member -InputObject $e -MemberType ScriptMethod -Name Delete -Value { TW-L ('DEL ' + $this.Handle); $global:TW_MS.Remove($this) }
   [void]$global:TW_MS.Add($e); TW-L ('ADD ' + $e.Handle + ' ' + $e.Layer + ' ' + $len)
   return $e
 }
-$doc = New-Object PSObject -Property @{ Name = [IO.Path]::GetFileName($env:TANNIA_TEST_DOC); FullName = $env:TANNIA_TEST_DOC; Saved = $true; Layers = $layersObj; ModelSpace = $global:TW_MS }
+$doc = New-Object PSObject -Property @{ Name = [IO.Path]::GetFileName($env:TANNIA_TEST_DOC); FullName = $env:TANNIA_TEST_DOC; Saved = ($env:TANNIA_TEST_DIRTY -ne '1'); Layers = $layersObj; ModelSpace = $global:TW_MS }
 Add-Member -InputObject $doc -MemberType ScriptProperty -Name ActiveLayer -Value { $global:TW_ACTIVE } -SecondValue { $global:TW_ACTIVE = $args[0] }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name HandleToObject -Value { param($h) foreach ($x in $global:TW_MS) { if ($x.Handle -eq $h) { return $x } }; throw 'handle inexistente' }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name GetVariable -Value { param($n) return 4 }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name StartUndoMark -Value { TW-L 'UNDO_START' }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name EndUndoMark -Value { TW-L 'UNDO_END' }
+$global:TW_DOC = $doc
+$global:TW_DOCS = New-Object System.Collections.ArrayList
+[void]$global:TW_DOCS.Add($doc)
+Add-Member -InputObject $acad -MemberType NoteProperty -Name Documents -Value $global:TW_DOCS
+Add-Member -InputObject $global:TW_DOCS -MemberType ScriptMethod -Name Open -Value { param($p, $ro) if ($env:TANNIA_TEST_REOPENFAIL -eq '1') { throw 'no se pudo reabrir' }; TW-L 'OPEN'; if ($env:TANNIA_TEST_LOSE -eq '1') { $global:TW_MS.Clear() }; [void]$global:TW_DOCS.Add($global:TW_DOC); $global:TW_DOC.Saved = $true; return $global:TW_DOC }
+Add-Member -InputObject $doc -MemberType ScriptMethod -Name Close -Value { param($guardar) TW-L ('CLOSE ' + $guardar); $global:TW_DOCS.Remove($this) }
+if ($env:TANNIA_TEST_RECT) { $rp = $env:TANNIA_TEST_RECT -split ','; $w = [double]$rp[0]; $h = [double]$rp[1]; $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @($w, 0.0, 0.0)); $null = $global:TW_MS.AddLine(@($w, 0.0, 0.0), @($w, $h, 0.0)); $null = $global:TW_MS.AddLine(@($w, $h, 0.0), @(0.0, $h, 0.0)); $null = $global:TW_MS.AddLine(@(0.0, $h, 0.0), @(0.0, 0.0, 0.0)); $global:TW_N = 0; Set-Content -LiteralPath $global:TW_LOG -Value '' }
 if ($env:TANNIA_TEST_PREPOP) { foreach ($len in ($env:TANNIA_TEST_PREPOP -split ',')) { $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @([double]$len, 0.0, 0.0)) }; $global:TW_N = 0; Set-Content -LiteralPath $global:TW_LOG -Value '' }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name Save -Value { if ($env:TANNIA_TEST_SAVEFAIL -eq '1') { throw 'no se pudo guardar' }; TW-L 'SAVE' }
 `;
@@ -179,4 +186,47 @@ test('PowerShell real: sin AutoCAD, el script de conexión REAL informa AUTOCAD_
 test('PowerShell real: un script con error de sintaxis o excepción produce una clase de fallo segura, no un cuelgue', opts, async () => {
   await assert.rejects(() => runPowerShell('if (', {}), (x) => ['powershell_fallo', 'sin_respuesta'].includes(x.clase));
   await assert.rejects(() => runPowerShell('Start-Sleep -Seconds 20', {}, { timeoutMs: 1500 }), (x) => x.clase === 'tiempo_agotado');
+});
+
+
+test('PowerShell real: StartPoint/EndPoint por COM y verificación independiente del cierre del rectángulo 6000×4000', opts, async () => {
+  const e = entorno();
+  try {
+    const com = adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000' });
+    const g = await com.leerGeometria(H(4));
+    assert.deepEqual(g.entidades.map((x) => [x.inicio, x.fin]), [[[0, 0, 0], [6000, 0, 0]], [[6000, 0, 0], [6000, 4000, 0]], [[6000, 4000, 0], [0, 4000, 0]], [[0, 4000, 0], [0, 0, 0]]]);
+    const v = await com.verificarContorno(H(4), { ancho: 6000, alto: 4000 });
+    assert.equal(v.analisis.estado, 'ok'); assert.equal(v.analisis.cerrado, true); assert.equal(v.analisis.area, 24e6);
+    const abierto = await adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000' }).verificarContorno(H(3), { ancho: 6000, alto: 4000 });
+    assert.equal(abierto.analisis.cerrado, false); assert.equal(abierto.analisis.estado, 'needs_review');
+    const m = await com.medirEntidad(H(2)[1]); assert.deepEqual([m.StartPoint, m.EndPoint, m.Length], [[6000, 0, 0], [6000, 4000, 0], 4000]);
+  } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
+});
+
+test('PowerShell real: persistencia por cierre y reapertura (Close($false) + Open), con detección de pérdida, cambios pendientes y reapertura fallida', opts, async () => {
+  const e = entorno();
+  try {
+    const f = { archivo: `03 Trabajo/${path.basename(e.work)}`, handles: H(4), creado_en: new Date(Date.now() - 5000).toISOString() };
+    const hash0 = fs.readFileSync(e.work).toString('hex');
+    const r = await adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000' }).verificarPersistencia(e.P, f);
+    assert.equal(r.persistencia, 'verificada'); assert.equal(r.entidades_verificadas, 4); assert.deepEqual(r.diferencias, []);
+    assert.equal(r.archivo_en_disco.sin_cambios_por_el_cierre_y_reapertura, true); assert.equal(r.guardado_posterior_a_la_creacion, true);
+    assert.deepEqual(leer(e.log).filter((x) => /^(CLOSE|OPEN)/.test(x)), ['CLOSE False', 'OPEN'], 'se cierra SIN guardar y se reabre');
+    // las entidades se pierden al reabrir => FALLIDA con las 4 diferencias
+    fs.writeFileSync(e.log, '');
+    const perdida = await adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000', TANNIA_TEST_LOSE: '1' }).verificarPersistencia(e.P, f);
+    assert.equal(perdida.persistencia, 'fallida'); assert.equal(perdida.diferencias.length, 4);
+    // cambios sin guardar => no se cierra
+    fs.writeFileSync(e.log, '');
+    await assert.rejects(() => adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000', TANNIA_TEST_DIRTY: '1' }).verificarPersistencia(e.P, f), (x) => x.code === 'CAMBIOS_SIN_GUARDAR');
+    assert.ok(!leer(e.log).some((x) => x.startsWith('CLOSE')), 'no se cerró con cambios pendientes');
+    // reapertura fallida: se informa; el archivo en disco no cambió
+    fs.writeFileSync(e.log, '');
+    await assert.rejects(() => adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000', TANNIA_TEST_REOPENFAIL: '1' }).verificarPersistencia(e.P, f), (x) => x.code === 'REAPERTURA_FALLIDA' && x.detalle.lecturas_previas.length === 4);
+    assert.equal(fs.readFileSync(e.work).toString('hex'), hash0);
+    // original activo o copia distinta: jamás se cierra
+    fs.writeFileSync(e.log, '');
+    await assert.rejects(() => adaptador(e, e.orig, { TANNIA_TEST_RECT: '6000,4000' }).verificarPersistencia(e.P, f), (x) => x.code === 'ORIGINAL_PROTEGIDO');
+    assert.deepEqual(leer(e.log), [], 'sin Close ni Open'); assert.equal(fs.readFileSync(e.orig, 'utf8'), 'ORIGINAL');
+  } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
 });
