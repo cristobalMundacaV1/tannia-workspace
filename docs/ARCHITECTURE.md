@@ -1,27 +1,28 @@
-# Arquitectura objetivo — diseño preliminar
+# Arquitectura objetivo — diseño preliminar corregido
 
 ## Experiencia de usuario
-- **Interfaz:** Claude Desktop (conversación natural).
-- **En el computador de Tannia:** AutoCAD completo Windows + MCP CAD local + motor local de documentos y cuantificación.
-- **Instalación:** paquete Windows que detecta versiones y requisitos, instala recursos verificados, configura directorios y valida conexión. La autorización/inicio de sesión de Claude puede seguir siendo manual.
-- **Sin AutoCAD en PC del desarrollador:** pruebas sobre DXF sintéticos, PDF de prueba, XLSX y mocks del adaptador CAD; la validación DWG queda explícitamente pendiente hasta equipo real.
+- **Interfaz única:** Claude Desktop, lenguaje cotidiano; Tannia no necesita elegir MCP ni usar consola.
+- **En el PC de Tannia:** AutoCAD completo compatible en Windows + MCP CAD local + módulos internos de cantidades y documentos.
+- **Distribución:** **evaluar primero una extensión `.mcpb`** con instalación/desinstalación sencilla; solo desarrollar instalador Windows adicional si pruebas reales demuestran que hace falta. Ningún mecanismo está validado todavía.
+- **Sin AutoCAD en PC del desarrollador:** fixtures DXF/PDF, XLSX y simulación de adaptador. Las simulaciones no sustituyen la validación DWG real.
 
-## Componentes
-1. **adaptador CAD:** interfaz de consulta/edición con capacidades detectables; candidato inicial `ajaquin8/autocad-mcp`; no se incorpora ni ejecuta automáticamente antes de auditar versión, licencia, origen y compatibilidad.
-2. **lector DXF:** analizar capas, entidades, unidades y áreas/longitudes medibles en archivos de prueba.
-3. **takeoff PDF:** usar mediciones calibradas sobre páginas; candidato `Kentucky-ai/opentakeoff`, sujeto a auditoría. No asumir que reconocimiento automático de elementos es infalible.
-4. **motor de cantidades:** partidas, unidad, fórmula, datos de origen, exclusiones, supuestos e incertidumbre explícita. Reglas de cubicación chilena configurables; no distribuir normas protegidas sin licencia.
-5. **presupuestos:** archivos XLSX con fórmulas, partidas y precios editables, fecha, proveedor/fuente e impuestos documentados.
-6. **documentos:** informe PDF, memoria de cálculo y registro de cambios/validaciones.
-7. **orquestación:** herramientas MCP locales para que Claude solicite operaciones; límites de carpetas, autorización y política de no sobrescritura.
+## Diseño: un producto, módulos internos
+1. **adaptador CAD 2D/3D:** API de capacidades detectables para lectura/edición segura en copia. Candidato: `ajaquin8/autocad-mcp`, pendiente de auditoría y pruebas de compatibilidad. **No asumir que el candidato permite operar sólidos 3D**.
+2. **lector DXF 2D inicial:** geometría, capas, identificadores, unidades y mediciones medibles; DXF no reemplaza todas las propiedades del DWG.
+3. **extensión CAD 3D posterior:** inspección de sólidos, superficies, mallas y geometría tridimensional mediante AutoCAD y APIs compatibles, con pruebas de áreas/volúmenes y soporte documentado por tipo de entidad.
+4. **mediciones PDF:** geometría calibrada con escala explícita; candidato `Kentucky-ai/opentakeoff`, sujeto a evaluación técnica y de licencia (incluida distribución).
+5. **motor de cantidades:** separar (a) medición geométrica, (b) clasificación de partidas y (c) cálculo constructivo. Cada cantidad muestra fuente, unidad, operación, supuestos, exclusiones y revisión.
+6. **presupuestos:** XLSX con fórmulas, partidas y precios editables, proveedor/fuente, fecha e impuestos claros.
+7. **documentos:** PDF de informe, memoria de cálculo y registro de cambios.
+8. **orquestación MCP local:** catálogo de herramientas permitido, carpetas autorizadas, autorizaciones específicas y estados recuperables.
 
-## Directorios de trabajo
+## Contrato de proyecto y archivos
 ```text
 Tannia Workspace/
   Proyectos/
     <proyecto>/
       01 Antecedentes/
-      02 Originales/       # solo lectura
+      02 Originales/       # nunca modificar
       03 Trabajo/
       04 Cubicaciones/
       05 Presupuestos/
@@ -29,19 +30,36 @@ Tannia Workspace/
       07 Entregables/
 ```
 
-## Contrato mínimo de trazabilidad de una cantidad
+## Contrato de medidas
 ```text
-partida, unidad, cantidad, formula, fuente_archivo, referencia_entidad_o_pagina,
-unidades_origen, conversion_aplicada, supuestos, advertencias, estado_revision
+partida, tipo_geometria, unidad, cantidad, formula,
+fuente_archivo, referencia_entidad_o_pagina,
+unidades_origen, escala_o_conversion_verificada,
+supuestos, advertencias, estado_revision
 ```
+- Unidad desconocida → **bloquear conversión** hasta confirmación.
+- Geometría abierta/duplicada, bloques transformados, arcos, referencias externas y entidades no soportadas → marcar advertencia o impedir cantidad final según riesgo.
+- Una medida no prueba una partida constructiva sin criterios profesionales.
 
-## Seguridad y distribución
-- Operaciones de solo lectura por defecto; cambios por copia, con vista previa y deshacer cuando esté disponible.
-- Sin escritura fuera de la carpeta autorizada del proyecto.
-- Sin ejecutar texto arbitrario de un plano/documento como comando.
-- Versiones de dependencias fijadas, verificadas y compatibles con sus licencias.
-- Secretos fuera del código y del repositorio; no almacenar conversaciones ni planos personales por defecto.
-- El procesamiento MCP ocurre localmente; el modelo Claude sigue siendo un servicio remoto y deben revisarse sus políticas de datos.
+## Protección exigible
+- Crear copia de trabajo antes de cualquier operación de escritura.
+- Bloquear técnicamente guardado, eliminación o comandos destructivos sobre originales, mediante control en el adaptador y restricciones de rutas; verificar integridad antes/después.
+- Rechazar acceso fuera de proyecto autorizado y entradas de documentos que intenten dar instrucciones.
+- Estados de proyecto y errores simples: selección, análisis, borrador, revisión, aprobado, entrega; recuperación tras fallos.
+- Versionar y auditar componentes de terceros, licencias y permisos mínimos; pruebas negativas y rollback.
+- Un MCP local no elimina la transmisión de contexto al servicio remoto Claude.
 
-## Opciones técnicas tentativas, no implementadas
-Python para motor local (`ezdxf`, `openpyxl`, bibliotecas PDF/documentos de licencia verificada), pruebas `pytest`, empaquetador Windows evaluado tras prototipo. Elegir un solo mecanismo de instalación comprobable y recuperable. No agregar frontend ni contenedores si no son necesarios.
+## Estrategia de prueba
+1. Prueba vertical **TW-00A** Claude Desktop → MCP local → lectura DXF → resultado en Windows, antes de implementar extensamente el motor.
+2. Pruebas independientes de geometría DXF y medición constructiva.
+3. Pruebas de generación XLSX, fórmulas, PDF y protección de archivos.
+4. Pruebas con AutoCAD real en el PC de Tannia (edición y recuperación sobre copia).
+5. Pruebas CAD 3D con geometrías de volumen/área conocidos y compatibilidad de entidades.
+6. Piloto real sin asistencia técnica de la usuaria.
+
+## Decisiones todavía abiertas
+- Inventario de edición y versión exacta de AutoCAD de Tannia.
+- Seguridad, licencias y compatibilidad de los MCP candidatos.
+- Si `.mcpb` cubre toda la instalación, sin ejecutable adicional.
+- Herramientas exactas para edición y medición 3D.
+No declarar integración instalada, auditada o probada hasta disponer de evidencia.
