@@ -1,0 +1,173 @@
+{
+  "unidades": {
+    "declaradas": "m",
+    "confirmadas": "m",
+    "conversion": "aplicada",
+    "factor_a_metros": 1,
+    "advertencias": []
+  },
+  "totales_por_capa_unidades_dibujo": {
+    "MUROS": {
+      "longitud": 10,
+      "perimetro": 0,
+      "area": 0,
+      "volumen": 0,
+      "items_para_revision": 0
+    },
+    "LOSA": {
+      "longitud": 0,
+      "perimetro": 23.141592653589793,
+      "area": 21.5707963267949,
+      "volumen": 0,
+      "items_para_revision": 0
+    },
+    "COL": {
+      "longitud": 0,
+      "perimetro": 6.283185307179586,
+      "area": 3.141592653589793,
+      "volumen": 0,
+      "items_para_revision": 0
+    },
+    "ARCOS": {
+      "longitud": 3.141592653589793,
+      "perimetro": 0,
+      "area": 0,
+      "volumen": 0,
+      "items_para_revision": 0
+    }
+  },
+  "totales_por_capa_metros": {
+    "MUROS": {
+      "longitud_m": 10,
+      "perimetro_m": 0,
+      "area_m2": 0,
+      "volumen_m3": 0
+    },
+    "LOSA": {
+      "longitud_m": 0,
+      "perimetro_m": 23.141592653589793,
+      "area_m2": 21.5707963267949,
+      "volumen_m3": 0
+    },
+    "COL": {
+      "longitud_m": 0,
+      "perimetro_m": 6.283185307179586,
+      "area_m2": 3.141592653589793,
+      "volumen_m3": 0
+    },
+    "ARCOS": {
+      "longitud_m": 3.141592653589793,
+      "perimetro_m": 0,
+      "area_m2": 0,
+      "volumen_m3": 0
+    }
+  },
+  "mediciones": [
+    {
+      "id": 1,
+      "tipo_geometria": "LINE",
+      "capa": "MUROS",
+      "handle": "37",
+      "bloque": null,
+      "magnitud": "longitud",
+      "valor": 10,
+      "formula": "distancia(P1,P2)",
+      "estado": "ok",
+      "advertencias": []
+    },
+    {
+      "id": 2,
+      "tipo_geometria": "LWPOLYLINE",
+      "capa": "LOSA",
+      "handle": "38",
+      "bloque": null,
+      "magnitud": "perimetro",
+      "valor": 18,
+      "formula": "Σ longitud de segmentos (rectos y arcos)",
+      "estado": "ok",
+      "advertencias": [],
+      "vertices": 4
+    },
+    {
+      "id": 3,
+      "tipo_geometria": "LWPOLYLINE",
+      "capa": "LOSA",
+      "handle": "38",
+      "bloque": null,
+      "magnitud": "area",
+      "valor": 20,
+      "formula": "Fórmula del polígono (shoelace)",
+      "estado": "ok",
+      "advertencias": [],
+      "vertices": 4
+    },
+    {
+      "id": 4,
+      "tipo_geometria": "CIRCLE",
+      "capa": "COL",
+      "handle": "39",
+      "bloque": null,
+      "magnitud": "area",
+      "valor": 3.141592653589793,
+      "formula": "π·r² con r=1",
+      "estado": "ok",
+      "advertencias": []
+    },
+    {
+      "id": 5,
+      "tipo_geometria": "CIRCLE",
+      "capa": "COL",
+      "handle": "39",
+      "bloque": null,
+      "magnitud": "perimetro",
+      "valor": 6.283185307179586,
+      "formula": "2·π·r con r=1",
+      "estado": "ok",
+      "advertencias": []
+    },
+    {
+      "id": 6,
+      "tipo_geometria": "ARC",
+      "capa": "ARCOS",
+      "handle": "3A",
+      "bloque": null,
+      "magnitud": "longitud",
+      "valor": 3.141592653589793,
+      "formula": "r·Δθ con r=2, Δθ=90.000000°",
+      "estado": "ok",
+      "advertencias": []
+    },
+    {
+      "id": 7,
+      "tipo_geometria": "LWPOLYLINE",
+      "capa": "LOSA",
+      "handle": "3B",
+      "bloque": null,
+      "magnitud": "perimetro",
+      "valor": 5.141592653589793,
+      "formula": "Σ longitud de segmentos (rectos y arcos)",
+      "estado": "ok",
+      "advertencias": [],
+      "vertices": 2
+    },
+    {
+      "id": 8,
+      "tipo_geometria": "LWPOLYLINE",
+      "capa": "LOSA",
+      "handle": "3B",
+      "bloque": null,
+      "magnitud": "area",
+      "valor": 1.5707963267948966,
+      "formula": "Shoelace + segmentos circulares",
+      "estado": "ok",
+      "advertencias": [],
+      "vertices": 2
+    }
+  ],
+  "entidades_no_soportadas": {},
+  "advertencias": [],
+  "incertidumbre": "Cálculo analítico exacto sobre la geometría del archivo (precisión de doble). No incluye incertidumbre de escala: la conversión solo vale si la unidad confirmada es correcta.",
+  "necesita_revision": false,
+  "mediciones_total": 8,
+  "mediciones_ok": 8
+}

@@ -1,0 +1,42 @@
+{
+  "simple_m": {
+    "units_declared": 6,
+    "layers": {
+      "MUROS": {
+        "length": 10.0
+      },
+      "LOSA": {
+        "area": 21.5707963267949,
+        "length": 23.141592653589793
+      },
+      "COL": {
+        "area": 3.141592653589793,
+        "length": 6.283185307179586
+      },
+      "ARCOS": {
+        "length": 3.141592653589793
+      }
+    }
+  },
+  "bloques": {
+    "COL_area": 2.24,
+    "inserts_expanded": 11
+  },
+  "duplicados_abiertas": {
+    "DUP_length_unique": 4.0,
+    "duplicates": 2,
+    "ABIERTA_length": 6.0
+  },
+  "mm": {
+    "area_mm2": 20000000.0,
+    "area_m2": 20.0
+  },
+  "malla_3d": {
+    "cube_volume": 24.0,
+    "cube_area": 52.0,
+    "poly3d_length": 17.0,
+    "pyramid_volume": 0.3333333333333333,
+    "polyface_volume": 2.0,
+    "polyface_area": 10.0
+  }
+}
