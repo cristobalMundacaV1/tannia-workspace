@@ -1,0 +1,783 @@
+{
+  "version": "v006",
+  "alternativa": "alt-L_con_patio",
+  "analisis": {
+    "schema": "tw.arch.analysis/1",
+    "scheme_id": "alt-L_con_patio",
+    "input_hash": "6cb9bba5315d150b",
+    "engine_version": "mraa-0.1.0",
+    "hard_gates": [
+      {
+        "id": "geometria_valida",
+        "passed": true,
+        "detalle": "Sin solapes, huecos no declarados, vanos inválidos ni recintos sin acceso."
+      },
+      {
+        "id": "superficie_objetivo",
+        "passed": true,
+        "detalle": "Huella 90.03 m² vs objetivo 90 m² (0.03 %; tolerancia ±3,5 %)."
+      },
+      {
+        "id": "dormitorios",
+        "passed": true,
+        "detalle": "3 dormitorios (pedidos: 3)."
+      },
+      {
+        "id": "banos",
+        "passed": true,
+        "detalle": "2 baños (pedidos: 2)."
+      },
+      {
+        "id": "clase_de_huella",
+        "passed": true,
+        "detalle": "Partido L_con_patio (pedido: L_con_patio). Informativo: las otras ideas se muestran como contraste y no se bloquean."
+      },
+      {
+        "id": "encaje_en_predio",
+        "passed": true,
+        "detalle": "La huella cabe en el predio ingresado (y retranqueos con fuente, si los hay)."
+      }
+    ],
+    "metrics": [
+      {
+        "id": "superficie_huella_m2",
+        "familia": "superficie",
+        "estado": "computed",
+        "valor": 90.03,
+        "unidad": "m²",
+        "metodo": "área de la unión de polígonos (no caja envolvente)",
+        "limites": "No es superficie edificada legal."
+      },
+      {
+        "id": "superficie_util_m2",
+        "familia": "superficie",
+        "estado": "computed",
+        "valor": 75.86,
+        "unidad": "m²",
+        "metodo": "suma de recintos netos",
+        "limites": "No es superficie útil legal."
+      },
+      {
+        "id": "circulacion_pct",
+        "familia": "recorridos",
+        "estado": "computed",
+        "valor": 14,
+        "unidad": "%",
+        "metodo": "camino mínimo por centros de recinto y puntos de puerta/paso (distancia en planta)",
+        "limites": "Distancias geométricas; no es flujo real de personas ni verificación de accesibilidad o evacuación normativa."
+      },
+      {
+        "id": "indice_envolvente",
+        "familia": "economia_relativa",
+        "estado": "computed",
+        "valor": 1.35,
+        "metodo": "perímetro exterior / perímetro de cuadrado equivalente",
+        "limites": "Índices geométricos relativos; no son presupuesto ni verificación estructural/hidráulica."
+      },
+      {
+        "id": "precio_clp",
+        "familia": "economia_relativa",
+        "estado": "not_evaluated",
+        "valor": null,
+        "razon": "Sin partidas, cubicaciones ni precios confirmados no se estima ningún valor en pesos.",
+        "metodo": "sin partidas",
+        "limites": "Sin partidas, cubicaciones ni precios confirmados no se estima ningún valor en pesos."
+      },
+      {
+        "id": "ventilacion_potencial",
+        "familia": "viento",
+        "estado": "computed",
+        "valor": 0,
+        "metodo": "ventanas en fachadas distintas",
+        "limites": "Potencial GEOMÉTRICO (ventanas en distintas fachadas, supuestas practicables); no calcula caudales ni renovaciones de aire."
+      },
+      {
+        "id": "sol_directo_verano",
+        "familia": "sol",
+        "estado": "computed",
+        "valor": 71.8,
+        "unidad": "h·ventana",
+        "detalle": "2026-12-21",
+        "metodo": "ray casting desde el centro de cada vano hacia el sol (posición solar propia contrastada con NREL SPA)",
+        "limites": "Luz solar directa geométrica; no es iluminancia interior, deslumbramiento, ganancia térmica ni energía."
+      },
+      {
+        "id": "sol_directo_invierno",
+        "familia": "sol",
+        "estado": "computed",
+        "valor": 45.4,
+        "unidad": "h·ventana",
+        "detalle": "2026-06-21",
+        "metodo": "ray casting desde el centro de cada vano hacia el sol (posición solar propia contrastada con NREL SPA)",
+        "limites": "Luz solar directa geométrica; no es iluminancia interior, deslumbramiento, ganancia térmica ni energía."
+      },
+      {
+        "id": "abrigo_patio_viento",
+        "familia": "viento",
+        "estado": "blocked",
+        "valor": null,
+        "razon": "Falta clima cargado y/o norte verdadero confirmado.",
+        "metodo": "rayos hacia el rumbo del viento regional",
+        "limites": "Viento regional; sin CFD."
+      },
+      {
+        "id": "visual_R-COC_pool_play_zone",
+        "familia": "visuales",
+        "estado": "computed",
+        "valor": 1,
+        "detalle": "visible",
+        "metodo": "ray casting ojo→rejilla objetivo",
+        "limites": "La línea visual NO sustituye barreras independientes ni supervisión adulta activa."
+      },
+      {
+        "id": "privacidad_hallazgos",
+        "familia": "privacidad",
+        "estado": "computed",
+        "valor": 3,
+        "metodo": "ventanas enfrentadas y deslindes/vecinos si hay sitio",
+        "limites": "Geométrica y heurística; no considera cortinas, vegetación ni usos culturales de la privacidad."
+      },
+      {
+        "id": "normativa",
+        "familia": "normativa",
+        "estado": "not_evaluated",
+        "valor": null,
+        "razon": "Requiere CIP/IPT vigente y profesional; no se evalúa.",
+        "metodo": "sin documento fuente",
+        "limites": "El código nunca declara cumplimiento normativo."
+      }
+    ],
+    "alerts": [
+      {
+        "id": "piscina_barrera",
+        "severidad": "critica",
+        "texto": "Piscina en el programa: se requiere barrera independiente, control de acceso y supervisión activa, verificados por un profesional con la normativa vigente. La visual desde la casa no los reemplaza."
+      },
+      {
+        "id": "puerta_directa_P-LIV-PATIO",
+        "severidad": "critica",
+        "texto": "La puerta P-LIV-PATIO da directamente al patio con piscina sin control de acceso definido: no puede declararse seguridad demostrada."
+      },
+      {
+        "id": "planta_irregular",
+        "severidad": "media",
+        "texto": "La planta tiene 1 esquina(s) entrante(s): una planta no rectangular exige que el ingeniero estructural revise su regularidad (no se afirma nada sobre sismo)."
+      },
+      {
+        "id": "priv_0",
+        "severidad": "media",
+        "texto": "La ventana V-R-DP de zona privada mira a un deslinde a 2500 mm (<8000 mm de referencia heurística): posible vista desde/hacia el vecino."
+      },
+      {
+        "id": "priv_1",
+        "severidad": "media",
+        "texto": "La ventana V-R-D2 de zona privada mira a un deslinde a 2500 mm (<8000 mm de referencia heurística): posible vista desde/hacia el vecino."
+      },
+      {
+        "id": "priv_2",
+        "severidad": "media",
+        "texto": "La ventana V-R-D3 de zona privada mira a un deslinde a 2500 mm (<8000 mm de referencia heurística): posible vista desde/hacia el vecino."
+      },
+      {
+        "id": "sin_clima",
+        "severidad": "info",
+        "texto": "Sin clima cargado: no se evalúa viento ni confort."
+      }
+    ],
+    "global_state": "con_alertas_criticas",
+    "disclaimers": [
+      "ANTEPROYECTO conceptual: no apto para construcción ni para tramitación.",
+      "No acredita cumplimiento normativo (OGUC/RT/IPT), estructura, instalaciones ni seguridad.",
+      "Los resultados son geométricos/heurísticos; la decisión y la responsabilidad son de la profesional habilitada."
+    ]
+  },
+  "objetivos": [
+    {
+      "id": "o1",
+      "kind": "sightline",
+      "prioridad": "high",
+      "peso": 3,
+      "score": 1,
+      "estado": "evaluado",
+      "evidencia": [
+        "visual visible (1)"
+      ],
+      "razon": null,
+      "aviso": "La visual no sustituye barreras ni supervisión."
+    },
+    {
+      "id": "o2",
+      "kind": "pool_supervision",
+      "prioridad": "high",
+      "peso": 3,
+      "score": null,
+      "estado": "alerta",
+      "evidencia": [],
+      "razon": "Supervisión y barreras no son verificables por el código: ver alertas de seguridad.",
+      "aviso": null
+    },
+    {
+      "id": "o3",
+      "kind": "daylight_preference",
+      "prioridad": "high",
+      "peso": 3,
+      "score": 1,
+      "estado": "parcial",
+      "evidencia": [
+        "relación vano/piso 0.17 (referencia de práctica 0,10)"
+      ],
+      "razon": null,
+      "aviso": "Proxy geométrico: no es iluminancia ni luz natural calculada."
+    },
+    {
+      "id": "o4",
+      "kind": "summer_cooling",
+      "prioridad": "medium",
+      "peso": 2,
+      "score": 0.03,
+      "estado": "evaluado",
+      "evidencia": [
+        "7.8 h de sol directo en la ventana más expuesta del living (verano)"
+      ],
+      "razon": null,
+      "aviso": "Sol directo geométrico; no es temperatura interior."
+    },
+    {
+      "id": "o5",
+      "kind": "circulation_minimal",
+      "prioridad": "medium",
+      "peso": 2,
+      "score": 0.5,
+      "estado": "evaluado",
+      "evidencia": [
+        "circulación 14 % de la superficie útil",
+        "3 trayecto(s) dormitorio→baño cruzan la zona social"
+      ],
+      "razon": null,
+      "aviso": null
+    },
+    {
+      "id": "o6",
+      "kind": "cost_saving",
+      "prioridad": "high",
+      "peso": 3,
+      "score": 0.3,
+      "estado": "evaluado",
+      "evidencia": [
+        "índice de envolvente 1.35",
+        "1 esquina(s) entrante(s)"
+      ],
+      "razon": null,
+      "aviso": "Índice relativo: no hay precios ni presupuesto."
+    }
+  ],
+  "detalle": {
+    "recorridos": {
+      "desde_acceso": {
+        "R-BC": {
+          "distancia_m": 6.6,
+          "ruta": [
+            "R-LIV",
+            "R-BC"
+          ]
+        },
+        "R-BP": {
+          "distancia_m": 18.5,
+          "ruta": [
+            "R-LIV",
+            "R-PAS",
+            "R-DP",
+            "R-BP"
+          ]
+        },
+        "R-COC": {
+          "distancia_m": 7.1,
+          "ruta": [
+            "R-LIV",
+            "R-COC"
+          ]
+        },
+        "R-D2": {
+          "distancia_m": 13.1,
+          "ruta": [
+            "R-LIV",
+            "R-PAS",
+            "R-D2"
+          ]
+        },
+        "R-D3": {
+          "distancia_m": 16.1,
+          "ruta": [
+            "R-LIV",
+            "R-PAS",
+            "R-D3"
+          ]
+        },
+        "R-DP": {
+          "distancia_m": 15.8,
+          "ruta": [
+            "R-LIV",
+            "R-PAS",
+            "R-DP"
+          ]
+        },
+        "R-LIV": {
+          "distancia_m": 2.6,
+          "ruta": [
+            "R-LIV"
+          ]
+        },
+        "R-PAS": {
+          "distancia_m": 10.2,
+          "ruta": [
+            "R-LIV",
+            "R-PAS"
+          ]
+        }
+      },
+      "cocina_a_living": {
+        "distancia_m": 4.5,
+        "ruta": [
+          "R-COC",
+          "R-LIV"
+        ]
+      },
+      "baños_a_dormitorios": [
+        {
+          "bano": "R-BC",
+          "dormitorio": "R-D2",
+          "distancia_m": 14.6,
+          "ruta": [
+            "R-D2",
+            "R-PAS",
+            "R-LIV",
+            "R-BC"
+          ]
+        },
+        {
+          "bano": "R-BC",
+          "dormitorio": "R-D3",
+          "distancia_m": 17.6,
+          "ruta": [
+            "R-D3",
+            "R-PAS",
+            "R-LIV",
+            "R-BC"
+          ]
+        },
+        {
+          "bano": "R-BC",
+          "dormitorio": "R-DP",
+          "distancia_m": 17.3,
+          "ruta": [
+            "R-DP",
+            "R-PAS",
+            "R-LIV",
+            "R-BC"
+          ]
+        },
+        {
+          "bano": "R-BP",
+          "dormitorio": "R-D2",
+          "distancia_m": 11.2,
+          "ruta": [
+            "R-D2",
+            "R-PAS",
+            "R-DP",
+            "R-BP"
+          ]
+        },
+        {
+          "bano": "R-BP",
+          "dormitorio": "R-D3",
+          "distancia_m": 14.2,
+          "ruta": [
+            "R-D3",
+            "R-PAS",
+            "R-DP",
+            "R-BP"
+          ]
+        },
+        {
+          "bano": "R-BP",
+          "dormitorio": "R-DP",
+          "distancia_m": 2.7,
+          "ruta": [
+            "R-DP",
+            "R-BP"
+          ]
+        }
+      ],
+      "circulacion_pct": 14,
+      "superficie_circulacion_m2": 10.6,
+      "cruces_por_zona_social": [
+        {
+          "dormitorio": "R-D2",
+          "bano": "R-BC",
+          "ruta": [
+            "R-D2",
+            "R-PAS",
+            "R-LIV",
+            "R-BC"
+          ]
+        },
+        {
+          "dormitorio": "R-D3",
+          "bano": "R-BC",
+          "ruta": [
+            "R-D3",
+            "R-PAS",
+            "R-LIV",
+            "R-BC"
+          ]
+        },
+        {
+          "dormitorio": "R-DP",
+          "bano": "R-BC",
+          "ruta": [
+            "R-DP",
+            "R-PAS",
+            "R-LIV",
+            "R-BC"
+          ]
+        }
+      ],
+      "salidas_exteriores": 2,
+      "recintos_sin_ruta": [],
+      "metodo": "camino mínimo por centros de recinto y puntos de puerta/paso (distancia en planta)",
+      "limites": "Distancias geométricas; no es flujo real de personas ni verificación de accesibilidad o evacuación normativa."
+    },
+    "seguridad": {
+      "piscina": true,
+      "alertas": [
+        {
+          "id": "piscina_barrera",
+          "severidad": "critica",
+          "texto": "Piscina en el programa: se requiere barrera independiente, control de acceso y supervisión activa, verificados por un profesional con la normativa vigente. La visual desde la casa no los reemplaza."
+        },
+        {
+          "id": "puerta_directa_P-LIV-PATIO",
+          "severidad": "critica",
+          "texto": "La puerta P-LIV-PATIO da directamente al patio con piscina sin control de acceso definido: no puede declararse seguridad demostrada."
+        }
+      ],
+      "seguridad_demostrada": false,
+      "motivo_no_demostrada": "Faltan barreras/supervisión verificadas por profesional.",
+      "puertas_exteriores": 2,
+      "ancho_puerta_min_mm": 700,
+      "accesibilidad_info": "Hay puertas de 700 mm (<800 mm de referencia de práctica): revisar accesibilidad si el encargo la exige."
+    },
+    "privacidad": {
+      "hallazgos": [
+        {
+          "tipo": "dormitorio_cerca_del_deslinde",
+          "ventana": "V-R-DP",
+          "distancia_mm": 2500,
+          "texto": "La ventana V-R-DP de zona privada mira a un deslinde a 2500 mm (<8000 mm de referencia heurística): posible vista desde/hacia el vecino."
+        },
+        {
+          "tipo": "dormitorio_cerca_del_deslinde",
+          "ventana": "V-R-D2",
+          "distancia_mm": 2500,
+          "texto": "La ventana V-R-D2 de zona privada mira a un deslinde a 2500 mm (<8000 mm de referencia heurística): posible vista desde/hacia el vecino."
+        },
+        {
+          "tipo": "dormitorio_cerca_del_deslinde",
+          "ventana": "V-R-D3",
+          "distancia_mm": 2500,
+          "texto": "La ventana V-R-D3 de zona privada mira a un deslinde a 2500 mm (<8000 mm de referencia heurística): posible vista desde/hacia el vecino."
+        }
+      ],
+      "privacidad_vecinos": "evaluado",
+      "razon": [],
+      "umbrales": {
+        "version": "heur-1",
+        "privacidad_distancia_mm": 8000,
+        "privacidad_ventanas_enfrentadas_mm": 6000,
+        "ancho_puerta_min_mm": 800,
+        "altura_ojo_mm": 1500,
+        "altura_objetivo_visual_mm": 900,
+        "no_normativo": true
+      },
+      "limites": "Geométrica y heurística; no considera cortinas, vegetación ni usos culturales de la privacidad."
+    },
+    "constructibilidad": {
+      "perimetro_exterior_m": 51.3,
+      "area_huella_m2": 90.03,
+      "indice_envolvente": 1.35,
+      "indice_ref": "perímetro exterior / perímetro de un cuadrado de igual área (1,00 = ideal)",
+      "esquinas_entrantes": 1,
+      "quiebres": 6,
+      "piezas_de_cubierta_planas": 1,
+      "distancia_maxima_entre_humedos_m": 13.8,
+      "clase_huella": "L",
+      "alertas": [
+        {
+          "id": "planta_irregular",
+          "severidad": "media",
+          "texto": "La planta tiene 1 esquina(s) entrante(s): una planta no rectangular exige que el ingeniero estructural revise su regularidad (no se afirma nada sobre sismo)."
+        }
+      ],
+      "precio": {
+        "estado": "no_estimado",
+        "razon": "Sin partidas, cubicaciones ni precios confirmados no se estima ningún valor en pesos."
+      },
+      "limites": "Índices geométricos relativos; no son presupuesto ni verificación estructural/hidráulica."
+    },
+    "viento": {
+      "abrigo": {
+        "estado": "no_concluyente",
+        "razon": "Falta clima cargado y/o norte verdadero confirmado."
+      },
+      "ventilacion": {
+        "recintos": [
+          {
+            "recinto": "R-D2",
+            "fachadas_con_ventana": [
+              "O"
+            ],
+            "potencial": "unilateral"
+          },
+          {
+            "recinto": "R-D3",
+            "fachadas_con_ventana": [
+              "O"
+            ],
+            "potencial": "unilateral"
+          },
+          {
+            "recinto": "R-DP",
+            "fachadas_con_ventana": [
+              "O"
+            ],
+            "potencial": "unilateral"
+          },
+          {
+            "recinto": "R-LIV",
+            "fachadas_con_ventana": [
+              "S"
+            ],
+            "potencial": "unilateral"
+          }
+        ],
+        "fraccion_con_ventilacion_cruzada_o_esquina": 0,
+        "limites": "Potencial GEOMÉTRICO (ventanas en distintas fachadas, supuestas practicables); no calcula caudales ni renovaciones de aire."
+      }
+    },
+    "sol": {
+      "verano": {
+        "estado": "calculado",
+        "fecha": "2026-12-21",
+        "ventanas": [
+          {
+            "id": "V-LIV-S",
+            "recinto": "R-LIV",
+            "lado": "S",
+            "horas_sol_directo": 7.8
+          },
+          {
+            "id": "P-LIV-PATIO",
+            "recinto": "R-LIV",
+            "lado": "N",
+            "horas_sol_directo": 6.5
+          },
+          {
+            "id": "V-BC",
+            "recinto": "R-BC",
+            "lado": "S",
+            "horas_sol_directo": 7.8
+          },
+          {
+            "id": "V-COC",
+            "recinto": "R-COC",
+            "lado": "N",
+            "horas_sol_directo": 6.5
+          },
+          {
+            "id": "V-COC-E",
+            "recinto": "R-COC",
+            "lado": "E",
+            "horas_sol_directo": 7
+          },
+          {
+            "id": "V-PAS",
+            "recinto": "R-PAS",
+            "lado": "E",
+            "horas_sol_directo": 7
+          },
+          {
+            "id": "V-R-DP",
+            "recinto": "R-DP",
+            "lado": "O",
+            "horas_sol_directo": 7.3
+          },
+          {
+            "id": "V-R-D2",
+            "recinto": "R-D2",
+            "lado": "O",
+            "horas_sol_directo": 7.3
+          },
+          {
+            "id": "V-R-D3",
+            "recinto": "R-D3",
+            "lado": "O",
+            "horas_sol_directo": 7.3
+          },
+          {
+            "id": "V-BP",
+            "recinto": "R-BP",
+            "lado": "O",
+            "horas_sol_directo": 7.3
+          }
+        ],
+        "limites": "Luz solar directa geométrica; no es iluminancia interior, deslumbramiento, ganancia térmica ni energía.",
+        "razon": null
+      },
+      "invierno": {
+        "estado": "calculado",
+        "fecha": "2026-06-21",
+        "ventanas": [
+          {
+            "id": "V-LIV-S",
+            "recinto": "R-LIV",
+            "lado": "S",
+            "horas_sol_directo": 0
+          },
+          {
+            "id": "P-LIV-PATIO",
+            "recinto": "R-LIV",
+            "lado": "N",
+            "horas_sol_directo": 7
+          },
+          {
+            "id": "V-BC",
+            "recinto": "R-BC",
+            "lado": "S",
+            "horas_sol_directo": 0
+          },
+          {
+            "id": "V-COC",
+            "recinto": "R-COC",
+            "lado": "N",
+            "horas_sol_directo": 8.8
+          },
+          {
+            "id": "V-COC-E",
+            "recinto": "R-COC",
+            "lado": "E",
+            "horas_sol_directo": 4.8
+          },
+          {
+            "id": "V-PAS",
+            "recinto": "R-PAS",
+            "lado": "E",
+            "horas_sol_directo": 4.8
+          },
+          {
+            "id": "V-R-DP",
+            "recinto": "R-DP",
+            "lado": "O",
+            "horas_sol_directo": 5
+          },
+          {
+            "id": "V-R-D2",
+            "recinto": "R-D2",
+            "lado": "O",
+            "horas_sol_directo": 5
+          },
+          {
+            "id": "V-R-D3",
+            "recinto": "R-D3",
+            "lado": "O",
+            "horas_sol_directo": 5
+          },
+          {
+            "id": "V-BP",
+            "recinto": "R-BP",
+            "lado": "O",
+            "horas_sol_directo": 5
+          }
+        ],
+        "limites": "Luz solar directa geométrica; no es iluminancia interior, deslumbramiento, ganancia térmica ni energía.",
+        "razon": null
+      }
+    }
+  },
+  "sitio_urbano": {
+    "verificaciones": [
+      {
+        "id": "encaje",
+        "estado": "consistente_con_dato",
+        "detalle": "La huella cabe en el predio ingresado (y retranqueos con fuente, si los hay)."
+      },
+      {
+        "id": "ocupacion",
+        "estado": "no_evaluable",
+        "detalle": "Falta el coeficiente de ocupación con fuente documentada."
+      },
+      {
+        "id": "altura",
+        "estado": "no_evaluable",
+        "detalle": "Falta altura máxima/rasantes con fuente."
+      }
+    ],
+    "aviso": "Verificación contra el dato ingresado; no es certificación normativa (requiere CIP vigente y profesional).",
+    "faltantes": [
+      {
+        "id": "cip_prc",
+        "texto": "CIP / instrumento de planificación vigente (retranqueos, ocupación, alturas, rasantes).",
+        "necesario_para": [
+          "restricciones urbanísticas"
+        ]
+      }
+    ]
+  },
+  "critica": {
+    "alternativa": "alt-L_con_patio",
+    "puntos_debiles": [
+      {
+        "objetivo": "summer_cooling",
+        "score": 0.03,
+        "evidencia": [
+          "7.8 h de sol directo en la ventana más expuesta del living (verano)"
+        ]
+      },
+      {
+        "objetivo": "cost_saving",
+        "score": 0.3,
+        "evidencia": [
+          "índice de envolvente 1.35",
+          "1 esquina(s) entrante(s)"
+        ]
+      },
+      {
+        "objetivo": "circulation_minimal",
+        "score": 0.5,
+        "evidencia": [
+          "circulación 14 % de la superficie útil",
+          "3 trayecto(s) dormitorio→baño cruzan la zona social"
+        ]
+      }
+    ],
+    "alertas_pendientes": [
+      {
+        "id": "piscina_barrera",
+        "severidad": "critica",
+        "texto": "Piscina en el programa: se requiere barrera independiente, control de acceso y supervisión activa, verificados por un profesional con la normativa vigente. La visual desde la casa no los reemplaza."
+      },
+      {
+        "id": "puerta_directa_P-LIV-PATIO",
+        "severidad": "critica",
+        "texto": "La puerta P-LIV-PATIO da directamente al patio con piscina sin control de acceso definido: no puede declararse seguridad demostrada."
+      }
+    ],
+    "objetivos_sin_evaluar": [],
+    "donde_otra_opcion_gana": [],
+    "evidencia_que_cambiaria_la_conclusion": [
+      "Archivo de clima (EPW) o caché local para viento regional.",
+      "CIP/IPT vigente para restricciones urbanísticas.",
+      "Revisión profesional de estructura, instalaciones y seguridad."
+    ],
+    "aviso": "Esto es una crítica sobre datos calculados; no inventa datos faltantes ni certifica nada."
+  }
+}

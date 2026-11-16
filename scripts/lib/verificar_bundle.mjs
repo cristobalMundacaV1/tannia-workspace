@@ -52,6 +52,7 @@ export async function verificarBundle(mcpbPath, { esperadas } = {}) {
     if (esperadas != null && tools.length !== esperadas) problemas.push(`se esperaban exactamente ${esperadas} herramientas y se publicaron ${tools.length}`);
     const malos = esquemasInvalidos(tools); datos.esquemas_invalidos = malos.length; if (malos.length) problemas.push(`esquemas inválidos: ${malos.slice(0, 5).join(' | ')}`);
     const diag = await cliente.callTool({ name: 'tannia_diagnostico', arguments: {} }); datos.diagnostico = diag.isError ? 'ERROR' : 'ok'; if (diag.isError) problemas.push('tannia_diagnostico devolvió error');
+    else { const v = diag.structuredContent?.versiones; datos.identidad_paquete = v?.paquete ?? null; datos.motor_arquitectonico = v?.motor_arquitectonico ?? null; if (v?.paquete?.origen !== 'manifest.json' || v.paquete.version !== manifest.version || v.paquete.id !== manifest.name) problemas.push(`el diagnóstico no informa la identidad del paquete instalado (esperado ${manifest.name} ${manifest.version}; obtenido ${JSON.stringify(v?.paquete ?? null)})`); }
   } catch (e) { problemas.push(`el paquete no inicia o no responde: ${String(e.message).split('\n')[0].slice(0, 200)}`); }
   finally { try { await cliente?.close(); } catch { /* cerrado */ } fs.rmSync(tmp, { recursive: true, force: true }); }
   return { ok: problemas.length === 0, problemas, datos };

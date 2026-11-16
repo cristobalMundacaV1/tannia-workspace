@@ -1,0 +1,31 @@
+{
+  "phase": "TW-10",
+  "contract_version": "autonomia-e2e-v2",
+  "overall_status": "IMPLEMENTANDO",
+  "branch": "feat/tw10-architectural-reasoning",
+  "head_sha": null,
+  "base_sha_verified": null,
+  "pr_url": null,
+  "updated_utc": null,
+  "current_gate": "G0",
+  "current_story": "TW10-00-01",
+  "next_action": "Verificar stack real y crear worktree TW10 aislado; leer contratos y pruebas históricas",
+  "gates": {
+    "G0": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G1": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G2": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G3": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G4": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G5": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G6": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G7": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G8": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G9": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []},
+    "G10": {"status": "NO_INICIADA", "sha": null, "evidence": [], "blockers": []}
+  },
+  "ci_windows": {"status": "NO_COMPROBADO", "sha": null, "url": null},
+  "ci_ubuntu": {"status": "NO_COMPROBADO", "sha": null, "url": null},
+  "external_required": ["AutoCAD 2027 real", "revisión arquitectónica independiente", "aprobación del PO"],
+  "unresolved_p0_p1": [],
+  "last_session_result": null
+}

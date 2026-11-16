@@ -1,0 +1,590 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1340" height="786" viewBox="0 0 1340 786" font-family="Arial, Helvetica, sans-serif"><rect width="100%" height="100%" fill="#fff"/><text x="20" y="28" font-size="18" font-weight="bold">Comparación de partidos</text><text x="20" y="46" font-size="11" fill="#a00">ANTEPROYECTO conceptual — no apto para construcción; sin verificación normativa ni profesional.</text>
+<text x="20" y="76" font-size="14" font-weight="bold">alt-compacta (compacta)</text><svg x="20" y="86" width="420" height="326" viewBox="0 0 14700 11400">
+<rect width="14700" height="11400" fill="#ffffff"/>
+<rect x="12170" y="5070" width="1430" height="3130" fill="#d9ecf5"/>
+<rect x="5820" y="900" width="1560" height="2930" fill="#d9ecf5"/>
+<rect x="9100" y="5070" width="2930" height="3130" fill="#fbe9d0"/>
+<rect x="7520" y="900" width="2960" height="2930" fill="#ecf3e3"/>
+<rect x="10620" y="900" width="2980" height="2930" fill="#ecf3e3"/>
+<rect x="2300" y="900" width="3380" height="2930" fill="#e4efe0"/>
+<rect x="2300" y="5070" width="6800" height="3130" fill="#f6efe0"/>
+<rect x="2300" y="3970" width="11300" height="960" fill="#f1f1f1"/>
+<rect x="2100" y="8200" width="750" height="200" fill="#2b2b2b"/>
+<rect x="3750" y="8200" width="2080" height="200" fill="#2b2b2b"/>
+<rect x="8230" y="8200" width="1770" height="200" fill="#2b2b2b"/>
+<rect x="11200" y="8200" width="1400" height="200" fill="#2b2b2b"/>
+<rect x="13200" y="8200" width="600" height="200" fill="#2b2b2b"/>
+<rect x="2100" y="7400" width="200" height="800" fill="#2b2b2b"/>
+<rect x="12030" y="7400" width="140" height="800" fill="#2b2b2b"/>
+<rect x="13600" y="7400" width="200" height="800" fill="#2b2b2b"/>
+<rect x="12030" y="5900" width="140" height="1500" fill="#2b2b2b"/>
+<rect x="13600" y="5900" width="200" height="1500" fill="#2b2b2b"/>
+<rect x="2100" y="5070" width="200" height="830" fill="#2b2b2b"/>
+<rect x="12030" y="5070" width="140" height="830" fill="#2b2b2b"/>
+<rect x="13600" y="5070" width="200" height="830" fill="#2b2b2b"/>
+<rect x="2100" y="4930" width="1100" height="140" fill="#2b2b2b"/>
+<rect x="4200" y="4930" width="8350" height="140" fill="#2b2b2b"/>
+<rect x="13250" y="4930" width="550" height="140" fill="#2b2b2b"/>
+<rect x="2100" y="3970" width="200" height="960" fill="#2b2b2b"/>
+<rect x="13600" y="3970" width="200" height="960" fill="#2b2b2b"/>
+<rect x="2100" y="3830" width="600" height="140" fill="#2b2b2b"/>
+<rect x="3500" y="3830" width="4450" height="140" fill="#2b2b2b"/>
+<rect x="8750" y="3830" width="2300" height="140" fill="#2b2b2b"/>
+<rect x="11850" y="3830" width="1950" height="140" fill="#2b2b2b"/>
+<rect x="2100" y="2700" width="200" height="1130" fill="#2b2b2b"/>
+<rect x="5680" y="2700" width="140" height="1130" fill="#2b2b2b"/>
+<rect x="7380" y="2700" width="140" height="1130" fill="#2b2b2b"/>
+<rect x="10480" y="2700" width="140" height="1130" fill="#2b2b2b"/>
+<rect x="13600" y="2700" width="200" height="1130" fill="#2b2b2b"/>
+<rect x="2100" y="2000" width="200" height="700" fill="#2b2b2b"/>
+<rect x="7380" y="2000" width="140" height="700" fill="#2b2b2b"/>
+<rect x="10480" y="2000" width="140" height="700" fill="#2b2b2b"/>
+<rect x="13600" y="2000" width="200" height="700" fill="#2b2b2b"/>
+<rect x="2100" y="900" width="200" height="1100" fill="#2b2b2b"/>
+<rect x="5680" y="900" width="140" height="1100" fill="#2b2b2b"/>
+<rect x="7380" y="900" width="140" height="1100" fill="#2b2b2b"/>
+<rect x="10480" y="900" width="140" height="1100" fill="#2b2b2b"/>
+<rect x="13600" y="900" width="200" height="1100" fill="#2b2b2b"/>
+<rect x="2100" y="700" width="1130" height="200" fill="#2b2b2b"/>
+<rect x="4730" y="700" width="1570" height="200" fill="#2b2b2b"/>
+<rect x="6900" y="700" width="1350" height="200" fill="#2b2b2b"/>
+<rect x="9750" y="700" width="1630" height="200" fill="#2b2b2b"/>
+<rect x="12880" y="700" width="920" height="200" fill="#2b2b2b"/>
+<rect x="2850" y="8200" width="900" height="200" fill="#ffffff"/>
+<path d="M 2850 8200 L 3750 8200 L 3742.3003752364293 8082.526427001953 L 3719.3332436601613 7967.062859407732 L 3681.4915792601582 7855.584910871419 L 3629.4228634059946 7750 L 3564.0180062621116 7652.1147138921515 L 3486.396103067893 7563.603896932107 L 3397.8852861078485 7485.981993737889 L 3300 7420.577136594005 L 3194.415089128581 7368.508420739842 L 3082.9371405922684 7330.666756339839 L 2967.4735729980466 7307.699624763571 L 2850 7300 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="2850" y1="8200" x2="2850" y2="7300" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="5830" y="8200" width="2400" height="200" fill="#ffffff"/>
+<line x1="5830" y1="8366.666666666666" x2="8230" y2="8366.666666666666" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="5830" y1="8300" x2="8230" y2="8300" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="5830" y1="8233.333333333334" x2="8230" y2="8233.333333333334" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="2100" y="5900" width="200" height="1500" fill="#ffffff"/>
+<line x1="2133.3333333333335" y1="7400" x2="2133.3333333333335" y2="5900" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2200" y1="7400" x2="2200" y2="5900" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2266.6666666666665" y1="7400" x2="2266.6666666666665" y2="5900" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="3200" y="4930" width="1000" height="140" fill="#ffffff"/>
+<rect x="10000" y="8200" width="1200" height="200" fill="#ffffff"/>
+<line x1="10000" y1="8366.666666666666" x2="11200" y2="8366.666666666666" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="10000" y1="8300" x2="11200" y2="8300" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="10000" y1="8233.333333333334" x2="11200" y2="8233.333333333334" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="12550" y="4930" width="700" height="140" fill="#ffffff"/>
+<path d="M 13250 5070 L 12550 5070 L 12555.988597038333 5161.368334554036 L 12573.851921597652 5251.173331571765 L 12603.2843272421 5337.878402655562 L 12643.782217350894 5420 L 12694.652661796135 5496.133000306105 L 12755.025253169417 5564.974746830583 L 12823.866999693895 5625.347338203865 L 12900 5676.217782649107 L 12982.121597344438 5716.7156727579 L 13068.826668428235 5746.148078402348 L 13158.631665445964 5764.011402961667 L 13250 5770 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="13250" y1="5070" x2="13250" y2="5770" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="12600" y="8200" width="600" height="200" fill="#ffffff"/>
+<line x1="12600" y1="8366.666666666666" x2="13200" y2="8366.666666666666" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="12600" y1="8300" x2="13200" y2="8300" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="12600" y1="8233.333333333334" x2="13200" y2="8233.333333333334" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="2700" y="3830" width="800" height="140" fill="#ffffff"/>
+<path d="M 2700 3830 L 3500 3830 L 3493.155889099048 3725.5790462239584 L 3472.7406610312546 3622.9447639179834 L 3439.1036260090295 3523.8532541079285 L 3392.8203230275512 3430 L 3334.682672232988 3342.9908567930233 L 3265.685424949238 3264.314575050762 L 3187.0091432069767 3195.317327767012 L 3100 3137.1796769724488 L 3006.146745892072 3090.8963739909705 L 2907.0552360820166 3057.2593389687454 L 2804.4209537760416 3036.844110900952 L 2700 3030 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="2700" y1="3830" x2="2700" y2="3030" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="3230" y="700" width="1500" height="200" fill="#ffffff"/>
+<line x1="3230" y1="866.666666666667" x2="4730" y2="866.666666666667" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="3230" y1="800" x2="4730" y2="800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="3230" y1="733.333333333333" x2="4730" y2="733.333333333333" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="7950" y="3830" width="800" height="140" fill="#ffffff"/>
+<path d="M 7950 3830 L 8750 3830 L 8743.15588909905 3725.5790462239584 L 8722.740661031254 3622.9447639179834 L 8689.10362600903 3523.8532541079285 L 8642.82032302755 3430 L 8584.682672232988 3342.9908567930233 L 8515.685424949239 3264.314575050762 L 8437.009143206977 3195.317327767012 L 8350 3137.1796769724488 L 8256.14674589207 3090.8963739909705 L 8157.055236082017 3057.2593389687454 L 8054.420953776042 3036.844110900952 L 7950 3030 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="7950" y1="3830" x2="7950" y2="3030" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="8250" y="700" width="1500" height="200" fill="#ffffff"/>
+<line x1="8250" y1="866.666666666667" x2="9750" y2="866.666666666667" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="8250" y1="800" x2="9750" y2="800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="8250" y1="733.333333333333" x2="9750" y2="733.333333333333" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="11050" y="3830" width="800" height="140" fill="#ffffff"/>
+<path d="M 11050 3830 L 11850 3830 L 11843.15588909905 3725.5790462239584 L 11822.740661031254 3622.9447639179834 L 11789.10362600903 3523.8532541079285 L 11742.82032302755 3430 L 11684.682672232988 3342.9908567930233 L 11615.685424949239 3264.314575050762 L 11537.009143206977 3195.317327767012 L 11450 3137.1796769724488 L 11356.146745892072 3090.8963739909705 L 11257.055236082017 3057.2593389687454 L 11154.420953776042 3036.844110900952 L 11050 3030 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="11050" y1="3830" x2="11050" y2="3030" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="11380" y="700" width="1500" height="200" fill="#ffffff"/>
+<line x1="11380" y1="866.666666666667" x2="12880" y2="866.666666666667" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="11380" y1="800" x2="12880" y2="800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="11380" y1="733.333333333333" x2="12880" y2="733.333333333333" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="5680" y="2000" width="140" height="700" fill="#ffffff"/>
+<path d="M 5820 2000 L 5820 2700 L 5911.368334554037 2694.011402961667 L 6001.173331571765 2676.148078402348 L 6087.878402655563 2646.7156727579004 L 6170 2606.217782649107 L 6246.133000306105 2555.3473382038646 L 6314.974746830583 2494.974746830583 L 6375.347338203865 2426.133000306105 L 6426.217782649107 2350 L 6466.7156727579 2267.8784026555622 L 6496.148078402348 2181.1733315717647 L 6514.011402961667 2091.3683345540358 L 6520 2000 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="5820" y1="2000" x2="6520" y2="2000" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="6300" y="700" width="600" height="200" fill="#ffffff"/>
+<line x1="6300" y1="866.666666666667" x2="6900" y2="866.666666666667" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="6300" y1="800" x2="6900" y2="800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="6300" y1="733.333333333333" x2="6900" y2="733.333333333333" stroke="#2a7fb8" stroke-width="18"/>
+<text x="12885" y="6595" font-size="160" font-weight="700" text-anchor="middle" fill="#222">BAÑO 1</text>
+<text x="12885" y="6825" font-size="140" text-anchor="middle" fill="#555">4.48 m²</text>
+<text x="6600" y="2325" font-size="160" font-weight="700" text-anchor="middle" fill="#222">BAÑO PRINCIPAL</text>
+<text x="6600" y="2555" font-size="140" text-anchor="middle" fill="#555">4.57 m²</text>
+<text x="10565" y="6515" font-size="160" font-weight="700" text-anchor="middle" fill="#222">COCINA</text>
+<text x="10565" y="6690" font-size="160" font-weight="700" text-anchor="middle" fill="#222">AMERICANA</text>
+<text x="10565" y="6915" font-size="140" text-anchor="middle" fill="#555">9.17 m²</text>
+<text x="9000" y="2325" font-size="160" font-weight="700" text-anchor="middle" fill="#222">DORMITORIO 2</text>
+<text x="9000" y="2555" font-size="140" text-anchor="middle" fill="#555">8.67 m²</text>
+<text x="12110" y="2325" font-size="160" font-weight="700" text-anchor="middle" fill="#222">DORMITORIO 3</text>
+<text x="12110" y="2555" font-size="140" text-anchor="middle" fill="#555">8.73 m²</text>
+<text x="3990" y="2245" font-size="160" font-weight="700" text-anchor="middle" fill="#222">DORMITORIO</text>
+<text x="3990" y="2420" font-size="160" font-weight="700" text-anchor="middle" fill="#222">PRINCIPAL</text>
+<text x="3990" y="2645" font-size="140" text-anchor="middle" fill="#555">9.90 m²</text>
+<text x="5700" y="6595" font-size="160" font-weight="700" text-anchor="middle" fill="#222">LIVING-COMEDOR</text>
+<text x="5700" y="6825" font-size="140" text-anchor="middle" fill="#555">21.28 m²</text>
+<text x="7950" y="4495" font-size="130" text-anchor="middle" fill="#444">PASILLO 10.85 m²</text>
+<line x1="2200" y1="8900" x2="5750" y2="8900" stroke="#a02c8c" stroke-width="12"/>
+<line x1="2200" y1="8550" x2="2200" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="2110" y1="8990" x2="2290" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<line x1="5750" y1="8550" x2="5750" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="5660" y1="8990" x2="5840" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<text x="3975" y="8850" font-size="125" text-anchor="middle" fill="#a02c8c">3.55</text>
+<line x1="5750" y1="8900" x2="7450" y2="8900" stroke="#a02c8c" stroke-width="12"/>
+<line x1="5750" y1="8550" x2="5750" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="5660" y1="8990" x2="5840" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<line x1="7450" y1="8550" x2="7450" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="7360" y1="8990" x2="7540" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<text x="6600" y="8850" font-size="125" text-anchor="middle" fill="#a02c8c">1.70</text>
+<line x1="7450" y1="8900" x2="9100" y2="8900" stroke="#a02c8c" stroke-width="12"/>
+<line x1="7450" y1="8550" x2="7450" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="7360" y1="8990" x2="7540" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<line x1="9100" y1="8550" x2="9100" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="9010" y1="8990" x2="9190" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<text x="8275" y="8850" font-size="125" text-anchor="middle" fill="#a02c8c">1.65</text>
+<line x1="9100" y1="8900" x2="10550" y2="8900" stroke="#a02c8c" stroke-width="12"/>
+<line x1="9100" y1="8550" x2="9100" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="9010" y1="8990" x2="9190" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<line x1="10550" y1="8550" x2="10550" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="10460" y1="8990" x2="10640" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<text x="9825" y="8850" font-size="125" text-anchor="middle" fill="#a02c8c">1.45</text>
+<line x1="10550" y1="8900" x2="12100" y2="8900" stroke="#a02c8c" stroke-width="12"/>
+<line x1="10550" y1="8550" x2="10550" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="10460" y1="8990" x2="10640" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<line x1="12100" y1="8550" x2="12100" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="12010" y1="8990" x2="12190" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<text x="11325" y="8850" font-size="125" text-anchor="middle" fill="#a02c8c">1.55</text>
+<line x1="12100" y1="8900" x2="13700" y2="8900" stroke="#a02c8c" stroke-width="12"/>
+<line x1="12100" y1="8550" x2="12100" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="12010" y1="8990" x2="12190" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<line x1="13700" y1="8550" x2="13700" y2="9050" stroke="#a02c8c" stroke-width="8"/><line x1="13610" y1="8990" x2="13790" y2="8810" stroke="#a02c8c" stroke-width="14"/>
+<text x="12900" y="8850" font-size="125" text-anchor="middle" fill="#a02c8c">1.60</text>
+<line x1="2100" y1="9600" x2="13800" y2="9600" stroke="#a02c8c" stroke-width="12"/>
+<line x1="2100" y1="8550" x2="2100" y2="9750" stroke="#a02c8c" stroke-width="8"/><line x1="2010" y1="9690" x2="2190" y2="9510" stroke="#a02c8c" stroke-width="14"/>
+<line x1="13800" y1="8550" x2="13800" y2="9750" stroke="#a02c8c" stroke-width="8"/><line x1="13710" y1="9690" x2="13890" y2="9510" stroke="#a02c8c" stroke-width="14"/>
+<text x="7950" y="9550" font-size="125" text-anchor="middle" fill="#a02c8c">11.70</text>
+<line x1="1600" y1="8300" x2="1600" y2="5000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="8300" x2="1450" y2="8300" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="8390" x2="1690" y2="8210" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="5000" x2="1450" y2="5000" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="5090" x2="1690" y2="4910" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 6650) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">3.30</text>
+<line x1="1600" y1="5000" x2="1600" y2="3900" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="5000" x2="1450" y2="5000" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="5090" x2="1690" y2="4910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="3900" x2="1450" y2="3900" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="3990" x2="1690" y2="3810" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 4450) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">1.10</text>
+<line x1="1600" y1="3900" x2="1600" y2="800" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="3900" x2="1450" y2="3900" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="3990" x2="1690" y2="3810" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="800" x2="1450" y2="800" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="890" x2="1690" y2="710" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 2350) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">3.10</text>
+<line x1="900" y1="8400" x2="900" y2="700" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="8400" x2="750" y2="8400" stroke="#a02c8c" stroke-width="8"/><line x1="810" y1="8490" x2="990" y2="8310" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="700" x2="750" y2="700" stroke="#a02c8c" stroke-width="8"/><line x1="810" y1="790" x2="990" y2="610" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(845 4550) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">7.70</text>
+<text x="8000" y="10600" font-size="230" font-weight="700" text-anchor="middle" fill="#b00020">ANTEPROYECTO — NO APTO PARA CONSTRUCCIÓN</text>
+<text x="8000" y="10860" font-size="150" text-anchor="middle" fill="#333">alt-compacta · alt-compacta · 2026-11-16</text>
+<text x="8000" y="11120" font-size="140" text-anchor="middle" fill="#333">Construida 90.09 m² · útil 77.65 m² · Albañilería confinada (ladrillo cerámico, pilares y cadenas de hormigón armado)</text>
+</svg><text x="20" y="432" font-size="11">Huella 90.09 m² · útil 77.65 m²</text><text x="20" y="447" font-size="11">Huella: rectangular · envolvente 1</text><text x="20" y="462" font-size="11">Estado: con_alertas_criticas</text><text x="20" y="477" font-size="11">Alertas críticas: 1</text>
+<text x="460" y="76" font-size="14" font-weight="bold">alt-L_con_patio (L_con_patio)</text><svg x="460" y="86" width="420" height="545" viewBox="0 0 14250 18500">
+<rect width="14250" height="18500" fill="#ffffff"/>
+<rect x="2300" y="12370" width="1630" height="2930" fill="#d9ecf5"/>
+<rect x="2300" y="7070" width="3130" height="1660" fill="#d9ecf5"/>
+<rect x="10250" y="12400" width="2900" height="2900" fill="#fbe9d0"/>
+<rect x="2300" y="3970" width="3130" height="2960" fill="#ecf3e3"/>
+<rect x="2300" y="900" width="3130" height="2930" fill="#ecf3e3"/>
+<rect x="2300" y="8870" width="3130" height="3360" fill="#e4efe0"/>
+<rect x="4070" y="12400" width="6180" height="2900" fill="#f6efe0"/>
+<rect x="5570" y="900" width="930" height="11400" fill="#f1f1f1"/>
+<rect x="2100" y="15300" width="700" height="200" fill="#2b2b2b"/>
+<rect x="3400" y="15300" width="1250" height="200" fill="#2b2b2b"/>
+<rect x="5550" y="15300" width="1940" height="200" fill="#2b2b2b"/>
+<rect x="9890" y="15300" width="3460" height="200" fill="#2b2b2b"/>
+<rect x="2100" y="14450" width="200" height="850" fill="#2b2b2b"/>
+<rect x="3930" y="14450" width="140" height="850" fill="#2b2b2b"/>
+<rect x="13150" y="14450" width="200" height="850" fill="#2b2b2b"/>
+<rect x="2100" y="14200" width="200" height="250" fill="#2b2b2b"/>
+<rect x="3930" y="14200" width="140" height="250" fill="#2b2b2b"/>
+<rect x="2100" y="13500" width="200" height="700" fill="#2b2b2b"/>
+<rect x="2100" y="13250" width="200" height="250" fill="#2b2b2b"/>
+<rect x="3930" y="13250" width="140" height="250" fill="#2b2b2b"/>
+<rect x="2100" y="12400" width="200" height="850" fill="#2b2b2b"/>
+<rect x="3930" y="12400" width="140" height="850" fill="#2b2b2b"/>
+<rect x="13150" y="12400" width="200" height="850" fill="#2b2b2b"/>
+<rect x="2100" y="12370" width="200" height="30" fill="#2b2b2b"/>
+<rect x="3930" y="12370" width="140" height="30" fill="#2b2b2b"/>
+<rect x="6500" y="12370" width="1030" height="30" fill="#2b2b2b"/>
+<rect x="9330" y="12370" width="1670" height="30" fill="#2b2b2b"/>
+<rect x="12500" y="12370" width="850" height="30" fill="#2b2b2b"/>
+<rect x="2100" y="12230" width="3470" height="140" fill="#2b2b2b"/>
+<rect x="6500" y="12230" width="1030" height="140" fill="#2b2b2b"/>
+<rect x="9330" y="12230" width="1670" height="140" fill="#2b2b2b"/>
+<rect x="12500" y="12230" width="850" height="140" fill="#2b2b2b"/>
+<rect x="2100" y="12200" width="200" height="30" fill="#2b2b2b"/>
+<rect x="5430" y="12200" width="140" height="30" fill="#2b2b2b"/>
+<rect x="6500" y="12200" width="1030" height="30" fill="#2b2b2b"/>
+<rect x="9330" y="12200" width="1670" height="30" fill="#2b2b2b"/>
+<rect x="12500" y="12200" width="850" height="30" fill="#2b2b2b"/>
+<rect x="2100" y="11300" width="200" height="900" fill="#2b2b2b"/>
+<rect x="5430" y="11300" width="140" height="900" fill="#2b2b2b"/>
+<rect x="6500" y="11300" width="200" height="900" fill="#2b2b2b"/>
+<rect x="5430" y="10950" width="140" height="350" fill="#2b2b2b"/>
+<rect x="6500" y="10950" width="200" height="350" fill="#2b2b2b"/>
+<rect x="6500" y="10150" width="200" height="800" fill="#2b2b2b"/>
+<rect x="5430" y="9800" width="140" height="350" fill="#2b2b2b"/>
+<rect x="6500" y="9800" width="200" height="350" fill="#2b2b2b"/>
+<rect x="2100" y="8870" width="200" height="930" fill="#2b2b2b"/>
+<rect x="5430" y="8870" width="140" height="930" fill="#2b2b2b"/>
+<rect x="6500" y="8870" width="200" height="930" fill="#2b2b2b"/>
+<rect x="2100" y="8730" width="1400" height="140" fill="#2b2b2b"/>
+<rect x="4200" y="8730" width="1370" height="140" fill="#2b2b2b"/>
+<rect x="6500" y="8730" width="200" height="140" fill="#2b2b2b"/>
+<rect x="2100" y="8200" width="200" height="530" fill="#2b2b2b"/>
+<rect x="5430" y="8200" width="140" height="530" fill="#2b2b2b"/>
+<rect x="6500" y="8200" width="200" height="530" fill="#2b2b2b"/>
+<rect x="5430" y="7600" width="140" height="600" fill="#2b2b2b"/>
+<rect x="6500" y="7600" width="200" height="600" fill="#2b2b2b"/>
+<rect x="2100" y="7150" width="200" height="450" fill="#2b2b2b"/>
+<rect x="5430" y="7150" width="140" height="450" fill="#2b2b2b"/>
+<rect x="6500" y="7150" width="200" height="450" fill="#2b2b2b"/>
+<rect x="2100" y="7070" width="200" height="80" fill="#2b2b2b"/>
+<rect x="5430" y="7070" width="140" height="80" fill="#2b2b2b"/>
+<rect x="2100" y="6930" width="3470" height="140" fill="#2b2b2b"/>
+<rect x="2100" y="6200" width="200" height="730" fill="#2b2b2b"/>
+<rect x="5430" y="6200" width="140" height="730" fill="#2b2b2b"/>
+<rect x="5430" y="5950" width="140" height="250" fill="#2b2b2b"/>
+<rect x="5430" y="5850" width="140" height="100" fill="#2b2b2b"/>
+<rect x="6500" y="5850" width="200" height="100" fill="#2b2b2b"/>
+<rect x="6500" y="5050" width="200" height="800" fill="#2b2b2b"/>
+<rect x="5430" y="4700" width="140" height="350" fill="#2b2b2b"/>
+<rect x="6500" y="4700" width="200" height="350" fill="#2b2b2b"/>
+<rect x="2100" y="3970" width="200" height="730" fill="#2b2b2b"/>
+<rect x="5430" y="3970" width="140" height="730" fill="#2b2b2b"/>
+<rect x="6500" y="3970" width="200" height="730" fill="#2b2b2b"/>
+<rect x="2100" y="3830" width="3470" height="140" fill="#2b2b2b"/>
+<rect x="6500" y="3830" width="200" height="140" fill="#2b2b2b"/>
+<rect x="2100" y="3100" width="200" height="730" fill="#2b2b2b"/>
+<rect x="5430" y="3100" width="140" height="730" fill="#2b2b2b"/>
+<rect x="6500" y="3100" width="200" height="730" fill="#2b2b2b"/>
+<rect x="5430" y="2750" width="140" height="350" fill="#2b2b2b"/>
+<rect x="6500" y="2750" width="200" height="350" fill="#2b2b2b"/>
+<rect x="6500" y="1950" width="200" height="800" fill="#2b2b2b"/>
+<rect x="5430" y="1600" width="140" height="350" fill="#2b2b2b"/>
+<rect x="6500" y="1600" width="200" height="350" fill="#2b2b2b"/>
+<rect x="2100" y="900" width="200" height="700" fill="#2b2b2b"/>
+<rect x="5430" y="900" width="140" height="700" fill="#2b2b2b"/>
+<rect x="6500" y="900" width="200" height="700" fill="#2b2b2b"/>
+<rect x="2100" y="700" width="4600" height="200" fill="#2b2b2b"/>
+<rect x="4650" y="15300" width="900" height="200" fill="#ffffff"/>
+<path d="M 4650 15300 L 5550 15300 L 5542.300375236429 15182.526427001954 L 5519.333243660161 15067.062859407732 L 5481.491579260159 14955.58491087142 L 5429.422863405995 14850 L 5364.018006262111 14752.114713892151 L 5286.396103067893 14663.603896932107 L 5197.8852861078485 14585.981993737889 L 5100 14520.577136594005 L 4994.415089128581 14468.508420739841 L 4882.937140592268 14430.666756339839 L 4767.473572998047 14407.69962476357 L 4650 14400 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="4650" y1="15300" x2="4650" y2="14400" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="7490" y="15300" width="2400" height="200" fill="#ffffff"/>
+<line x1="7490" y1="15466.666666666666" x2="9890" y2="15466.666666666666" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="7490" y1="15400" x2="9890" y2="15400" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="7490" y1="15333.333333333334" x2="9890" y2="15333.333333333334" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="7530" y="12200" width="1800" height="200" fill="#ffffff"/>
+<path d="M 9330 12400 L 7530 12400 L 7545.399249527141 12634.947145996091 L 7591.333512679677 12865.874281184537 L 7667.0168414796835 13088.830178257162 L 7771.154273188011 13300 L 7901.963987475777 13495.770572215697 L 8057.207793864214 13672.792206135786 L 8234.229427784303 13828.036012524222 L 8430 13958.84572681199 L 8641.169821742838 14062.983158520316 L 8864.125718815463 14138.666487320323 L 9095.052854003907 14184.600750472859 L 9330 14200 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="9330" y1="12400" x2="9330" y2="14200" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="3930" y="13500" width="140" height="700" fill="#ffffff"/>
+<path d="M 3930 13500 L 3230 13500 L 3235.9885970383325 13591.368334554036 L 3253.851921597652 13681.173331571765 L 3283.284327242099 13767.878402655562 L 3323.782217350893 13850 L 3374.6526617961354 13926.133000306105 L 3435.025253169417 13994.974746830583 L 3503.866999693895 14055.347338203865 L 3580 14106.217782649106 L 3662.1215973444373 14146.7156727579 L 3748.8266684282353 14176.148078402348 L 3838.631665445964 14194.011402961667 L 3930 14200 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="3930" y1="13500" x2="3230" y2="13500" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="2800" y="15300" width="600" height="200" fill="#ffffff"/>
+<line x1="2800" y1="15466.666666666666" x2="3400" y2="15466.666666666666" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2800" y1="15400" x2="3400" y2="15400" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2800" y1="15333.333333333334" x2="3400" y2="15333.333333333334" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="11000" y="12200" width="1500" height="200" fill="#ffffff"/>
+<line x1="11000" y1="12366.666666666666" x2="12500" y2="12366.666666666666" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="11000" y1="12300" x2="12500" y2="12300" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="11000" y1="12233.333333333334" x2="12500" y2="12233.333333333334" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="13150" y="13250" width="200" height="1200" fill="#ffffff"/>
+<line x1="13183.333333333334" y1="14450" x2="13183.333333333334" y2="13250" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="13250" y1="14450" x2="13250" y2="13250" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="13316.666666666666" y1="14450" x2="13316.666666666666" y2="13250" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="6500" y="5950" width="200" height="1200" fill="#ffffff"/>
+<line x1="6533.333333333333" y1="7150" x2="6533.333333333333" y2="5950" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="6600" y1="7150" x2="6600" y2="5950" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="6666.666666666667" y1="7150" x2="6666.666666666667" y2="5950" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="5430" y="10150" width="140" height="800" fill="#ffffff"/>
+<path d="M 5430 10150 L 4630 10150 L 4636.844110900952 10254.42095377604 L 4657.259338968745 10357.055236082017 L 4690.8963739909705 10456.14674589207 L 4737.17967697245 10550 L 4795.317327767012 10637.009143206977 L 4864.314575050762 10715.685424949239 L 4942.990856793023 10784.682672232988 L 5030 10842.82032302755 L 5123.8532541079285 10889.10362600903 L 5222.944763917983 10922.740661031254 L 5325.579046223958 10943.15588909905 L 5430 10950 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="5430" y1="10150" x2="4630" y2="10150" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="2100" y="9800" width="200" height="1500" fill="#ffffff"/>
+<line x1="2133.3333333333335" y1="11300" x2="2133.3333333333335" y2="9800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2200" y1="11300" x2="2200" y2="9800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2266.6666666666665" y1="11300" x2="2266.6666666666665" y2="9800" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="5430" y="5050" width="140" height="800" fill="#ffffff"/>
+<path d="M 5430 5050 L 4630 5050 L 4636.844110900952 5154.420953776042 L 4657.259338968745 5257.055236082017 L 4690.8963739909705 5356.146745892071 L 4737.17967697245 5450 L 4795.317327767012 5537.009143206977 L 4864.314575050762 5615.685424949237 L 4942.990856793023 5684.682672232988 L 5030 5742.82032302755 L 5123.8532541079285 5789.1036260090295 L 5222.944763917983 5822.740661031254 L 5325.579046223958 5843.155889099049 L 5430 5850 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="5430" y1="5050" x2="4630" y2="5050" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="2100" y="4700" width="200" height="1500" fill="#ffffff"/>
+<line x1="2133.3333333333335" y1="6200" x2="2133.3333333333335" y2="4700" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2200" y1="6200" x2="2200" y2="4700" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2266.6666666666665" y1="6200" x2="2266.6666666666665" y2="4700" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="5430" y="1950" width="140" height="800" fill="#ffffff"/>
+<path d="M 5430 1950 L 4630 1950 L 4636.844110900952 2054.4209537760416 L 4657.259338968745 2157.0552360820166 L 4690.8963739909705 2256.1467458920706 L 4737.17967697245 2350 L 4795.317327767012 2437.0091432069767 L 4864.314575050762 2515.685424949237 L 4942.990856793023 2584.682672232988 L 5030 2642.8203230275503 L 5123.8532541079285 2689.1036260090295 L 5222.944763917983 2722.7406610312537 L 5325.579046223958 2743.155889099049 L 5430 2750 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="5430" y1="1950" x2="4630" y2="1950" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="2100" y="1600" width="200" height="1500" fill="#ffffff"/>
+<line x1="2133.3333333333335" y1="3100" x2="2133.3333333333335" y2="1600" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2200" y1="3100" x2="2200" y2="1600" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2266.6666666666665" y1="3100" x2="2266.6666666666665" y2="1600" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="3500" y="8730" width="700" height="140" fill="#ffffff"/>
+<path d="M 4200 8730 L 4200 8030 L 4108.631665445964 8035.988597038333 L 4018.8266684282353 8053.851921597652 L 3932.1215973444373 8083.2843272421 L 3850 8123.782217350893 L 3773.8669996938957 8174.652661796135 L 3705.025253169417 8235.025253169417 L 3644.6526617961354 8303.866999693895 L 3593.782217350893 8380 L 3553.284327242099 8462.121597344438 L 3523.851921597652 8548.826668428235 L 3505.988597038333 8638.631665445964 L 3500 8730 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="4200" y1="8730" x2="4200" y2="8030" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="2100" y="7600" width="200" height="600" fill="#ffffff"/>
+<line x1="2133.3333333333335" y1="8200" x2="2133.3333333333335" y2="7600" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2200" y1="8200" x2="2200" y2="7600" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2266.6666666666665" y1="8200" x2="2266.6666666666665" y2="7600" stroke="#2a7fb8" stroke-width="18"/>
+<text x="3115" y="13795" font-size="160" font-weight="700" text-anchor="middle" fill="#222">BAÑO 1</text>
+<text x="3115" y="14025" font-size="140" text-anchor="middle" fill="#555">4.78 m²</text>
+<text x="3865" y="7860" font-size="160" font-weight="700" text-anchor="middle" fill="#222">BAÑO PRINCIPAL</text>
+<text x="3865" y="8090" font-size="140" text-anchor="middle" fill="#555">5.20 m²</text>
+<text x="11700" y="13730" font-size="160" font-weight="700" text-anchor="middle" fill="#222">COCINA</text>
+<text x="11700" y="13905" font-size="160" font-weight="700" text-anchor="middle" fill="#222">AMERICANA</text>
+<text x="11700" y="14130" font-size="140" text-anchor="middle" fill="#555">8.41 m²</text>
+<text x="3865" y="5410" font-size="160" font-weight="700" text-anchor="middle" fill="#222">DORMITORIO 2</text>
+<text x="3865" y="5640" font-size="140" text-anchor="middle" fill="#555">9.26 m²</text>
+<text x="3865" y="2325" font-size="160" font-weight="700" text-anchor="middle" fill="#222">DORMITORIO 3</text>
+<text x="3865" y="2555" font-size="140" text-anchor="middle" fill="#555">9.17 m²</text>
+<text x="3865" y="10430" font-size="160" font-weight="700" text-anchor="middle" fill="#222">DORMITORIO</text>
+<text x="3865" y="10605" font-size="160" font-weight="700" text-anchor="middle" fill="#222">PRINCIPAL</text>
+<text x="3865" y="10830" font-size="140" text-anchor="middle" fill="#555">10.52 m²</text>
+<text x="7160" y="13810" font-size="160" font-weight="700" text-anchor="middle" fill="#222">LIVING-COMEDOR</text>
+<text x="7160" y="14040" font-size="140" text-anchor="middle" fill="#555">17.92 m²</text>
+<text x="6035" y="6645" font-size="130" text-anchor="middle" fill="#444">PASILLO 10.60 m²</text>
+<line x1="2200" y1="16000" x2="4000" y2="16000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="2200" y1="15650" x2="2200" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="2110" y1="16090" x2="2290" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="4000" y1="15650" x2="4000" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="3910" y1="16090" x2="4090" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<text x="3100" y="15950" font-size="125" text-anchor="middle" fill="#a02c8c">1.80</text>
+<line x1="4000" y1="16000" x2="5500" y2="16000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="4000" y1="15650" x2="4000" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="3910" y1="16090" x2="4090" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="5500" y1="15650" x2="5500" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="5410" y1="16090" x2="5590" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<text x="4750" y="15950" font-size="125" text-anchor="middle" fill="#a02c8c">1.50</text>
+<line x1="5500" y1="16000" x2="6600" y2="16000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="5500" y1="15650" x2="5500" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="5410" y1="16090" x2="5590" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="6600" y1="15650" x2="6600" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="6510" y1="16090" x2="6690" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<text x="6050" y="15950" font-size="125" text-anchor="middle" fill="#a02c8c">1.10</text>
+<line x1="6600" y1="16000" x2="10250" y2="16000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="6600" y1="15650" x2="6600" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="6510" y1="16090" x2="6690" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="10250" y1="15650" x2="10250" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="10160" y1="16090" x2="10340" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<text x="8425" y="15950" font-size="125" text-anchor="middle" fill="#a02c8c">3.65</text>
+<line x1="10250" y1="16000" x2="13250" y2="16000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="10250" y1="15650" x2="10250" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="10160" y1="16090" x2="10340" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="13250" y1="15650" x2="13250" y2="16150" stroke="#a02c8c" stroke-width="8"/><line x1="13160" y1="16090" x2="13340" y2="15910" stroke="#a02c8c" stroke-width="14"/>
+<text x="11750" y="15950" font-size="125" text-anchor="middle" fill="#a02c8c">3.00</text>
+<line x1="2100" y1="16700" x2="13350" y2="16700" stroke="#a02c8c" stroke-width="12"/>
+<line x1="2100" y1="15650" x2="2100" y2="16850" stroke="#a02c8c" stroke-width="8"/><line x1="2010" y1="16790" x2="2190" y2="16610" stroke="#a02c8c" stroke-width="14"/>
+<line x1="13350" y1="15650" x2="13350" y2="16850" stroke="#a02c8c" stroke-width="8"/><line x1="13260" y1="16790" x2="13440" y2="16610" stroke="#a02c8c" stroke-width="14"/>
+<text x="7725" y="16650" font-size="125" text-anchor="middle" fill="#a02c8c">11.25</text>
+<line x1="1600" y1="15400" x2="1600" y2="12300" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="15400" x2="1450" y2="15400" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="15490" x2="1690" y2="15310" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="12300" x2="1450" y2="12300" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="12390" x2="1690" y2="12210" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 13850) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">3.10</text>
+<line x1="1600" y1="12300" x2="1600" y2="8800" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="12300" x2="1450" y2="12300" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="12390" x2="1690" y2="12210" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="8800" x2="1450" y2="8800" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="8890" x2="1690" y2="8710" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 10550) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">3.50</text>
+<line x1="1600" y1="8800" x2="1600" y2="7000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="8800" x2="1450" y2="8800" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="8890" x2="1690" y2="8710" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="7000" x2="1450" y2="7000" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="7090" x2="1690" y2="6910" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 7900) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">1.80</text>
+<line x1="1600" y1="7000" x2="1600" y2="3900" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="7000" x2="1450" y2="7000" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="7090" x2="1690" y2="6910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="3900" x2="1450" y2="3900" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="3990" x2="1690" y2="3810" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 5450) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">3.10</text>
+<line x1="1600" y1="3900" x2="1600" y2="800" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="3900" x2="1450" y2="3900" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="3990" x2="1690" y2="3810" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="800" x2="1450" y2="800" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="890" x2="1690" y2="710" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 2350) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">3.10</text>
+<line x1="900" y1="15500" x2="900" y2="700" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="15500" x2="750" y2="15500" stroke="#a02c8c" stroke-width="8"/><line x1="810" y1="15590" x2="990" y2="15410" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="700" x2="750" y2="700" stroke="#a02c8c" stroke-width="8"/><line x1="810" y1="790" x2="990" y2="610" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(845 8100) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">14.80</text>
+<text x="7775" y="17700" font-size="230" font-weight="700" text-anchor="middle" fill="#b00020">ANTEPROYECTO — NO APTO PARA CONSTRUCCIÓN</text>
+<text x="7775" y="17960" font-size="150" text-anchor="middle" fill="#333">alt-L_con_patio · alt-L_con_patio · 2026-11-16</text>
+<text x="7775" y="18220" font-size="140" text-anchor="middle" fill="#333">Construida 90.03 m² · útil 75.86 m² · Albañilería confinada (ladrillo cerámico, pilares y cadenas de hormigón armado)</text>
+</svg><text x="460" y="651" font-size="11">Huella 90.03 m² · útil 75.86 m²</text><text x="460" y="666" font-size="11">Huella: L · envolvente 1.35</text><text x="460" y="681" font-size="11">Estado: con_alertas_criticas</text><text x="460" y="696" font-size="11">Alertas críticas: 2</text>
+<text x="900" y="76" font-size="14" font-weight="bold">alt-dos_alas (dos_alas)</text><svg x="900" y="86" width="420" height="415" viewBox="0 0 15700 15500">
+<rect width="15700" height="15500" fill="#ffffff"/>
+<rect x="13070" y="900" width="1530" height="2830" fill="#d9ecf5"/>
+<rect x="5570" y="900" width="1560" height="2830" fill="#d9ecf5"/>
+<rect x="2300" y="9200" width="2900" height="3100" fill="#fbe9d0"/>
+<rect x="7270" y="900" width="2760" height="2830" fill="#ecf3e3"/>
+<rect x="10170" y="900" width="2760" height="2830" fill="#ecf3e3"/>
+<rect x="2300" y="900" width="3130" height="2830" fill="#e4efe0"/>
+<rect x="5200" y="9200" width="9400" height="3100" fill="#f6efe0"/>
+<rect x="2300" y="3870" width="12300" height="930" fill="#f1f1f1"/>
+<rect x="13700" y="4900" width="900" height="4200" fill="#f1f1f1"/>
+<rect x="2100" y="12300" width="5230" height="200" fill="#2b2b2b"/>
+<rect x="9730" y="12300" width="3420" height="200" fill="#2b2b2b"/>
+<rect x="14050" y="12300" width="750" height="200" fill="#2b2b2b"/>
+<rect x="2100" y="11350" width="200" height="950" fill="#2b2b2b"/>
+<rect x="14600" y="11350" width="200" height="950" fill="#2b2b2b"/>
+<rect x="14600" y="10150" width="200" height="1200" fill="#2b2b2b"/>
+<rect x="2100" y="9200" width="200" height="950" fill="#2b2b2b"/>
+<rect x="14600" y="9200" width="200" height="950" fill="#2b2b2b"/>
+<rect x="2100" y="9100" width="850" height="100" fill="#2b2b2b"/>
+<rect x="4450" y="9100" width="4050" height="100" fill="#2b2b2b"/>
+<rect x="10300" y="9100" width="3400" height="100" fill="#2b2b2b"/>
+<rect x="14600" y="9100" width="200" height="100" fill="#2b2b2b"/>
+<rect x="2100" y="9000" width="850" height="100" fill="#2b2b2b"/>
+<rect x="4450" y="9000" width="4050" height="100" fill="#2b2b2b"/>
+<rect x="10300" y="9000" width="3400" height="100" fill="#2b2b2b"/>
+<rect x="14600" y="9000" width="200" height="100" fill="#2b2b2b"/>
+<rect x="13500" y="7600" width="200" height="1400" fill="#2b2b2b"/>
+<rect x="14600" y="7600" width="200" height="1400" fill="#2b2b2b"/>
+<rect x="13500" y="6400" width="200" height="1200" fill="#2b2b2b"/>
+<rect x="13500" y="5000" width="200" height="1400" fill="#2b2b2b"/>
+<rect x="14600" y="5000" width="200" height="1400" fill="#2b2b2b"/>
+<rect x="2100" y="4900" width="3340" height="100" fill="#2b2b2b"/>
+<rect x="6940" y="4900" width="6760" height="100" fill="#2b2b2b"/>
+<rect x="14600" y="4900" width="200" height="100" fill="#2b2b2b"/>
+<rect x="2100" y="4800" width="3340" height="100" fill="#2b2b2b"/>
+<rect x="6940" y="4800" width="6760" height="100" fill="#2b2b2b"/>
+<rect x="14600" y="4800" width="200" height="100" fill="#2b2b2b"/>
+<rect x="2100" y="3870" width="200" height="930" fill="#2b2b2b"/>
+<rect x="14600" y="3870" width="200" height="930" fill="#2b2b2b"/>
+<rect x="2100" y="3730" width="1350" height="140" fill="#2b2b2b"/>
+<rect x="4250" y="3730" width="4000" height="140" fill="#2b2b2b"/>
+<rect x="9050" y="3730" width="2100" height="140" fill="#2b2b2b"/>
+<rect x="11950" y="3730" width="1550" height="140" fill="#2b2b2b"/>
+<rect x="14200" y="3730" width="600" height="140" fill="#2b2b2b"/>
+<rect x="2100" y="2650" width="200" height="1080" fill="#2b2b2b"/>
+<rect x="5430" y="2650" width="140" height="1080" fill="#2b2b2b"/>
+<rect x="7130" y="2650" width="140" height="1080" fill="#2b2b2b"/>
+<rect x="10030" y="2650" width="140" height="1080" fill="#2b2b2b"/>
+<rect x="12930" y="2650" width="140" height="1080" fill="#2b2b2b"/>
+<rect x="14600" y="2650" width="200" height="1080" fill="#2b2b2b"/>
+<rect x="2100" y="1950" width="200" height="700" fill="#2b2b2b"/>
+<rect x="7130" y="1950" width="140" height="700" fill="#2b2b2b"/>
+<rect x="10030" y="1950" width="140" height="700" fill="#2b2b2b"/>
+<rect x="12930" y="1950" width="140" height="700" fill="#2b2b2b"/>
+<rect x="14600" y="1950" width="200" height="700" fill="#2b2b2b"/>
+<rect x="2100" y="900" width="200" height="1050" fill="#2b2b2b"/>
+<rect x="5430" y="900" width="140" height="1050" fill="#2b2b2b"/>
+<rect x="7130" y="900" width="140" height="1050" fill="#2b2b2b"/>
+<rect x="10030" y="900" width="140" height="1050" fill="#2b2b2b"/>
+<rect x="12930" y="900" width="140" height="1050" fill="#2b2b2b"/>
+<rect x="14600" y="900" width="200" height="1050" fill="#2b2b2b"/>
+<rect x="2100" y="700" width="1000" height="200" fill="#2b2b2b"/>
+<rect x="4600" y="700" width="1450" height="200" fill="#2b2b2b"/>
+<rect x="6650" y="700" width="1250" height="200" fill="#2b2b2b"/>
+<rect x="9400" y="700" width="1400" height="200" fill="#2b2b2b"/>
+<rect x="12300" y="700" width="1250" height="200" fill="#2b2b2b"/>
+<rect x="14150" y="700" width="650" height="200" fill="#2b2b2b"/>
+<rect x="13150" y="12300" width="900" height="200" fill="#ffffff"/>
+<path d="M 14050 12300 L 14050 11400 L 13932.526427001954 11407.69962476357 L 13817.062859407732 11430.666756339839 L 13705.58491087142 11468.508420739841 L 13600 11520.577136594005 L 13502.114713892151 11585.981993737889 L 13413.603896932107 11663.603896932107 L 13335.981993737889 11752.114713892151 L 13270.577136594005 11850 L 13218.508420739841 11955.58491087142 L 13180.666756339839 12067.062859407732 L 13157.69962476357 12182.526427001954 L 13150 12300 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="14050" y1="12300" x2="14050" y2="11400" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="7330" y="12300" width="2400" height="200" fill="#ffffff"/>
+<line x1="7330" y1="12466.666666666666" x2="9730" y2="12466.666666666666" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="7330" y1="12400" x2="9730" y2="12400" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="7330" y1="12333.333333333334" x2="9730" y2="12333.333333333334" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="8500" y="9000" width="1800" height="200" fill="#ffffff"/>
+<path d="M 10300 9200 L 8500 9200 L 8515.399249527141 9434.947145996091 L 8561.333512679677 9665.874281184537 L 8637.016841479683 9888.830178257162 L 8741.15427318801 10100 L 8871.963987475778 10295.770572215697 L 9027.207793864214 10472.792206135786 L 9204.229427784303 10628.036012524222 L 9400 10758.84572681199 L 9611.169821742838 10862.983158520316 L 9834.125718815463 10938.666487320323 L 10065.052854003907 10984.600750472859 L 10300 11000 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="10300" y1="9200" x2="10300" y2="11000" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="2950" y="9000" width="1500" height="200" fill="#ffffff"/>
+<line x1="2950" y1="9166.666666666666" x2="4450" y2="9166.666666666666" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2950" y1="9100" x2="4450" y2="9100" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2950" y1="9033.333333333334" x2="4450" y2="9033.333333333334" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="2100" y="10150" width="200" height="1200" fill="#ffffff"/>
+<line x1="2133.3333333333335" y1="11350" x2="2133.3333333333335" y2="10150" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2200" y1="11350" x2="2200" y2="10150" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="2266.6666666666665" y1="11350" x2="2266.6666666666665" y2="10150" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="14600" y="6400" width="200" height="1200" fill="#ffffff"/>
+<line x1="14633.333333333334" y1="7600" x2="14633.333333333334" y2="6400" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="14700" y1="7600" x2="14700" y2="6400" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="14766.666666666666" y1="7600" x2="14766.666666666666" y2="6400" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="5440" y="4800" width="1500" height="200" fill="#ffffff"/>
+<line x1="5440" y1="4966.666666666667" x2="6940" y2="4966.666666666667" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="5440" y1="4900" x2="6940" y2="4900" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="5440" y1="4833.333333333333" x2="6940" y2="4833.333333333333" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="3450" y="3730" width="800" height="140" fill="#ffffff"/>
+<path d="M 4250 3730 L 4250 2930 L 4145.579046223958 2936.844110900951 L 4042.9447639179834 2957.2593389687463 L 3943.8532541079285 2990.8963739909705 L 3850 3037.1796769724497 L 3762.9908567930233 3095.317327767012 L 3684.314575050762 3164.314575050761 L 3615.3173277670116 3242.9908567930233 L 3557.1796769724488 3330 L 3510.8963739909705 3423.8532541079276 L 3477.2593389687454 3522.9447639179834 L 3456.844110900952 3625.5790462239584 L 3450 3730 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="4250" y1="3730" x2="4250" y2="2930" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="3100" y="700" width="1500" height="200" fill="#ffffff"/>
+<line x1="3100" y1="866.6666666666661" x2="4600" y2="866.6666666666661" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="3100" y1="800" x2="4600" y2="800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="3100" y1="733.3333333333339" x2="4600" y2="733.3333333333339" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="8250" y="3730" width="800" height="140" fill="#ffffff"/>
+<path d="M 9050 3730 L 9050 2930 L 8945.57904622396 2936.844110900951 L 8842.944763917983 2957.2593389687463 L 8743.85325410793 2990.8963739909705 L 8650 3037.1796769724497 L 8562.990856793023 3095.317327767012 L 8484.314575050761 3164.314575050761 L 8415.317327767012 3242.9908567930233 L 8357.17967697245 3330 L 8310.89637399097 3423.8532541079276 L 8277.259338968746 3522.9447639179834 L 8256.84411090095 3625.5790462239584 L 8250 3730 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="9050" y1="3730" x2="9050" y2="2930" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="7900" y="700" width="1500" height="200" fill="#ffffff"/>
+<line x1="7900" y1="866.6666666666661" x2="9400" y2="866.6666666666661" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="7900" y1="800" x2="9400" y2="800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="7900" y1="733.3333333333339" x2="9400" y2="733.3333333333339" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="11150" y="3730" width="800" height="140" fill="#ffffff"/>
+<path d="M 11950 3730 L 11950 2930 L 11845.579046223958 2936.844110900951 L 11742.944763917983 2957.2593389687463 L 11643.853254107928 2990.8963739909705 L 11550 3037.1796769724497 L 11462.990856793023 3095.317327767012 L 11384.314575050763 3164.314575050761 L 11315.317327767012 3242.9908567930233 L 11257.17967697245 3330 L 11210.89637399097 3423.8532541079276 L 11177.259338968746 3522.9447639179834 L 11156.84411090095 3625.5790462239584 L 11150 3730 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="11950" y1="3730" x2="11950" y2="2930" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="10800" y="700" width="1500" height="200" fill="#ffffff"/>
+<line x1="10800" y1="866.6666666666661" x2="12300" y2="866.6666666666661" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="10800" y1="800" x2="12300" y2="800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="10800" y1="733.3333333333339" x2="12300" y2="733.3333333333339" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="13500" y="3730" width="700" height="140" fill="#ffffff"/>
+<path d="M 14200 3730 L 14200 3030 L 14108.631665445964 3035.988597038333 L 14018.826668428235 3053.851921597652 L 13932.121597344438 3083.2843272420996 L 13850 3123.782217350892 L 13773.866999693895 3174.6526617961354 L 13705.025253169417 3235.025253169417 L 13644.652661796135 3303.866999693895 L 13593.782217350892 3380 L 13553.2843272421 3462.1215973444378 L 13523.851921597652 3548.8266684282353 L 13505.988597038333 3638.6316654459642 L 13500 3730 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="14200" y1="3730" x2="14200" y2="3030" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="13550" y="700" width="600" height="200" fill="#ffffff"/>
+<line x1="13550" y1="866.6666666666661" x2="14150" y2="866.6666666666661" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="13550" y1="800" x2="14150" y2="800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="13550" y1="733.3333333333339" x2="14150" y2="733.3333333333339" stroke="#2a7fb8" stroke-width="18"/>
+<rect x="5430" y="1950" width="140" height="700" fill="#ffffff"/>
+<path d="M 5570 1950 L 5570 2650 L 5661.368334554037 2644.011402961667 L 5751.173331571765 2626.148078402348 L 5837.878402655563 2596.7156727579004 L 5920 2556.217782649106 L 5996.133000306105 2505.3473382038646 L 6064.974746830583 2444.974746830583 L 6125.347338203865 2376.133000306105 L 6176.217782649107 2300 L 6216.7156727579 2217.8784026555622 L 6246.148078402348 2131.1733315717647 L 6264.011402961667 2041.3683345540358 L 6270 1950 Z" fill="#3b9a4a" fill-opacity="0.12" stroke="#3b9a4a" stroke-width="12"/>
+<line x1="5570" y1="1950" x2="6270" y2="1950" stroke="#2f7a3a" stroke-width="26"/>
+<rect x="6050" y="700" width="600" height="200" fill="#ffffff"/>
+<line x1="6050" y1="866.6666666666661" x2="6650" y2="866.6666666666661" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="6050" y1="800" x2="6650" y2="800" stroke="#2a7fb8" stroke-width="18"/>
+<line x1="6050" y1="733.3333333333339" x2="6650" y2="733.3333333333339" stroke="#2a7fb8" stroke-width="18"/>
+<text x="13835" y="2275" font-size="160" font-weight="700" text-anchor="middle" fill="#222">BAÑO 1</text>
+<text x="13835" y="2505" font-size="140" text-anchor="middle" fill="#555">4.33 m²</text>
+<text x="6350" y="2275" font-size="160" font-weight="700" text-anchor="middle" fill="#222">BAÑO PRINCIPAL</text>
+<text x="6350" y="2505" font-size="140" text-anchor="middle" fill="#555">4.41 m²</text>
+<text x="3750" y="10630" font-size="160" font-weight="700" text-anchor="middle" fill="#222">COCINA</text>
+<text x="3750" y="10805" font-size="160" font-weight="700" text-anchor="middle" fill="#222">AMERICANA</text>
+<text x="3750" y="11030" font-size="140" text-anchor="middle" fill="#555">8.99 m²</text>
+<text x="8650" y="2275" font-size="160" font-weight="700" text-anchor="middle" fill="#222">DORMITORIO 2</text>
+<text x="8650" y="2505" font-size="140" text-anchor="middle" fill="#555">7.81 m²</text>
+<text x="11550" y="2275" font-size="160" font-weight="700" text-anchor="middle" fill="#222">DORMITORIO 3</text>
+<text x="11550" y="2505" font-size="140" text-anchor="middle" fill="#555">7.81 m²</text>
+<text x="3865" y="2195" font-size="160" font-weight="700" text-anchor="middle" fill="#222">DORMITORIO</text>
+<text x="3865" y="2370" font-size="160" font-weight="700" text-anchor="middle" fill="#222">PRINCIPAL</text>
+<text x="3865" y="2595" font-size="140" text-anchor="middle" fill="#555">8.86 m²</text>
+<text x="9900" y="10710" font-size="160" font-weight="700" text-anchor="middle" fill="#222">LIVING-COMEDOR</text>
+<text x="9900" y="10940" font-size="140" text-anchor="middle" fill="#555">29.14 m²</text>
+<text x="8450" y="4380" font-size="130" text-anchor="middle" fill="#444">PASILLO 11.44 m²</text>
+<text x="14150" y="7045" font-size="130" text-anchor="middle" fill="#444">PASILLO CONECTOR 3.78 m²</text>
+<line x1="2200" y1="13000" x2="5200" y2="13000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="2200" y1="12650" x2="2200" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="2110" y1="13090" x2="2290" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="5200" y1="12650" x2="5200" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="5110" y1="13090" x2="5290" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<text x="3700" y="12950" font-size="125" text-anchor="middle" fill="#a02c8c">3.00</text>
+<line x1="5200" y1="13000" x2="5500" y2="13000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="5200" y1="12650" x2="5200" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="5110" y1="13090" x2="5290" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="5500" y1="12650" x2="5500" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="5410" y1="13090" x2="5590" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<text x="5350" y="12950" font-size="125" text-anchor="middle" fill="#a02c8c">0.30</text>
+<line x1="5500" y1="13000" x2="7200" y2="13000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="5500" y1="12650" x2="5500" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="5410" y1="13090" x2="5590" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="7200" y1="12650" x2="7200" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="7110" y1="13090" x2="7290" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<text x="6350" y="12950" font-size="125" text-anchor="middle" fill="#a02c8c">1.70</text>
+<line x1="7200" y1="13000" x2="10100" y2="13000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="7200" y1="12650" x2="7200" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="7110" y1="13090" x2="7290" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="10100" y1="12650" x2="10100" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="10010" y1="13090" x2="10190" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<text x="8650" y="12950" font-size="125" text-anchor="middle" fill="#a02c8c">2.90</text>
+<line x1="10100" y1="13000" x2="13000" y2="13000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="10100" y1="12650" x2="10100" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="10010" y1="13090" x2="10190" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="13000" y1="12650" x2="13000" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="12910" y1="13090" x2="13090" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<text x="11550" y="12950" font-size="125" text-anchor="middle" fill="#a02c8c">2.90</text>
+<line x1="13000" y1="13000" x2="13600" y2="13000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="13000" y1="12650" x2="13000" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="12910" y1="13090" x2="13090" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="13600" y1="12650" x2="13600" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="13510" y1="13090" x2="13690" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<text x="13300" y="12950" font-size="125" text-anchor="middle" fill="#a02c8c">0.60</text>
+<line x1="13600" y1="13000" x2="14700" y2="13000" stroke="#a02c8c" stroke-width="12"/>
+<line x1="13600" y1="12650" x2="13600" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="13510" y1="13090" x2="13690" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<line x1="14700" y1="12650" x2="14700" y2="13150" stroke="#a02c8c" stroke-width="8"/><line x1="14610" y1="13090" x2="14790" y2="12910" stroke="#a02c8c" stroke-width="14"/>
+<text x="14150" y="12950" font-size="125" text-anchor="middle" fill="#a02c8c">1.10</text>
+<line x1="2100" y1="13700" x2="14800" y2="13700" stroke="#a02c8c" stroke-width="12"/>
+<line x1="2100" y1="12650" x2="2100" y2="13850" stroke="#a02c8c" stroke-width="8"/><line x1="2010" y1="13790" x2="2190" y2="13610" stroke="#a02c8c" stroke-width="14"/>
+<line x1="14800" y1="12650" x2="14800" y2="13850" stroke="#a02c8c" stroke-width="8"/><line x1="14710" y1="13790" x2="14890" y2="13610" stroke="#a02c8c" stroke-width="14"/>
+<text x="8450" y="13650" font-size="125" text-anchor="middle" fill="#a02c8c">12.70</text>
+<line x1="1600" y1="12400" x2="1600" y2="9100" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="12400" x2="1450" y2="12400" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="12490" x2="1690" y2="12310" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="9100" x2="1450" y2="9100" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="9190" x2="1690" y2="9010" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 10750) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">3.30</text>
+<line x1="1600" y1="9100" x2="1600" y2="4900" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="9100" x2="1450" y2="9100" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="9190" x2="1690" y2="9010" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="4900" x2="1450" y2="4900" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="4990" x2="1690" y2="4810" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 7000) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">4.20</text>
+<line x1="1600" y1="4900" x2="1600" y2="3800" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="4900" x2="1450" y2="4900" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="4990" x2="1690" y2="4810" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="3800" x2="1450" y2="3800" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="3890" x2="1690" y2="3710" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 4350) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">1.10</text>
+<line x1="1600" y1="3800" x2="1600" y2="800" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="3800" x2="1450" y2="3800" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="3890" x2="1690" y2="3710" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="800" x2="1450" y2="800" stroke="#a02c8c" stroke-width="8"/><line x1="1510" y1="890" x2="1690" y2="710" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(1545 2300) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">3.00</text>
+<line x1="900" y1="12500" x2="900" y2="700" stroke="#a02c8c" stroke-width="12"/>
+<line x1="1950" y1="12500" x2="750" y2="12500" stroke="#a02c8c" stroke-width="8"/><line x1="810" y1="12590" x2="990" y2="12410" stroke="#a02c8c" stroke-width="14"/>
+<line x1="1950" y1="700" x2="750" y2="700" stroke="#a02c8c" stroke-width="8"/><line x1="810" y1="790" x2="990" y2="610" stroke="#a02c8c" stroke-width="14"/>
+<text transform="translate(845 6600) rotate(-90)" font-size="125" text-anchor="middle" fill="#a02c8c">11.80</text>
+<text x="8500" y="14700" font-size="230" font-weight="700" text-anchor="middle" fill="#b00020">ANTEPROYECTO — NO APTO PARA CONSTRUCCIÓN</text>
+<text x="8500" y="14960" font-size="150" text-anchor="middle" fill="#333">alt-dos_alas · alt-dos_alas · 2026-11-16</text>
+<text x="8500" y="15220" font-size="140" text-anchor="middle" fill="#333">Construida 104.26 m² · útil 86.57 m² · Albañilería confinada (ladrillo cerámico, pilares y cadenas de hormigón armado)</text>
+</svg><text x="900" y="521" font-size="11">Huella 104.26 m² · útil 86.57 m²</text><text x="900" y="536" font-size="11">Huella: C · envolvente 1.74</text><text x="900" y="551" font-size="11">BLOQUEADA: superficie_objetivo</text><text x="900" y="566" font-size="11">Alertas críticas: 2</text>
+<text x="20" y="731" font-size="11" fill="#444">Diversidad: 3 clases de huella, 3 topologías distintas.</text>
+<text x="20" y="746" font-size="11" fill="#444">Frontera de Pareto: alt-compacta</text>
+<text x="20" y="761" font-size="11" fill="#444">La vista de líneas es un croquis; la decisión es suya y de la profesional.</text>
+</svg>
