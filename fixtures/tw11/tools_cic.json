@@ -1,9 +1,9 @@
 {
   "cic": true,
-  "total": 83,
-  "bytes_tools_list": 104578,
-  "tokens_estimados": 26016,
-  "arranque_ms": 593,
+  "total": 84,
+  "bytes_tools_list": 107690,
+  "tokens_estimados": 26788,
+  "arranque_ms": 641,
   "herramientas": [
     {
       "nombre": "tannia_3d_a_autocad",
@@ -192,12 +192,12 @@
     },
     {
       "nombre": "tannia_cic_encargo",
-      "sha256_esquema": "b4c8dd9adcdd6256f1918d757ee90a5a6c6452dbdbe24405e37c7f74850787f1",
-      "sha256_descripcion": "af667860a55a2daec48615a71ffd6e4e2ba8602588a7453f5671862a09b35bd4"
+      "sha256_esquema": "3d74dfca61db5541438abd6b0630ccce194f4e3508df6603c697699c75b3d37b",
+      "sha256_descripcion": "5904f360ec31dadeb097fc1b3a3644929f8755ad8cb402470de20add2a25cb1d"
     },
     {
       "nombre": "tannia_cic_entregable",
-      "sha256_esquema": "026359d39624a34db011deb00fbb08dd6dfad827e2badc24002636114d49b0b3",
+      "sha256_esquema": "4095d2f71a48c77491627f846e2ab21ebc123086ca04da2ad2165c3060006bf5",
       "sha256_descripcion": "3be30f8e123ec1e466e4787d4132a033af0ffd1e877e3c12935bec7eaa931aa4"
     },
     {
@@ -214,6 +214,11 @@
       "nombre": "tannia_cic_verificar",
       "sha256_esquema": "d3ac07d7c681af949f89d9815de64b4c32aba2a919f4698775050e23cea56cb7",
       "sha256_descripcion": "e0de52efa4e0de70001cc94afb9d37ed28cc30337aef502ed174b7303dd22a1a"
+    },
+    {
+      "nombre": "tannia_comunicacion",
+      "sha256_esquema": "510c00616f91d427c56fdc3092b2234dfd566c905f1e569f9cdaebd3299de5fd",
+      "sha256_descripcion": "840a582ab7e5234d00fe53c9d7f9c95089be6fc994c18f5d006c01f6a20d4ccc"
     },
     {
       "nombre": "tannia_conocimiento_consultar",
@@ -298,7 +303,7 @@
     {
       "nombre": "tannia_encargo_evaluar",
       "sha256_esquema": "78a919667a2b58f5dd8b8e575c0512e6910f7cf6a73f2f93d00886259fa85193",
-      "sha256_descripcion": "9da347774dbed4283d6feccec01f5870f1b509124ca3908aa002e85bd168e14a"
+      "sha256_descripcion": "9c82d29ed16250ff53a9161b8ac84d546c8ea90cfa68f79110df0dbc228fd702"
     },
     {
       "nombre": "tannia_entregable_exportar",

@@ -25,3 +25,9 @@ Código + pruebas (positivas, negativas, adversariales) + doc + ejemplos + fila 
 Resumen corto: qué se hizo, qué pruebas, SHA/CI, hashes del paquete (cuando aplique), pendientes externos y bloqueos.
 ## Pendientes externos heredados de TW-10 (no los resuelve TW-11)
 G10 en Claude Desktop con rc3, AutoCAD 2027 real, taller con Tannia y arquitecta independiente, revisión independiente y decisión del PO.
+
+## Actualización — hardening y comunicación (PR de hardening sobre #18)
+- Ver `docs/tw11/HARDENING.md`: H1–H5 reproducidos, corregidos y probados; contrato de comunicación (`tannia_comunicacion`, nivel por defecto breve, precedencia, advertencias en el texto).
+- Semántica vigente de `tannia_cic_encargo`: `actualizar` (por defecto) conserva todo; `reemplazar` explícito; `needs_confirmation` + `confirmar_cambios` nombrados; `retirar` explícito.
+- `permitir_desactualizado` ya no existe; el borrador desactualizado exige consentimiento humano (`src/cic/consentimiento.js`).
+- Los gates G10–G12 siguen **pendientes** (revisor independiente, casos retenidos, decisión de la PO). Pruebas reales pendientes: Claude Desktop (protocolos de entrega A–D y de comunicación C1–C15) y AutoCAD.

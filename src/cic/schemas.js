@@ -40,7 +40,7 @@ export const InterpretacionSchema = z.object({
   research_questions: z.array(z.object({ id: z.string(), text: z.string(), needed_for: z.array(z.string()).optional(), status: z.enum(['open', 'answered', 'unanswerable_with_sources']).default('open') }).strict()).default([]),
   deliverables: z.array(z.object({ id: z.string(), kind: z.string(), status: ESTADO_EPISTEMICO }).strict()).default([]),
   disciplines_proposed: z.array(z.object({ tag: z.string(), registry_id: z.string().nullable().optional(), rationale: z.string().optional() }).strict()).default([]),
-  antecedents: z.array(z.object({ ref: z.string(), quote: z.string().optional(), use: z.string().optional() }).strict()).default([]),
+  antecedents: z.array(z.object({ ref: z.string(), quote: z.string().optional(), use: z.string().optional(), locator: z.object({ page: z.number().int().positive().optional(), slide: z.number().int().positive().optional(), sheet: z.string().optional(), section: z.string().optional() }).strict().optional() }).strict()).default([]),
   magnitudes: z.array(z.object({ name: z.string(), value: z.number().nullable(), unit: z.string().nullable(), origin: z.enum(['user', 'source', 'assumed', 'unknown']), ref: z.string().nullable().optional() }).strict()).default([]),
   methods_proposed: z.array(z.object({ operation_id: z.string().nullable().optional(), free_text: z.string().optional(), source_ref: z.string().nullable().optional(), why: z.string().optional() }).strict()).default([]),
   assumptions: z.array(z.object({ text: z.string(), editable: z.boolean().default(true) }).strict()).default([]),
