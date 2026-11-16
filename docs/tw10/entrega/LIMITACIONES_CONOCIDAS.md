@@ -1,0 +1,19 @@
+# TW-10 — Limitaciones conocidas (honestas)
+- **No es un arquitecto habilitado.** Es una metodología computable de diseño asistido; salidas = ANTEPROYECTO conceptual, no apto para construcción, tramitación ni cálculo.
+- **No verificado en AutoCAD real, Claude Desktop real ni por Tannia/arquitecta independiente** (ver `TW10_FIELD_VALIDATION.md`).
+- Recintos rectangulares; huellas L/C/patio por unión de rectángulos. Sin recintos en L, sin muros inclinados, sin curvas. Predio ortogonal.
+- Cubierta: solo **plana** sobre huella L/C/patio; la inclinada se rechaza explícitamente.
+- Partidos generados: compacta, L con patio, dos alas (C). **Patio central**: la geometría está soportada y probada, pero no hay generador. 1 piso; 1–5 dormitorios, 1–2 baños, 45–260 m². Con superficies pequeñas, el partido entrega su mínimo con aviso (p. ej. «dos alas» ≥ ~104 m² para 3 dorm./2 baños).
+- La **posición de la piscina** es un supuesto (centro del patio); no hay geometría de piscina ni verificación de barreras. La visual **nunca** equivale a seguridad.
+- **Sol**: sol directo geométrico (ray casting, posición solar propia contrastada con NREL SPA: err. máx. 0,024° azimut / 0,006° elevación). No es iluminancia, deslumbramiento, ganancia térmica ni energía. Requiere norte verdadero, coordenadas y zona horaria **confirmados**; sin ellos `no concluyente`.
+- **Viento**: rosa **regional** (EPW o caché ERA5); sin CFD; no estima velocidad en el patio ni ventilación real. Open-Meteo: solo caché local importable; **no hay consultas de red** (términos/plan comercial por decidir por el PO).
+- Sombra de contexto: con altura de vecino/árbol desconocida, `no concluyente`.
+- **Normativa**: ningún valor normativo se infiere ni se declara «cumple». Las restricciones urbanísticas solo entran con documento fuente + fecha; el servidor no extrae datos de CIP (sin OCR).
+- **Precios**: no se estiman; índices de envolvente son relativos.
+- Interpretación del encargo: reglas léxicas en español (no un modelo de lenguaje); frases fuera de ellas quedan como `desconocido`/pregunta. Claude Desktop conversa; el código valida.
+- Privacidad/acústica/accesibilidad: heurísticas editables (`heur-1`), no normativas.
+- Dependencias: sin runtime Python en el paquete; pvlib solo como oráculo de desarrollo (fixture `fixtures/tw10/solar_oracle.json`).
+- Heredadas de TW-09: ver `docs/KNOWN_LIMITATIONS.md` (AutoCAD COM, ACL/junctions reales, OneDrive/antivirus sin validar).
+
+## Qué NO se ha verificado nunca (hasta que se ejecute G10)
+AutoCAD 2027 real (ningún DWG ha sido abierto por AutoCAD real con este código TW-10), instalación gráfica en Claude Desktop, uso por Tannia, revisión arquitectónica independiente. El CI ejecuta simuladores COM y, en Windows, pruebas de PowerShell sin AutoCAD.

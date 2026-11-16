@@ -68,3 +68,6 @@ Las pruebas viven en `test/tw10_*.test.js`. Ninguna fila `EXTERNO` está aprobad
 | 13 | Hemisferios | `tw10_escenarios` E13, `tw10_g3_solar` |
 | 14 | v1 y DWG previo intactos | `tw10_escenarios` E14 (DWG real: EXTERNO) |
 | 15 | Instrucciones hostiles en PDF/EPW | `tw10_g3_clima`, `tw10_g9_mcp` |
+
+## Expediente de revisión independiente
+`docs/tw10/TW10_AUDIT_TRANSFER.md` (informe de transferencia), `docs/tw10/entrega/` (documentos del ZIP de entrega) y `TW10_CANDIDATE.md` (hashes). Ninguna fila `EXTERNO` está aprobada.

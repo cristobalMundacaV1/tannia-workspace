@@ -9,7 +9,7 @@
   "updated_utc": "2026-11-16T15:54:28.241Z",
   "current_gate": "G10",
   "current_story": "TW10-10-02",
-  "next_action": "Esperar externos: ejecutar docs/tw10/TW10_FIELD_VALIDATION.md (AutoCAD 2027 real, Claude Desktop, taller con Tannia y revisión independiente) y decisión del PO. Sin merge/release por el agente.",
+  "next_action": "Esperar externos: el PO instala el candidato (docs/tw10/entrega/INSTALAR_EN_WINDOWS.md), ejecuta PROTOCOLO_PRUEBA_REAL.md y entrega evidencias al Director de Revisión Independiente; taller con Tannia pendiente; decisión del PO. Sin merge/release por el agente.",
   "gates": {
     "G0": {
       "status": "SUPERADA_TECNICA_AUTOMATIZABLE",
@@ -132,5 +132,5 @@
     "aprobación del PO"
   ],
   "unresolved_p0_p1": [],
-  "last_session_result": "Local: 278 pruebas, 261 pasan, 0 fallan, 17 omitidas (PowerShell real, solo CI Windows). CI verde (Windows+Ubuntu) comprobado en 56aef38 (run 43900583395). Candidato .mcpb/ZIP construible; ver TW10_CANDIDATE.md. CI (Windows+Ubuntu, matriz) verde sobre el SHA de código ee8a0e6 (run 43901501563) y sobre dc5b58d (run 43901639327, solo docs)."
+  "last_session_result": "Local: 278 pruebas, 261 pasan, 0 fallan, 17 omitidas (PowerShell real, solo CI Windows). CI verde (Windows+Ubuntu) comprobado en 56aef38 (run 43900583395). Candidato .mcpb/ZIP construible; ver TW10_CANDIDATE.md. CI (Windows+Ubuntu, matriz) verde sobre el SHA de código ee8a0e6 (run 43901501563) y sobre dc5b58d (run 43901639327, solo docs). Entrega: ZIP TW10-entrega-151c0a1-rc1 con MCPB (sha256 13e37b45…9f31), protocolo real, informe de transferencia (TW10_AUDIT_TRANSFER.md). Artefactos del CI no son el candidato."
 }

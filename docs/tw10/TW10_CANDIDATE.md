@@ -1,6 +1,7 @@
 # TW-10 — Paquete candidato (prueba; NO es release)
-- Código: rama `feat/tw10-architectural-reasoning`, commit de código `ee8a0e6` (los commits posteriores solo cambian documentación/estado). Paquete construido desde `151c0a1`.
-- Archivo: `tannia-workspace-tw10-151c0a1-rc1.mcpb` — SHA-256 `13e37b45ea15f16944810d8a005b6da43bdb4fec9e2b13f14ae5b91023569f31`
-- Verificado como cliente MCP (stdio): 72 herramientas (61 TW-09 + 11 `tannia_arq_*`), 0 esquemas inválidos, servidor inicia desde el paquete.
-- **No verificado**: Claude Desktop real (instalación gráfica), AutoCAD 2027 real, Tannia, revisión independiente. Ver `TW10_FIELD_VALIDATION.md`.
-- Convive con el paquete TW-09 (id distinto `tannia-workspace-tw10`); no lo reemplaza. Compatibilidad: Windows 10/11 con Claude Desktop; AutoCAD solo para DWG (el diseño funciona sin AutoCAD).
+- Código: rama `feat/tw10-architectural-reasoning`, commit de código `ee8a0e6aecb180fdc1fccd6723de960202bbd809` (CI Windows+Ubuntu verde, run 43901501563). Los commits posteriores solo cambian `docs/`/`examples/`. Paquete construido con `npm run build` + `scripts/paquete-prueba.mjs --fase tw10` desde el árbol `151c0a1` (mismo código).
+- **MCPB:** `tannia-workspace-tw10-151c0a1-rc1.mcpb` — SHA-256 `13e37b45ea15f16944810d8a005b6da43bdb4fec9e2b13f14ae5b91023569f31` (2 010 454 bytes).
+- **ZIP de entrega:** `TW10-entrega-151c0a1-rc1.zip` (contiene el MCPB + `SHA256SUMS.txt`, `INSTALAR_EN_WINDOWS.md`, `PROTOCOLO_PRUEBA_REAL.md`, `MENSAJE_PRUEBA_CLAUDE.txt`, `LIMITACIONES_CONOCIDAS.md`, `EVIDENCIA_TECNICA.md`, `clima_sintetico_PRUEBA.epw`). Su SHA-256 se informa fuera del ZIP (un archivo no puede contener su propio hash); fuentes en `docs/tw10/entrega/`.
+- Verificado como cliente MCP (stdio) **desde una ruta con espacios y «ñ», solo con `server/index.js`**: 72 herramientas (61 TW-09 + 11 `tannia_arq_*`), 0 esquemas inválidos, diagnóstico y flujo encargo→alternativas OK.
+- Los artefactos `tannia-mcpb-*` del CI son **otro build** (id `tannia-workspace`, versión `0.1.0-rc.3`); **no** son este candidato.
+- **No verificado:** Claude Desktop real, AutoCAD 2027 real, Tannia, revisión independiente. Convive con TW-09 (id distinto): deshabilitar TW-09 durante la prueba, sin desinstalar ni borrar datos.

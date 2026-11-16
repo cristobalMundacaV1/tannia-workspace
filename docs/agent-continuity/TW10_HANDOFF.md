@@ -17,5 +17,8 @@
 Oráculos de desarrollo (no se empaquetan): pvlib `spa_python` → `fixtures/tw10/solar_oracle.json`.
 Convención de signos: `true_north_deg_from_local_plus_y_clockwise` = n ⇒ rumbo local = n + rumbo geográfico (corregido en G3; ver historial de commits).
 
+## Entrega para el PO y la revisión independiente
+`docs/tw10/entrega/` (fuentes del ZIP), `TW10_CANDIDATE.md` (hashes), `TW10_AUDIT_TRANSFER.md`. Reconstruir el ZIP: `npm run build`, `node scripts/paquete-prueba.mjs --fase tw10 …`, copiar el `.mcpb` junto a los documentos de `docs/tw10/entrega/` y recalcular `SHA256SUMS.txt`. Si el hash del `.mcpb` difiere del registrado, **no** presentarlo como idéntico: documentar la diferencia.
+
 ## Reanudar tras interrupción
 1. `git status`; `git log -3`; leer `TW10_STATE.json`. 2. `npm ci && npm test`. 3. Si cambió el código: regenerar ejemplos (`node scripts/ejemplos-tw10.mjs`), `npm run build`, y el paquete: `node scripts/paquete-prueba.mjs --fase tw10 --etiqueta <sha7> --revision rcN --id tannia-workspace-tw10 --nombre "Tannia Workspace - PRUEBA TW-10 (<sha7>)" --esperadas 72`.
