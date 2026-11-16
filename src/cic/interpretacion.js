@@ -8,6 +8,8 @@ import { madurezPermitida, politicaDe } from './politica.js';
 
 const REF = /^(magnitude|claim|step):(.+)$/;
 export const esRef = (v) => v && typeof v === 'object' && typeof v.ref === 'string' && REF.test(v.ref);
+export const esRefs = (v) => v && typeof v === 'object' && Array.isArray(v.refs) && v.refs.length > 0 && v.refs.every((r) => typeof r === 'string' && REF.test(r));
+export const refsDe = (v) => (esRef(v) ? [v.ref] : esRefs(v) ? v.refs : []);
 
 function aciclico(pasos) {
   const g = new Map(pasos.map((p) => [p.id, p.depends_on])); const estado = new Map();
@@ -33,7 +35,7 @@ export function validarInterpretacion(interp, ctx) {
   const ids = new Set(interp.proposed_steps.map((s) => s.id));
   for (const s of interp.proposed_steps) for (const d of s.depends_on) if (!ids.has(d)) { return { outcome: 'rejected', issues: [{ schema: 'tw.cic.issue/1', id: 'iss-0', kind: 'policy', severity: 'blocking', message: `El paso ${s.id} depende de "${d}", que no existe.`, refs: [s.id] }], gaps, preguntas, plan: null }; }
   // dependencias implícitas por referencias a pasos
-  const pasos = interp.proposed_steps.map((s) => { const dep = new Set(s.depends_on); for (const v of Object.values(s.inputs || {})) if (esRef(v)) { const m = REF.exec(v.ref); if (m[1] === 'step') { const sid = m[2].split('.')[0]; if (!ids.has(sid)) iss('missing_input', 'blocking', `El paso ${s.id} referencia un paso inexistente (${sid}).`, [s.id]); else dep.add(sid); } } return { ...s, depends_on: [...dep] }; });
+  const pasos = interp.proposed_steps.map((s) => { const dep = new Set(s.depends_on); for (const v of Object.values(s.inputs || {})) for (const rf of refsDe(v)) { const m = REF.exec(rf); if (m[1] === 'step') { const sid = m[2].split('.')[0]; if (!ids.has(sid)) iss('missing_input', 'blocking', `El paso ${s.id} referencia un paso inexistente (${sid}).`, [s.id]); else dep.add(sid); } } return { ...s, depends_on: [...dep] }; });
   if (!aciclico(pasos)) return { outcome: 'rejected', issues: [{ schema: 'tw.cic.issue/1', id: 'iss-0', kind: 'policy', severity: 'blocking', message: 'El plan contiene un ciclo de dependencias.', refs: [] }], gaps, preguntas, plan: null };
   // 2) antecedentes: citas verificadas contra el almacén (nunca por confianza)
   const antecedentes = interp.antecedents.map((a) => {
