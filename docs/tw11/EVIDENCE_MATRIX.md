@@ -16,8 +16,8 @@ Suite local en el último SHA de código (`aed57ae`): **389 pruebas, 372 pasan, 
 | G8 Departamentos / edificación transversal | superado (N1) | `dcc658b` | `tw11_g8_departamentos` | ✅ run 43954370335 | artefactos del caso B: entrepiso compartido, medianeros, acceso por núcleo, terraza, sin lote; contraste casa/depto (≥6 diferencias); oficina/local | generador por franjas; sin estructura ni normativa |
 | G9 Paquete y experiencia | superado (N1) | `cab78cd` | `tw11_g9_paquete` | ✅ run 43954614508 | `.mcpb` CIC apagado (72) y CIC activado (83) verificados desde el bundle desempaquetado; el verificador usa el entorno del manifiesto | Claude Desktop real pendiente; presupuesto de herramientas D7 **excedido** (+31,7 % vs propuesta de +25 %): decide la PO |
 | G10 Evaluación | ejecutor listo; **APROBACIÓN PENDIENTE** | `cab78cd` | `tw11_g10_eval` | ✅ (solo el ejecutor) | `scripts/tw11-eval.mjs` con umbrales absolutos, hash de compromiso y casos de desarrollo | **requiere revisor independiente y casos retenidos externos: no existen** |
-| **Hardening H1–H5** | superado (N1) — 5/5 pruebas fallaban en `92d5d19` y pasan | `aed57ae` | `tw11_h_hardening` | ⏳ (ver estado) | `docs/tw11/HARDENING.md` | la selección real de herramientas del modelo no se prueba aquí (protocolo C15) |
-| **Contrato de comunicación** | servidor verificado (N1); **conducta del modelo NO verificada** | `aed57ae` | `tw11_comunicacion` | ⏳ | preferencia persistente (global/proyecto), precedencia, advertencias en el texto, datos estructurados intactos; `tannia_comunicacion` | requiere `entrega/PROTOCOLO_COMUNICACION_DESKTOP.md` en Claude Desktop real |
+| **Hardening H1–H5** | superado (N1) — 5/5 pruebas fallaban en `92d5d19` y pasan | `aed57ae` | `tw11_h_hardening` | ✅ run 43957962608 | `docs/tw11/HARDENING.md` | la selección real de herramientas del modelo no se prueba aquí (protocolo C15) |
+| **Contrato de comunicación** | servidor verificado (N1); **conducta del modelo NO verificada** | `aed57ae` | `tw11_comunicacion` | ✅ run 43957962608 | preferencia persistente (global/proyecto), precedencia, advertencias en el texto, datos estructurados intactos; `tannia_comunicacion` | requiere `entrega/PROTOCOLO_COMUNICACION_DESKTOP.md` en Claude Desktop real |
 | G11 Auditoría independiente | pendiente (externo) | — | — | — | expediente `entrega/AUDITORIA_TRANSFER.md` | persona |
 | G12 Decisión del PO | pendiente (humano) | — | — | — | — | persona |
 
@@ -34,6 +34,8 @@ Precisión de selección de herramienta: **no medida** (requiere un cliente con 
 
 ## Pendientes humanos (no aprobados)
 AutoCAD real · Claude Desktop real · evaluación retenida independiente (G10) · revisión profesional por especialidad · taller con Tannia · decisión de aceptación del PO · merge y distribución.
+
+CI Windows+Ubuntu verde: `aed57ae` (run 43957962608) y `2597296` (runs 43958068584 push y 43958101455 pull_request).
 
 ## Candidato de prueba vigente (hardening)
 ZIP `TW11-entrega-aed57ae.zip`; `.mcpb` CIC apagado `774d4b454da8339f699f8701a9628bfceeb8389a0950fce1c965a2bbb0a0b762` (72 herramientas); `.mcpb` CIC activado `88219fa7c3c4849e4bbe2f06407622442e10c01e6cdcc46daee6136c8b9e75f5` (84). El candidato anterior (`cab78cd`, ZIP `0dddfec7…5b03`) queda **superado**. Sin validación real.
