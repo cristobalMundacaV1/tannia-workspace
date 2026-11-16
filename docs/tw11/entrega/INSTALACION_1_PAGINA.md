@@ -1,6 +1,6 @@
 # Tannia Workspace TW-11 — Instalación (1 página)
 **Es un candidato de PRUEBA para ingeniería asistida. No está validado en AutoCAD real, ni en Claude Desktop real, ni por un profesional.**
-Hay dos paquetes: **no instale ambos a la vez**.
+Hay dos paquetes: **no instale ambos a la vez**. El paquete CIC activado incluye además la herramienta `tannia_comunicacion` (nivel de respuesta breve/normal/detallado, persistente): diga «responde cortito» o «detallado» y quedará guardado.
 | Paquete | Qué es | Cuándo usarlo |
 |---|---|---|
 | `tannia-workspace-tw11-<sha>-cicoff.mcpb` | Igual que rc3: **72 herramientas**, el motor nuevo está APAGADO | Compatibilidad / volver atrás |
