@@ -26,10 +26,10 @@ const ultimoMovimiento = (pr) => { try { const h = pr.meta().historial; return h
 
 /** Resuelve "la casa de ayer"/"Casa Los Robles" SIN adivinar: único | probable | ambiguo | ninguno. Solo lectura. */
 export function resolverProyecto(sandbox, texto) {
-  const proyectos = listProjects(sandbox).filter((p) => p.nombre); const t = normalizarNombre(texto || '');
+  const sinArt = (x) => x.replace(/^(el|la|los|las|mi|nuestro|nuestra)\s+/, ''); const proyectos = listProjects(sandbox).filter((p) => p.nombre); const t = sinArt(normalizarNombre(texto || ''));
   if (!t) return { estado: 'ninguno', candidatos: [], motivo: 'No se indicó ningún nombre.' };
   const info = (p) => ({ id: p.id ?? null, nombre: p.nombre, estado: p.estado, creado: p.creado, ultimo_movimiento: p.historial?.at(-1)?.fecha ?? p.creado ?? null });
-  const exactos = proyectos.filter((p) => normalizarNombre(p.nombre) === t);
+  const exactos = proyectos.filter((p) => sinArt(normalizarNombre(p.nombre)) === t);
   if (exactos.length === 1) return { estado: 'unico', candidatos: [info(exactos[0])], motivo: 'Coincidencia exacta (sin distinguir mayúsculas ni tildes).' };
   const tokens = t.split(' ').filter((x) => x.length > 1);
   const puntuados = proyectos.map((p) => { const n = normalizarNombre(p.nombre); const hit = tokens.filter((k) => n.includes(k)).length; return { p, puntaje: tokens.length ? hit / tokens.length : 0 }; }).filter((x) => x.puntaje >= 0.5).sort((a, b) => b.puntaje - a.puntaje);
