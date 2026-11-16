@@ -1,5 +1,5 @@
-# Protocolo de prueba real G10 (repetición rc2) — Claude Desktop (Windows) + AutoCAD 2027
-> **Repetición tras la auditoría de campo F01–F05.** Use un proyecto **nuevo** («Prueba TW10 rc2»); **no** modifique «Prueba TW10 Los Robles» (su estudio v002 es evidencia histórica). Hallazgos y correcciones: `HALLAZGOS_CAMPO_F01_F05.md`.
+# Protocolo de prueba real G10 (repetición rc3) — Claude Desktop (Windows) + AutoCAD 2027
+> **Repetición tras la auditoría de campo F01–F05.** Use un proyecto **nuevo** («Prueba TW10 rc3»); **no** modifique «Prueba TW10 Los Robles» (su estudio v002 es evidencia histórica). Hallazgos y correcciones: `HALLAZGOS_CAMPO_F01_F05.md` y `HALLAZGOS_CAMPO_F06_F10.md`.
 **Quién:** Product Owner. **Qué NO es:** aprobación; es la recolección de evidencias para el Director de Revisión Independiente. Use un **proyecto nuevo** y no abra DWG reales de clientes.
 Reglas: pegue los mensajes tal cual (en conversación nueva de Claude Desktop). **No escriba nombres de herramientas.** En cada paso, si algo falla: copie el **mensaje de error completo** (texto, no resumen) y una captura. No reintente más de una vez sin anotarlo.
 
@@ -10,7 +10,7 @@ Reglas: pegue los mensajes tal cual (en conversación nueva de Claude Desktop). 
 - Anote: versión de Claude Desktop (Ayuda → Acerca de), versión de AutoCAD (`ACADVER`), fecha/hora.
 
 ## 1. Encargo familiar (sin terreno)
-Pegar `MENSAJE_PRUEBA_CLAUDE.txt` (cambie el nombre del proyecto a «Prueba TW10 rc2»).
+Pegar `MENSAJE_PRUEBA_CLAUDE.txt` (cambie el nombre del proyecto a «Prueba TW10 rc3»).
 **Esperado:** crea el proyecto; entiende superficie/dormitorios/baños/piscina/vista cocina→piscina/luz/verano/ahorro (**F02: debe registrar los 6 objetivos — visual cocina→piscina, iluminación natural, frescura en verano, pocos pasillos, patio y ahorro/presupuesto**; si pide algo ambiguo, debe **preguntar**, no suponer; compruébelo con «muéstrame el brief completo»); hace ≤3 preguntas (ninguna sobre un dato que ya dio); ofrece **3 ideas distintas** (rectangular compacta, en L con patio, dos alas en C) con compromisos; dice que sin terreno/norte no calcula sol; advierte que **la vista a la piscina no es seguridad** (barreras y supervisión).
 **Capturar:** la respuesta completa; el archivo `…\03 Trabajo\Arquitectura\<estudio>\v00X-comparacion.svg` (abrir en el navegador).
 **Falla si:** inventa horas de sol o normas; da 3 plantas que son espejos; dice «piscina segura»; pide JSON/ids.
@@ -38,6 +38,15 @@ Pegar: «Estudia el sol de invierno y de verano en las ventanas del living de la
 5. (Opcional) «Ya no quiero la piscina» → quita piscina/visual; el resto se conserva. «Mejor empecemos de cero: casa de 60 m², 2 dormitorios» → debe **avisar que reemplaza** el encargo (modo reemplazar).
 6. Verificar en `03 Trabajo\Arquitectura\<estudio>`: las versiones nuevas **no** alteran las anteriores (compare hashes) y que **leer** (evaluar/ver) no crea archivos nuevos.
 **Falla si:** el texto sale cortado, falta algún objetivo/alerta, «cambia a 4 dormitorios» borra otros datos, interpreta «un dormitorio más» como «1 dormitorio», o presenta 1,35 como «35 % más caro».
+
+## 4c. Verificaciones rc3 (F06–F10)
+Use el **mensaje completo que envió en rc2** (con sus seis prioridades y las frases «no inventes…») como primer mensaje del proyecto nuevo, y compruebe:
+1. **F06 (negación/prioridad):** «muéstrame el brief completo». **Esperado:** objetivos = visual cocina→piscina, iluminación natural, frescura en verano, pocos pasillos, patio y ahorro (+ supervisión de la piscina marcada como *supuesto*). **No** debe aparecer protección del viento; «no inventes orientación, normativa, viento ni datos del terreno» debe verse como nota/instrucción, no como objetivo. Luego: «No quiero priorizar el viento» → no se agrega nada; «Quiero proteger el patio del viento» → ahora sí aparece, con prioridad propia.
+2. **F07 (duplicados):** cada objetivo debe aparecer **una sola vez** (también tras pegar de nuevo la lista de prioridades; debe responder que ya estaba registrado y **no** crear versión).
+3. **F08 (identidad):** «haz el diagnóstico»: servidor `0.1.0-rc.3`, motor `mraa-0.3.0` y **paquete `0.1.0-tw10.f0141fa.rc3`** deben mostrarse por separado.
+4. **F09 (visual):** «evalúa la alternativa en L». **Esperado:** la visual aparece como **PRELIMINAR** (media, mejor y peor de 9 muestras; qué obstruye; qué falta: mobiliario, encimera, posición real de trabajo); **nunca** como seguridad. Luego: «Se trabaja junto al muro norte de la cocina» → debe registrar un punto de observación **confirmado** (versión nueva, sin cambiar la geometría) y evaluar la visual **desde ese punto**.
+5. **F10 (alternativas elegibles):** «genera las alternativas». **Esperado:** el texto dice **«Hay 3 alternativas ELEGIBLES de 4 generadas»** (compacta, L con patio y lineal; «dos alas» bloqueada por superficie, ≥104 m²). Pida «muéstrame la lineal» y revise: una sola crujía larga, entrada por el testero, jardín posterior. Con una superficie imposible (p. ej. 60 m² y 3 dormitorios) debe decir **«NO hay tres soluciones viables»** sin rebajar sus requisitos.
+**Falla si:** aparece viento como objetivo sin que usted lo pidiera; hay objetivos repetidos; el diagnóstico muestra solo `0.1.0-rc.3`; la visual se presenta como comprobación de supervisión o como índice 1,0 sin aclarar que es preliminar; dice «hay tres soluciones» cuando una está bloqueada.
 
 ## 5. Clima (archivo de datos)
 Copie `clima_sintetico_PRUEBA.epw` (incluido; **sintético, no es clima real**) a `…\Proyectos\Prueba TW10 Los Robles\01 Antecedentes\`. (Si tiene un EPW real de Santiago, úselo y anótelo.) Pegar: «Carga el clima del archivo 01 Antecedentes/clima_sintetico_PRUEBA.epw y dime qué viento domina en invierno y si el patio queda abrigado.»

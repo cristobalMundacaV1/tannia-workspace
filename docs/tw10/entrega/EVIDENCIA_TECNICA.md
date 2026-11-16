@@ -1,11 +1,11 @@
-# TW-10 — Informe de transferencia para la revisión independiente (PR #12) — rev. rc2 (tras auditoría de campo F01–F05)
-> **Actualización rc2:** esta revisión incorpora las correcciones de la auditoría de campo G10 (ver `HALLAZGOS_CAMPO_F01_F05.md`). Lo que sigue describe el estado vigente; lo anterior (rc1, `151c0a1`) queda como histórico.
+# TW-10 — Informe de transferencia para la revisión independiente (PR #12) — rev. rc3 (tras las pruebas reales rc1/rc2: F01–F10)
+> **Actualización rc3:** esta revisión incorpora las correcciones de la auditoría de campo G10 (`HALLAZGOS_CAMPO_F01_F05.md` y `HALLAZGOS_CAMPO_F06_F10.md`). Lo que sigue describe el estado vigente; rc1 (`151c0a1`) y rc2 (`6211397`) quedan como históricos.
 Autor: agente implementador (Claude Code). **Este informe no es una aprobación.** CI verde ≠ aceptación de arquitectura, UX ni producto. Revisor: Director de Revisión Independiente (ChatGPT), separado del implementador.
 
 ## 1. Identidad del PR
 - PR: https://github.com/cristobalMundacaV1/tannia-workspace/pull/12 (**draft**), rama `feat/tw10-architectural-reasoning` → base `feat/tw09-autonomia`.
 - **Base exacta:** `eb767891fe2dacbb4d3070653b1353ebde245243` (merge-base verificado; CI verde en la base: run 43880085863).
-- **SHA de código final (rc2):** `62113971801420c25ec5eff94311e3d729c2c14c` (`6211397`). Los commits posteriores **solo cambian `docs/`** (verifique con `git diff 6211397..<HEAD> --stat -- src scripts test fixtures`; debe estar vacío). Históricos: rc1 = `ee8a0e6`; `505444d` (commit intermedio con una prueba E14/E11 desactualizada, corregida en `6211397`: su CI debe ignorarse). `git rev-parse HEAD` da el HEAD completo actual.
+- **SHA de código final (rc3):** `f0141fac621a770fd391e946ba080c250f12b6e1` (`f0141fa`). Los commits posteriores **solo cambian `docs/`** (verifique con `git diff f0141fa..<HEAD> --stat -- src scripts test fixtures`; debe estar vacío). Históricos: rc1 = `ee8a0e6`; `505444d` (commit intermedio con una prueba E14/E11 desactualizada, corregida en `6211397`: su CI debe ignorarse). `git rev-parse HEAD` da el HEAD completo actual.
 - Alcance del diff vs base: 67 archivos, +13 003 / −4, 12 commits al empaquetar. Archivos **existentes** modificados (4): `src/tools/index.js` (registro), `src/politica/autonomia.js` (rama de enrutamiento), `src/server.js` (instrucciones), `scripts/paquete-prueba.mjs` (`--fase`). **Todo lo demás es nuevo.** No se tocó `main`, el PR #11 ni otras ramas.
 
 ## 2. Inventario
@@ -23,6 +23,9 @@ Autor: agente implementador (Claude Code). **Este informe no es una aprobación.
 ## 3b. Cambios de la auditoría de campo (rc2)
 F01 evaluar compacto + secciones; F02 vistas/luz/presupuesto con preguntas por ambigüedad; F03 `modo` actualizar/reemplazar; F04 métricas con fórmula/lectura/límites; F05 alertas con código y acción. Matriz con causa, reproducción, corrección y evidencia: `HALLAZGOS_CAMPO_F01_F05.md`. **Cambios de contrato:** `tannia_arq_evaluar` (resumen por defecto; `seccion:'completo'` = anterior), `tannia_arq_ver` (brief compacto; `brief_completo`), `tannia_arq_encargo` (`modo`); `ok()` genera el JSON del texto sin sangría antes de recortar.
 
+## 3c. Cambios de la prueba real rc2 (rc3)
+F06 interpretación por cláusulas (negación, intención, prioridad local); F07 deduplicación semántica e idempotencia; F08 identidad servidor/motor/paquete; F09 visual preliminar vs. punto de observación confirmado; F10 tercera alternativa `lineal` y conteo honesto de elegibles. Matriz: `HALLAZGOS_CAMPO_F06_F10.md`. **Evidencia literal del mensaje rc2: pendiente de aportar por el PO** (fixture reconstruido, declarado).
+
 ## 4. Correspondencia 45 historias ↔ evidencia
 Ver `docs/tw10/TW10_EVIDENCE_MATRIX.md` (tabla completa con archivo de prueba por historia y estado `PASA_CI`/`PARCIAL`/`EXTERNO`; incluye los 15 escenarios). Parciales **declarados**: 03-03 (Open-Meteo solo caché local, sin red, por ADR), 05-01 (patio central: geometría probada, sin generador), 06-04 (sin conectores avanzados), 10-04 (dossier a falta de campo).
 
@@ -37,7 +40,7 @@ Ver `docs/tw10/TW10_EVIDENCE_MATRIX.md` (tabla completa con archivo de prueba po
 Nada de lo «real» está aprobado. El agente no fija `ACEPTADO_POR_PO`.
 
 ## 6. Pruebas
-- Línea base TW-09: 192 pruebas / 175 pasan / 0 fallan / 17 omitidas. **TW-10 rc2: 294 / 277 pasan / 0 fallan / 17 omitidas** (+102 nuevas: 86 de G0–G9 y 16 de la auditoría de campo; ninguna de TW-09 modificada; una prueba propia de TW-10, E14/E11, se adaptó al brief compacto de `ver`).
+- Línea base TW-09: 192 pruebas / 175 pasan / 0 fallan / 17 omitidas. **TW-10 rc3: 320 / 303 pasan / 0 fallan / 17 omitidas** (+128 nuevas: 86 de G0–G9, 16 de F01–F05 y 26 de F06–F10; ninguna de TW-09 modificada; una prueba propia de TW-10, E14/E11, se adaptó al brief compacto de `ver`).
 - **Las 17 omitidas** (idénticas a la base): 16 «PowerShell real» (`test/tw09_windows_powershell.test.js`, requieren `powershell.exe`; **se ejecutan en el job `windows-latest` del CI**, sin AutoCAD: usan un mock COM) y 1 «TW-05: carpeta sin permiso de escritura» (se omite por diseño si se ejecuta como root **o en Windows**; en el job Ubuntu del CI, que no es root, sí corre). En Linux local como root se omiten las 17; en el CI Windows corren las 16 de PowerShell y se omite la de TW-05.
 - Reproducir: `npm ci && npm test` (Node 22).
 
@@ -65,7 +68,7 @@ URL: `https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/<id>`.
 `tw10_escenarios` E14/E11: proyecto con anteproyecto v1 y modelo 3D previos → tras el flujo TW-10 **el SHA-256 de todos los archivos previos de `03 Trabajo` es idéntico**, otro proyecto no cambia, el estudio conserva versiones (v002 sigue con el encargo de 90 m² tras cambiar a 110 m²). `tw10_g9_mcp`: `v002.json` mantiene su hash tras 8+ versiones; aislamiento entre proyectos; fuzz de nombres (`../../x`, `CON`, `a:b`, NUL…) no sale de `03 Trabajo/Arquitectura`. Las versiones usan `commitConHistorial` (staging+journal+manifiesto+bloqueo) de TW-09. **Pendiente real:** ACL/junctions/OneDrive/antivirus (heredado de TW-09).
 
 ## 10. Paquete (verificado en Linux)
-`tannia-workspace-tw10-6211397-rc2.mcpb` (SHA-256 `de7a502a3e6b54a72e48ea0346f117361821c9bea9933933ccc783bf88392f6d`), construido desde el código `6211397` (el anterior rc1 `13e37b45…9f31` queda **superado**; los hashes **difieren** porque el código cambió): manifiesto 0.3 válido (`mcpb validate`), nombre ASCII sin separadores, **desempaquetado en una ruta con espacios y «ñ»** y ejecutado **solo con `server/index.js`** (sin node_modules): 72 herramientas (61 TW-09 + 11 `tannia_arq_*`), 0 esquemas inválidos (sin `items` en arreglo), `tannia_diagnostico` OK, flujo encargo→alternativas→evaluar compacto OK con carpeta Unicode (el texto de `evaluar` llega completo: 6 885 caracteres sin recorte, con alertas, circulación y objetivos). **No verificado en Windows real ni en Claude Desktop.**
+`tannia-workspace-tw10-f0141fa-rc3.mcpb` (SHA-256 `a50c568362f59196a7ad518d95b3e3198bf82111f377ecae89528db7f0077cc9`), construido desde el código `f0141fa` (rc1 `13e37b45…9f31` y rc2 `de7a502a…2f6d` quedan **superados**; los hashes **difieren** porque el código cambió): manifiesto 0.3 válido (`mcpb validate`), nombre ASCII sin separadores, **desempaquetado en una ruta con espacios y «ñ»** y ejecutado **solo con `server/index.js`** (sin node_modules): 72 herramientas (61 TW-09 + 11 `tannia_arq_*`), 0 esquemas inválidos (sin `items` en arreglo), `tannia_diagnostico` OK, flujo encargo→alternativas→evaluar compacto OK con carpeta Unicode (el texto de `evaluar` llega completo: 6 885 caracteres sin recorte, con alertas, circulación y objetivos). **No verificado en Windows real ni en Claude Desktop.**
 
 ## 11. Limitaciones y riesgos pendientes
 Ver `LIMITACIONES_CONOCIDAS.md`. Riesgos principales: (1) sin AutoCAD real, los DWG 2D/3D de TW-10 no están validados (el adaptador COM es el de TW-09); (2) el léxico de interpretación es por reglas en español: frases fuera de él quedan «desconocidas»; (3) posición de piscina supuesta; (4) superficies <~104 m² con «dos alas» exceden lo pedido (avisado); (5) generación limitada a 1 piso, recintos rectangulares; (6) UX conversacional real sin probar con Tannia; (7) la elección «en L = orienta, no bloquea» es una decisión de producto a confirmar; (8) las heurísticas de privacidad/acústica (`heur-1`) no son normativas.

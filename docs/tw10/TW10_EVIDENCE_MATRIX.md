@@ -74,3 +74,6 @@ Las pruebas viven en `test/tw10_*.test.js`. Ninguna fila `EXTERNO` está aprobad
 
 ## Auditoría de campo G10 (F01–F05)
 `TW10_FIELD_FINDINGS_F01_F05.md`: F01 respuestas compactas, F02 necesidades del lenguaje natural, F03 continuidad del brief, F04 métricas interpretadas, F05 alertas recuperables — `PASA_CI` (ver CANDIDATE). Repetición en Claude Desktop real: **EXTERNO / PENDIENTE**.
+
+## Prueba real rc2 (F06–F10)
+`TW10_FIELD_FINDINGS_F06_F10.md`: F06 negación/intención/prioridad local, F07 duplicados, F08 identidad servidor/motor/paquete, F09 alcance de la visual, F10 tercera alternativa y conteo de elegibles — `PASA_CI` (ver CANDIDATE). Patio central: `PARCIAL` (sin generador). Repetición en Claude Desktop real: **EXTERNO / PENDIENTE**.

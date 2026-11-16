@@ -3,13 +3,13 @@
   "contract_version": "autonomia-e2e-v2",
   "overall_status": "ESPERA_EXTERNA",
   "branch": "feat/tw10-architectural-reasoning",
-  "head_sha": "62113971801420c25ec5eff94311e3d729c2c14c",
+  "head_sha": "f0141fac621a770fd391e946ba080c250f12b6e1",
   "base_sha_verified": "eb767891fe2dacbb4d3070653b1353ebde245243",
   "pr_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/12",
   "updated_utc": "2026-11-16T15:54:28.241Z",
   "current_gate": "G10",
-  "current_story": "TW10-10-02 (repetición G10 rc2)",
-  "next_action": "Esperar externos: el PO repite G10 con el rc2 (docs/tw10/entrega/PROTOCOLO_PRUEBA_REAL.md, pasos 1, 4 y 4b) y entrega evidencias al Director de Revisión Independiente; AutoCAD 2027 real; taller con Tannia; decisión del PO. Sin merge/release por el agente.",
+  "current_story": "TW10-10-02 (repetición G10 rc3)",
+  "next_action": "Esperar externos: el PO repite G10 con el rc3 (docs/tw10/entrega/PROTOCOLO_PRUEBA_REAL.md, pasos 1, 4, 4b y 4c), aporta el mensaje literal de rc2 (v001.json → request_original), AutoCAD 2027 real, taller con Tannia y decisión del PO. Sin merge/release por el agente.",
   "gates": {
     "G0": {
       "status": "SUPERADA_TECNICA_AUTOMATIZABLE",
@@ -132,5 +132,5 @@
     "aprobación del PO"
   ],
   "unresolved_p0_p1": [],
-  "last_session_result": "Auditoría de campo G10 F01–F05 corregida (docs/tw10/TW10_FIELD_FINDINGS_F01_F05.md). Local: 294 pruebas, 277 pasan, 0 fallan, 17 omitidas. Código final 6211397; paquete rc2 sha256 de7a502a…2f6d (supera al rc1). CI Windows+Ubuntu verde sobre 6211397 (run 43931959889); 505444d falló por una prueba desactualizada ya corregida. G10 NO aprobado."
+  "last_session_result": "Prueba real rc2: F01–F05 mejoraron; F06–F10 corregidos (docs/tw10/TW10_FIELD_FINDINGS_F06_F10.md). Local: 320 pruebas, 303 pasan, 0 fallan, 17 omitidas. Código final f0141fa; paquete rc3 sha256 a50c5683…7cc9 (supera a rc1/rc2). CI: CI_RC3_RES. G10 NO aprobado."
 }
