@@ -11,11 +11,11 @@ Suite local en el último SHA de código: **375 pruebas, 358 pasan, 0 fallan, 17
 | G4 Interpretación y plan | superado (N1) | `3786d1b` | `tw11_g4_interpretacion` | ✅ | validación determinista, T16, brechas, ejecutor reanudable | la validación verifica propiedades, no «comprensión» |
 | G5 Geometría lineal | superado (N1) | `c264dbc` | `tw11_g5_geometria_lineal` | ✅ run 43949392711 | alineamientos, perfil, TIN exacto, LandXML (ADR-005), DXF releído + ezdxf | sin clotoides; barrido horizontal |
 | GV1 Túnel extremo a extremo | superado (N1, datos sintéticos) | `c264dbc` | `tw11_gv1_tunel` | ✅ | los 12 puntos de la directiva; coherencia DXF↔claims↔XLSX↔PDF; `examples/tw11/gv1_tunel/` | **no** es aptitud profesional ni AutoCAD real |
-| G6 Cantidades, presupuesto, programa | superado en pruebas locales; CI pendiente | `dcc658b` | `tw11_g6_cadena` | ⏳ run 43954370335 | Caso D; bud.rollup contrastado con computeBudget; CPM/curva S/EVM con soluciones cerradas; recomputación y bloqueo de base desactualizada | precios/rendimientos los aporta la usuaria |
-| G7 Especializaciones y migración | superado en pruebas locales; CI pendiente | `dcc658b` | `tw11_g7_especializaciones` | ⏳ | 6 especializaciones declarativas; carga segura (T13); adaptador ≥200 frases sin cambiar la salida; 72 intactas | enrutador activo solo con flag |
-| G8 Departamentos / edificación transversal | superado en pruebas locales; CI pendiente | `dcc658b` | `tw11_g8_departamentos` | ⏳ | artefactos del caso B: entrepiso compartido, medianeros, acceso por núcleo, terraza, sin lote; contraste casa/depto (≥6 diferencias); oficina/local | generador por franjas; sin estructura ni normativa |
-| G9 Paquete y experiencia | técnicamente superado en local | ver `ESTADO` | `tw11_g9_paquete` | ⏳ | `.mcpb` CIC apagado (72) y CIC activado (83) verificados desde el bundle desempaquetado; el verificador usa el entorno del manifiesto | Claude Desktop real pendiente; presupuesto de herramientas D7 **excedido** (+31,7 % vs propuesta de +25 %): decide la PO |
-| G10 Evaluación | ejecutor listo; **APROBACIÓN PENDIENTE** | — | `tw11_g10_eval` | ⏳ | `scripts/tw11-eval.mjs` con umbrales absolutos, hash de compromiso y casos de desarrollo | **requiere revisor independiente y casos retenidos externos: no existen** |
+| G6 Cantidades, presupuesto, programa | superado (N1) | `dcc658b` | `tw11_g6_cadena` | ✅ run 43954370335 | Caso D; bud.rollup contrastado con computeBudget; CPM/curva S/EVM con soluciones cerradas; recomputación y bloqueo de base desactualizada | precios/rendimientos los aporta la usuaria |
+| G7 Especializaciones y migración | superado (N1) | `dcc658b` | `tw11_g7_especializaciones` | ✅ run 43954370335 | 6 especializaciones declarativas; carga segura (T13); adaptador ≥200 frases sin cambiar la salida; 72 intactas | enrutador activo solo con flag |
+| G8 Departamentos / edificación transversal | superado (N1) | `dcc658b` | `tw11_g8_departamentos` | ✅ run 43954370335 | artefactos del caso B: entrepiso compartido, medianeros, acceso por núcleo, terraza, sin lote; contraste casa/depto (≥6 diferencias); oficina/local | generador por franjas; sin estructura ni normativa |
+| G9 Paquete y experiencia | superado (N1) | `cab78cd` | `tw11_g9_paquete` | ✅ run 43954614508 | `.mcpb` CIC apagado (72) y CIC activado (83) verificados desde el bundle desempaquetado; el verificador usa el entorno del manifiesto | Claude Desktop real pendiente; presupuesto de herramientas D7 **excedido** (+31,7 % vs propuesta de +25 %): decide la PO |
+| G10 Evaluación | ejecutor listo; **APROBACIÓN PENDIENTE** | `cab78cd` | `tw11_g10_eval` | ✅ (solo el ejecutor) | `scripts/tw11-eval.mjs` con umbrales absolutos, hash de compromiso y casos de desarrollo | **requiere revisor independiente y casos retenidos externos: no existen** |
 | G11 Auditoría independiente | pendiente (externo) | — | — | — | expediente `entrega/AUDITORIA_TRANSFER.md` | persona |
 | G12 Decisión del PO | pendiente (humano) | — | — | — | — | persona |
 
@@ -32,3 +32,6 @@ Precisión de selección de herramienta: **no medida** (requiere un cliente con 
 
 ## Pendientes humanos (no aprobados)
 AutoCAD real · Claude Desktop real · evaluación retenida independiente (G10) · revisión profesional por especialidad · taller con Tannia · decisión de aceptación del PO · merge y distribución.
+
+## Candidato de prueba entregado
+ZIP `TW11-entrega-cab78cd.zip` SHA-256 `0dddfec760f6101d96faf81b85effe81f61b809ea42bd2a40a16415cfc5f5b03`; `.mcpb` CIC apagado `a0c73654c38ab05e68c34a372f683c5edc5bfae2195b09725724d49c3d6c1557` (72 herramientas); `.mcpb` CIC activado `679f9ebfab302e93cbf561367d50d32bd07f0ae08f036375483f74e1c71be9e9` (83). Sin validación real.

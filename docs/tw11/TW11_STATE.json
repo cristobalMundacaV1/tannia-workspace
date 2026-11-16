@@ -54,31 +54,31 @@
     "G6": {
       "estado": "tecnicamente_superado_N1",
       "sha_codigo": "dcc658b71f8f560a95cdacb1e6de1eee3b5f05b8",
-      "ci": "pendiente",
+      "ci": "success 43954370335",
       "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G7": {
       "estado": "tecnicamente_superado_N1",
       "sha_codigo": "dcc658b71f8f560a95cdacb1e6de1eee3b5f05b8",
-      "ci": "pendiente",
+      "ci": "success 43954370335",
       "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G8": {
       "estado": "tecnicamente_superado_N1",
       "sha_codigo": "dcc658b71f8f560a95cdacb1e6de1eee3b5f05b8",
-      "ci": "pendiente",
+      "ci": "success 43954370335",
       "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G9": {
       "estado": "tecnicamente_superado_local_N1",
-      "sha_codigo": null,
-      "ci": "pendiente",
+      "sha_codigo": "cab78cdd81f606d70fc743c45c01633099eadcb6",
+      "ci": "success 43954614508",
       "evidencia": "test/tw11_g9_paquete.test.js; fixtures/tw11/tools_cic.json"
     },
     "G10": {
       "estado": "EJECUTOR_LISTO_APROBACION_PENDIENTE_EXTERNA",
-      "sha_codigo": null,
-      "ci": "pendiente",
+      "sha_codigo": "cab78cdd81f606d70fc743c45c01633099eadcb6",
+      "ci": "success 43954614508 (solo ejecutor)",
       "evidencia": "scripts/tw11-eval.mjs"
     },
     "G11": {
@@ -134,5 +134,12 @@
       "item": "decisión del PO sobre presupuesto de herramientas (D7)"
     }
   ],
-  "paquetes_candidatos": []
+  "paquetes_candidatos": [
+    {
+      "zip": "TW11-entrega-cab78cd.zip",
+      "sha256": "0dddfec760f6101d96faf81b85effe81f61b809ea42bd2a40a16415cfc5f5b03",
+      "cicoff_sha256": "a0c73654c38ab05e68c34a372f683c5edc5bfae2195b09725724d49c3d6c1557",
+      "cicon_sha256": "679f9ebfab302e93cbf561367d50d32bd07f0ae08f036375483f74e1c71be9e9"
+    }
+  ]
 }
