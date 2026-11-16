@@ -177,7 +177,7 @@ try {
   $d = $acad.Documents.Add()
   try { $d.SetVariable('INSUNITS', 4) } catch { }
   foreach ($c in $in.capas) { $l = $d.Layers.Add([string]$c.nombre); try { $l.color = [int]$c.color } catch { } }
-  $ms = $d.ModelSpace; $mapa = @(); $centrado = $true
+  $ms = $d.ModelSpace; $mapa = @(); $lect = @(); $centrado = $true
   foreach ($p in $in.primitivas) {
     if ($p.tipo -eq 'cuna') { $s = CrearCuna $ms $p }
     else { $s = $ms.AddBox((P3 $p.centro_inicial[0] $p.centro_inicial[1] $p.centro_inicial[2]), [double]$p.dx, [double]$p.dy, [double]$p.dz) }
@@ -187,6 +187,7 @@ try {
     if ($p.tipo -eq 'cuna') { $null = Centrar $s (P3 $p.esperado.centroide[0] $p.esperado.centroide[1] $p.esperado.centroide[2]) }
     $s.Layer = [string]$p.capa
     $mapa += @{ id = [string]$p.id; handle = [string]$s.Handle }
+    $lect += (LeerEnt $s ([string]$s.Handle))
   }
   $t = $ms.AddText([string]$in.nota, (P3 $in.nota_pos[0] $in.nota_pos[1] $in.nota_pos[2]), 200.0); $t.Layer = 'TW3D_NOTAS'
   foreach ($c in $in.capas) { if (-not $c.visible) { $d.Layers.Item([string]$c.nombre).LayerOn = $false } }
@@ -206,7 +207,7 @@ try {
 $nCap = [int]$d.Layers.Count; $capas = @(); for ($i = 0; $i -lt $nCap; $i++) { $capas += [string]$d.Layers.Item($i).Name }
 $total = [int]$d.ModelSpace.Count; $porCapa = @{}
 for ($i = 0; $i -lt $total; $i++) { $cc = [string]$d.ModelSpace.Item($i).Layer; if ($porCapa.ContainsKey($cc)) { $porCapa[$cc] = $porCapa[$cc] + 1 } else { $porCapa[$cc] = 1 } }
-Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; entidades = $total; capas = $capas; entidades_por_capa = $porCapa; mapa = $mapa; centroide_informado = $centrado; vista = $vista; estilo = $estilo; unidades_insunits = $d.GetVariable('INSUNITS') } }`,
+Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; entidades = $total; capas = $capas; entidades_por_capa = $porCapa; mapa = $mapa; lecturas = $lect; centroide_informado = $centrado; vista = $vista; estilo = $estilo; unidades_insunits = $d.GetVariable('INSUNITS') } }`,
   vista_3d: `if ($doc.FullName -ne $in.ruta_esperada) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
 foreach ($n in $in.mostrar) { $doc.Layers.Item([string]$n).LayerOn = $true }
 foreach ($n in $in.ocultar) { $doc.Layers.Item([string]$n).LayerOn = $false }
@@ -639,8 +640,13 @@ export class AutoCadCom {
     try { const st = fs.statSync(dwgAbs); bytes = st.size; const fd = fs.openSync(dwgAbs, 'r'); const b = Buffer.alloc(6); fs.readSync(fd, b, 0, 6, 0); fs.closeSync(fd); cabecera = b.toString('latin1'); } catch { /* se informa abajo */ }
     const valido = !!cabecera && /^AC10\d\d$/.test(cabecera) && bytes > 1000;
     const estructura = verificarEstructura(esperado, r);
-    return { ...r, dwg: dwgRel, archivo_dwg: { bytes, cabecera, cabecera_dwg_valida: valido, sha256: valido ? sha256File(dwgAbs) : null }, verificacion_estructura: estructura,
-      verificacion: valido && estructura.ok ? 'DWG 3D guardado en disco con cabecera de AutoCAD; capas y conteos por capa coinciden con el modelo. Use tannia_3d_verificar para comprobar cada sólido.' : 'ATENCIÓN: el DWG 3D no pasó la verificación de archivo o estructura (ver archivo_dwg y verificacion_estructura).' };
+    // Lectura inmediata de cada sólido creado (volumen, centroide, caja envolvente) frente al valor analítico del modelo
+    const { lecturas, ...resto } = r;
+    const cmp = compararSolidos(primitivas.map((p) => ({ id: p.id, capa: p.capa, ...p.esperado, centro: p.esperado.centroide, min: p.esperado.bbox_min, max: p.esperado.bbox_max })), lecturas || []);
+    const verificacionSolidos = { estado: cmp.estado, esperados: cmp.esperados, leidos: cmp.leidos, coinciden: cmp.coinciden, faltan: cmp.faltan.slice(0, 20), distintos: cmp.distintos.slice(0, 20), sobran: cmp.sobran.slice(0, 20), caja_envolvente: cmp.caja_envolvente };
+    const todoBien = valido && estructura.ok && cmp.estado === 'fiel';
+    return { ...resto, dwg: dwgRel, archivo_dwg: { bytes, cabecera, cabecera_dwg_valida: valido, sha256: valido ? sha256File(dwgAbs) : null }, verificacion_estructura: estructura, verificacion_solidos: verificacionSolidos,
+      verificacion: todoBien ? 'DWG 3D guardado en disco con cabecera de AutoCAD; capas, conteos y CADA sólido (volumen, centroide, caja envolvente) coinciden con el modelo. Compruebe a ojo la vista y confirme el cierre/reapertura con tannia_cad_verificar_persistencia.' : `ATENCIÓN: verificación no concluyente o con diferencias (archivo ${valido ? 'ok' : 'NO válido'}; estructura ${estructura.ok ? 'ok' : 'con diferencias'}; sólidos ${cmp.estado}). Revise verificacion_estructura y verificacion_solidos.` };
   }
 
   /** Vista 3D del documento activo (copia en 03 Trabajo): dirección isométrica/planta/alzado, zoom a la extensión, estilo visual y capas visibles. */

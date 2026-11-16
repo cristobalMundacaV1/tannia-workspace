@@ -72,6 +72,53 @@ if ($env:TANNIA_TEST_PREPOP -and -not $global:TW_LOST) { foreach ($len in ($env:
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name Save -Value { if ($env:TANNIA_TEST_SAVEFAIL -eq '1') { throw 'no se pudo guardar' }; TW-L 'SAVE' }
 `;
 
+
+// AutoCAD 3D simulado (PowerShell): sólidos con convenciones DISTINTAS a las supuestas (centro de la base en AddBox; pendiente de la cuña a lo largo de Y)
+// para comprobar que el script real se autocorrige con Centroid/GetBoundingBox. Estado en memoria: cada llamada es un proceso nuevo.
+const MOCK_3D = `$global:BOXBASE = ($env:TANNIA_TEST_BOXCONV -eq 'base'); $global:WEDGEY = ($env:TANNIA_TEST_WEDGEY -eq '1'); $global:NS = 0
+function global:Rot2($x, $y, $a) { $r = $a * [math]::PI / 180; return @(($x * [math]::Cos($r) - $y * [math]::Sin($r)), ($x * [math]::Sin($r) + $y * [math]::Cos($r))) }
+function global:Sol($kind, $c, $d, $hi) {
+  $global:NS++
+  $o = New-Object PSObject -Property @{ Handle = ('{0:X}' -f (200 + $global:NS)); ObjectName = 'AcDb3dSolid'; Layer = '0'; Kind = $kind; C = $c; D = $d; Ang = 0.0; Hi = $hi }
+  Add-Member -InputObject $o -MemberType ScriptProperty -Name Volume -Value { $v = $this.D[0] * $this.D[1] * $this.D[2]; if ($this.Kind -eq 'wedge') { $v / 2 } else { $v } }
+  Add-Member -InputObject $o -MemberType ScriptProperty -Name Centroid -Value {
+    $cx = $this.C[0]; $cy = $this.C[1]; $cz = $this.C[2]
+    if ($this.Kind -eq 'wedge') { $off = Rot2 ($this.Hi[0] * $this.D[0] / 6) ($this.Hi[1] * $this.D[1] / 6) $this.Ang; $cx += $off[0]; $cy += $off[1]; $cz = $this.C[2] - $this.D[2] / 2 + $this.D[2] / 3 }
+    return ,@($cx, $cy, $cz) }
+  Add-Member -InputObject $o -MemberType ScriptMethod -Name GetBoundingBox -Value { param($mn, $mx)
+    $xs = @(); $ys = @(); foreach ($sx in -1, 1) { foreach ($sy in -1, 1) { $p = Rot2 ($sx * $this.D[0] / 2) ($sy * $this.D[1] / 2) $this.Ang; $xs += ($this.C[0] + $p[0]); $ys += ($this.C[1] + $p[1]) } }
+    $mn.Value = [double[]]@((($xs | Measure-Object -Minimum).Minimum), (($ys | Measure-Object -Minimum).Minimum), ($this.C[2] - $this.D[2] / 2))
+    $mx.Value = [double[]]@((($xs | Measure-Object -Maximum).Maximum), (($ys | Measure-Object -Maximum).Maximum), ($this.C[2] + $this.D[2] / 2)) }
+  Add-Member -InputObject $o -MemberType ScriptMethod -Name Move -Value { param($a, $b) $this.C = @(($this.C[0] + $b[0] - $a[0]), ($this.C[1] + $b[1] - $a[1]), ($this.C[2] + $b[2] - $a[2])) }
+  Add-Member -InputObject $o -MemberType ScriptMethod -Name Rotate -Value { param($base, $ang) $g = $ang * 180 / [math]::PI; $r = Rot2 ($this.C[0] - $base[0]) ($this.C[1] - $base[1]) $g; $this.C = @(($base[0] + $r[0]), ($base[1] + $r[1]), $this.C[2]); $this.Ang = $this.Ang + $g }
+  Add-Member -InputObject $o -MemberType ScriptMethod -Name Delete -Value { [void]$global:MS3.Remove($this) }
+  return $o
+}
+$global:MS3 = New-Object System.Collections.ArrayList
+Add-Member -InputObject $global:MS3 -MemberType ScriptMethod -Name AddBox -Value { param($c, $l, $w, $h) $cz = $c[2]; if ($global:BOXBASE) { $cz += $h / 2 }; $s = Sol 'box' @($c[0], $c[1], $cz) @($l, $w, $h) $null; [void]$global:MS3.Add($s); return $s }
+Add-Member -InputObject $global:MS3 -MemberType ScriptMethod -Name AddWedge -Value { param($c, $l, $w, $h) $cz = $c[2]; if ($global:BOXBASE) { $cz += $h / 2 }; $hi = @(-1.0, 0.0); if ($global:WEDGEY) { $hi = @(0.0, -1.0) }; $s = Sol 'wedge' @($c[0], $c[1], $cz) @($l, $w, $h) $hi; [void]$global:MS3.Add($s); return $s }
+Add-Member -InputObject $global:MS3 -MemberType ScriptMethod -Name AddText -Value { param($t, $p, $h) $o = New-Object PSObject -Property @{ Handle = 'FF1'; ObjectName = 'AcDbText'; Layer = '0'; TextString = $t }; [void]$global:MS3.Add($o); return $o }
+$global:LAY = New-Object System.Collections.ArrayList
+function global:NuevaCapa($n) { $l = New-Object PSObject -Property @{ Name = $n; color = 7; LayerOn = $true }; [void]$global:LAY.Add($l); return $l }
+$null = NuevaCapa '0'
+$layers3 = New-Object PSObject
+Add-Member -InputObject $layers3 -MemberType ScriptMethod -Name Add -Value { param($n) return (NuevaCapa $n) }
+Add-Member -InputObject $layers3 -MemberType ScriptMethod -Name Item -Value { param($n) if ($n -is [int]) { return $global:LAY[$n] }; foreach ($l in $global:LAY) { if ($l.Name -eq $n) { return $l } }; throw 'capa inexistente' }
+Add-Member -InputObject $layers3 -MemberType ScriptProperty -Name Count -Value { $global:LAY.Count }
+$vp3 = New-Object PSObject -Property @{ Direction = @(0.0, 0.0, 1.0) }
+$nuevo = New-Object PSObject -Property @{ Name = 'Dibujo1.dwg'; FullName = 'Dibujo1.dwg'; Saved = $false; Layers = $layers3; ModelSpace = $global:MS3; ActiveViewport = $vp3 }
+Add-Member -InputObject $nuevo -MemberType ScriptMethod -Name SetVariable -Value { param($n, $v) }
+Add-Member -InputObject $nuevo -MemberType ScriptMethod -Name GetVariable -Value { param($n) return 4 }
+Add-Member -InputObject $nuevo -MemberType ScriptMethod -Name SendCommand -Value { param($c) Add-Content -LiteralPath $env:TANNIA_TEST_LOG -Value ('CMD ' + $c) -Encoding UTF8 }
+Add-Member -InputObject $nuevo -MemberType ScriptMethod -Name Close -Value { param($g) Add-Content -LiteralPath $env:TANNIA_TEST_LOG -Value ('CLOSE ' + $g) -Encoding UTF8 }
+Add-Member -InputObject $nuevo -MemberType ScriptMethod -Name SaveAs -Value { param($p, $t) [IO.File]::WriteAllBytes($p, ([Text.Encoding]::ASCII.GetBytes('AC1032') + (New-Object byte[] 3000))); $this.FullName = $p; $this.Name = [IO.Path]::GetFileName($p); $this.Saved = $true }
+$docs3 = New-Object PSObject
+Add-Member -InputObject $docs3 -MemberType ScriptMethod -Name Add -Value { return $nuevo }
+$acad = New-Object PSObject -Property @{ Version = '26.0s (simulado)'; Name = 'AutoCAD'; Documents = $docs3 }
+Add-Member -InputObject $acad -MemberType ScriptMethod -Name ZoomExtents -Value { Add-Content -LiteralPath $env:TANNIA_TEST_LOG -Value 'ZOOM' -Encoding UTF8 }
+$usado = 'AutoCAD.Application.26'
+$doc = New-Object PSObject -Property @{ Name = 'previo.dwg'; FullName = $env:TANNIA_TEST_DOC; Saved = $true }
+`;
 function entorno(prefix = "'Tannia Workspace ó ñ ") {
   const home = tmpHome(prefix); const sb = new Sandbox(home);
   const P = "Prueba de integración AutoCAD ñ'"; createProject(sb, P);
@@ -251,6 +298,29 @@ test('PowerShell real: causa raíz — arcos SIN Length leen ArcLength (no 0), e
     assert.equal(l.entidades[3].texto, 'BAÑO', 'la Ñ viaja PowerShell→Node sin corromperse');
     const r = await com.verificarPersistencia(e.P, { archivo: `03 Trabajo/${path.basename(e.work)}` });
     assert.equal(r.persistencia, 'verificada'); assert.equal(r.cobertura.AcDbArc.verificadas, 3); assert.equal(r.cobertura.AcDbText.verificadas, 1);
+  } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
+});
+
+test('PowerShell real: construir_3d con convenciones de AutoCAD distintas a las supuestas (cajas por la base, cuña inclinada en Y) se autocorrige y verifica cada sólido', opts, async () => {
+  const { construirPrimitivas } = await import('../src/arq3d/geometria.js');
+  const e = entorno();
+  try {
+    const muro = (id, p1, p2, v = []) => ({ id, nivel: 'N1', tipo: 'ext', espesor_mm: 200, p1, p2, vanos: v });
+    const modelo = { niveles: [{ id: 'N1', cota_mm: 0, altura_mm: 2600 }], muros: [muro('A', [0, 0], [6000, 0], [{ id: 'P', tipo: 'puerta', posicion_mm: 1500, ancho_mm: 900, alto_mm: 2100 }, { id: 'W', tipo: 'ventana', posicion_mm: 4000, ancho_mm: 1500, alto_mm: 1200, antepecho_mm: 900 }]), muro('B', [6000, 0], [6000, 4000]), muro('C', [6000, 4000], [0, 4000]), muro('D', [0, 4000], [0, 0]), { id: 'X', nivel: 'N1', tipo: 'int', espesor_mm: 100, p1: [0, 0], p2: [3000, 3000] }], losas: [{ id: 'L', nivel: 'N1', espesor_mm: 150, contorno: [[-100, -100], [6100, -100], [6100, 4100], [-100, 4100]] }],
+      cubiertas: [{ id: 'C1', nivel: 'N1', tipo: 'dos_aguas', pendiente_pct: 30, eje_cumbrera: 'x' }, { id: 'C2', nivel: 'N1', tipo: 'un_agua', pendiente_pct: 10, direccion: '-x', contorno: [[7000, 0], [9000, 0], [9000, 3000], [7000, 3000]] }] };
+    const r = construirPrimitivas(modelo); assert.ok(r.primitivas.some((p) => p.tipo === 'cuna') && r.primitivas.some((p) => p.rot_deg));
+    const env = r.resumen.envolvente_mm;
+    for (const conv of [{}, { TANNIA_TEST_BOXCONV: 'base' }, { TANNIA_TEST_WEDGEY: '1' }, { TANNIA_TEST_BOXCONV: 'base', TANNIA_TEST_WEDGEY: '1' }]) {
+      fs.writeFileSync(e.log, '');
+      const dwgRel = `03 Trabajo/Modelos3D/Prueba ñ'/v${Object.keys(conv).length}${conv.TANNIA_TEST_BOXCONV || 'c'}${conv.TANNIA_TEST_WEDGEY || '0'}_3D.dwg`;
+      const com = new AutoCadCom({ sandbox: e.sb, platform: 'win32', connect: MOCK_3D, runner: (script, input) => runPowerShell(script, input, { env: { TANNIA_TEST_DOC: e.work, TANNIA_TEST_LOG: e.log, ...conv } }) });
+      const out = await com.construir3d(e.P, { dwgRel, primitivas: r.primitivas, capas: r.capas, nota: r.nota, nota_pos: [env.min[0], env.min[1] - 1500, 0], vista: 'iso_se', estilo: 'conceptual' });
+      assert.equal(out.verificacion_solidos.estado, 'fiel', `${JSON.stringify(conv)} ${JSON.stringify(out.verificacion_solidos)}`);
+      assert.equal(out.verificacion_solidos.coinciden, r.primitivas.length); assert.equal(out.archivo_dwg.cabecera_dwg_valida, true); assert.equal(out.verificacion_estructura.ok, true);
+      assert.deepEqual(out.vista.direccion, [1, -1, 1]); assert.equal(out.estilo, 'solicitado'); assert.equal(out.entidades, r.primitivas.length + 1);
+      const log = leer(e.log); assert.deepEqual(log.filter((x) => /^CLOSE/.test(x)), [], 'el documento nuevo no se cierra si todo va bien'); assert.ok(log.includes('CMD _.VSCURRENT _Conceptual '));
+    }
+    assert.equal(fs.readFileSync(e.orig, 'utf8'), 'ORIGINAL'); assert.equal(fs.readFileSync(e.work, 'utf8'), 'COPIA', 'el dibujo previo no se toca');
   } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
 });
 

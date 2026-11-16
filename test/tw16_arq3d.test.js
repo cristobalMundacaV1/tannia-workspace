@@ -222,7 +222,9 @@ test('AutoCAD (servidor COM simulado): construir DWG 3D nuevo, verificar cada s�
     const env = r.reg.resumen_geometria.envolvente_mm;
     const args = { dwgRel: rt.dwg, primitivas: r.reg.primitivas, capas: r.reg.capas, nota: r.reg.nota, nota_pos: [env.min[0], env.min[1] - 1500, 0] };
     const out = await mk().construir3d('Obra', args);
-    assert.equal(out.archivo_dwg.cabecera_dwg_valida, true); assert.equal(out.verificacion_estructura.ok, true); assert.match(out.verificacion, /DWG 3D guardado/);
+    assert.equal(out.archivo_dwg.cabecera_dwg_valida, true); assert.equal(out.verificacion_estructura.ok, true); assert.match(out.verificacion, /DWG 3D guardado/); assert.equal(out.verificacion_solidos.estado, 'fiel'); assert.equal(out.verificacion_solidos.coinciden, r.reg.primitivas.length); assert.equal(out.lecturas, undefined);
+    const sinCaja = await mk({ sinBbox: true }).construir3d('Obra', { ...args, dwgRel: '03 Trabajo/Modelos3D/Prueba/sin_caja.dwg' }); assert.equal(sinCaja.verificacion_solidos.estado, 'no_concluyente'); assert.match(sinCaja.verificacion, /ATENCIÓN/);
+    const malo = await mk({ defectoSolido: (q, i, props, capa) => ({ props: i === 2 ? { ...props, Volume: props.Volume * 2 } : props, capa }) }).construir3d('Obra', { ...args, dwgRel: '03 Trabajo/Modelos3D/Prueba/malo.dwg' }); assert.equal(malo.verificacion_solidos.estado, 'con_diferencias'); assert.equal(malo.verificacion_solidos.distintos[0].problemas[0].problema, 'volumen_distinto');
     assert.equal(out.entidades, r.reg.primitivas.length + 1); assert.deepEqual(out.vista.direccion, [-1, -1, 1]); assert.equal(out.entidades_por_capa.TW3D_NOTAS, 1);
     const enviado = calls.find((c) => c.name === 'construir_3d').input; assert.equal(enviado.estilo_cmd, '_.VSCURRENT _Conceptual '); assert.ok(enviado.capas.find((c) => c.nombre === 'TW3D_CUBIERTA').visible === false, 'cubierta oculta por defecto');
     assert.ok(/ñ/.test(dwgAbs), 'ruta con ñ y apóstrofo');
