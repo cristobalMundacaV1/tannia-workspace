@@ -35,6 +35,15 @@ export class Casos {
     commitConHistorial({ dir: this.#abs(project, rel), historial: this.#abs(project, `${rel}/historial.json`), id, archivos: [{ nombre: `${id}.json`, contenido: JSON.stringify(reg, null, 2) }], ...tx, hook: this.hook || undefined, raiz: this.sandbox.projectRoot(project) });
     return reg;
   }
+  /** Escribe un artefacto del caso SIN sobrescribir jamás (sufijo " (2)" si existe distinto; reutiliza si es idéntico). Devuelve {rel, sha256}. */
+  escribirArtefacto(project, nombre, archivo, contenido) {
+    const { rel } = this.#n(nombre); const buf = Buffer.isBuffer(contenido) ? contenido : Buffer.from(contenido); const { name, ext } = path.parse(archivo); let k = 1; let cand = archivo;
+    fs.mkdirSync(this.#abs(project, `${rel}/artefactos`), { recursive: true });
+    for (;;) {
+      const r = `${rel}/artefactos/${cand}`; const abs = this.#abs(project, r);
+      try { fs.writeFileSync(abs, buf, { flag: 'wx' }); return { rel: r, sha256: sha256(buf) }; } catch (e) { if (e.code !== 'EEXIST') throw e; if (fs.readFileSync(abs).equals(buf)) return { rel: r, sha256: sha256(buf), reutilizado: true }; cand = `${name} (${++k})${ext}`; }
+    }
+  }
   crear(project, nombre, mode, descripcion = 'Versión inicial') {
     const { n, rel } = this.#n(nombre); const id = `v${num3(1)}`; const creada = new Date().toISOString();
     const err = new UserError('CASO_EXISTE', `Ya existe el caso "${n}".`, 'Use tannia_cic_* sobre el caso existente.');

@@ -15,6 +15,13 @@ import { ejecutarPlan } from '../cic/ejecutor.js';
 import { claimDeDato, claimSupuesto } from '../cic/claims.js';
 import { sha256 } from '../cic/hash.js';
 import { politicaDe } from '../cic/politica.js';
+import { Alineamiento, Perfil, seccionArco, seccionRectangular, seccionTrapecio, formatoProgresiva } from '../geo/lineal.js';
+import { generarDxfLineal, verificarDxfLineal } from '../geo/dxf_lineal.js';
+import { importarLandXml } from '../geo/landxml.js';
+import { GeoError } from '../geo/geom.js';
+import { claimsDeOperacion as claimsOp } from '../cic/claims.js';
+import fs from 'node:fs';
+import { bloquesMemoria, bloquesATexto, bloquesAPdf, planillaCantidades } from '../cic/entregables.js';
 import { Conocimiento } from '../cic/conocimiento/almacen.js';
 
 const RO = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
@@ -174,5 +181,68 @@ export function registerCic(reg, { sandbox, server, herramientas }) {
     const { doc } = C.cargar(p, n); if (!doc.plan) throw new UserError('SIN_PLAN', 'El caso no tiene plan: registre el encargo con tannia_cic_encargo.');
     let inf; const g = C.guardar(p, n, (d) => { inf = ejecutarPlan(d, { modo: d.mode, solo: pasos || null }); return `Ejecución: ${inf.ejecutados.length} ok, ${inf.fallidos.length} fallidos`; });
     return ok(`Ejecutados ${inf.ejecutados.length}; fallidos ${inf.fallidos.length}; recalculados ${inf.recomputados.length}; delegados a usted ${inf.delegados.length}. Guardado en ${g.version}.`, { caso_version: g.version, ejecutados: inf.ejecutados, fallidos: inf.fallidos, omitidos: inf.omitidos.slice(0, 15), delegados_a_claude: inf.delegados, recalculados: inf.recomputados, claims_desactualizados: inf.invalidados });
+  });
+
+  const tramo = z.object({ type: z.enum(['straight', 'arc']), length: z.number().positive().optional(), radius: z.number().positive().optional(), angle_deg: z.number().positive().optional(), turn: z.enum(['left', 'right']).optional() });
+  reg('tannia_cic_geometria', {
+    title: 'Geometría de infraestructura lineal: generar planta, perfil y secciones en DXF (verificado), o importar un LandXML',
+    description: 'Acciones: "generar_lineal" (alineamiento de rectas y arcos + perfil con PIV y curvas verticales + secciones tipo arco/rectangular/trapecio → DXF editable de planta, perfil y secciones; el DXF se RELEE con un lector independiente y se contrasta con el modelo; las áreas y el largo quedan como claims), "importar_landxml" (alineamientos, perfiles y superficies; lo no soportado se declara como pérdida, nunca se omite en silencio), "verificar_dxf" (releer un DXF generado y contrastarlo). Unidades: metros salvo que indique `unidad`. El perfil usa exageración vertical DECLARADA. No interpreta geotecnia ni diseña: solo geometría. ' + AVISO,
+    inputSchema: {
+      proyecto, caso, accion: z.enum(['generar_lineal', 'importar_landxml', 'verificar_dxf']),
+      nombre: z.string().max(60).optional().describe('nombre base del archivo'), unidad: z.enum(['m', 'mm', 'cm']).optional(),
+      tramos: z.array(tramo).optional().describe('alineación horizontal'), inicio: z.object({ x: z.number(), y: z.number(), azimut_deg: z.number(), progresiva: z.number() }).optional(),
+      pivs: z.array(z.object({ s: z.number(), z: z.number(), curva: z.number().min(0).optional() })).optional().describe('perfil: progresiva, cota y longitud de curva vertical centrada'), terreno: z.array(z.array(z.number()).min(2).max(2)).optional().describe('perfil del terreno [[progresiva, cota], …] (dato de la usuaria)'),
+      secciones: z.array(z.object({ progresiva: z.number(), nombre: z.string().optional(), tipo: z.enum(['arco', 'rectangular', 'trapecio', 'herradura_revestida']), espesor: z.number().positive().optional().describe('herradura_revestida: espesor del revestimiento (dato aportado)'), luz: z.number().optional(), altura_hastial: z.number().optional(), flecha: z.number().optional(), ancho: z.number().optional(), alto: z.number().optional(), base: z.number().optional(), talud_h_por_v: z.number().optional(), altura: z.number().optional() })).optional(),
+      exageracion_vertical: z.number().min(1).max(100).optional(), paso_progresivas: z.number().positive().optional(), titulo: z.string().max(100).optional(), ruta: z.string().optional().describe('importar_landxml: archivo dentro del proyecto; verificar_dxf: ruta del DXF del caso'),
+    }, annotations: RW,
+  }, async (a) => {
+    const p = a.proyecto; const n = a.caso;
+    if (a.accion === 'importar_landxml') {
+      if (!a.ruta) throw new UserError('FALTA_RUTA', 'Indique la ruta del LandXML dentro del proyecto.'); const { abs } = sandbox.resolve(p, a.ruta);
+      let r; try { r = importarLandXml(fs.readFileSync(abs, 'utf8')); } catch (e) { if (e instanceof GeoError) throw new UserError(e.code, e.message, 'Verifique el archivo (LandXML 1.2 en texto, sin DOCTYPE).'); throw e; }
+      if (!C.existe(p, n)) C.crear(p, n, 'professional'); const art = C.escribirArtefacto(p, n, `${a.nombre || 'importado'}-landxml.json`, JSON.stringify(r, null, 2));
+      return ok(`LandXML importado: ${r.alineamientos.length} alineamiento(s), ${r.perfiles.length} perfil(es), ${r.superficies.length} superficie(s); ${r.no_soportado.length} elemento(s) NO soportado(s) declarados como pérdida.`, { unidades: r.unidades, alineamientos: r.alineamientos.map((x) => ({ nombre: x.nombre, tramos: x.tramos.length, utilizable: x.utilizable, advertencias: x.advertencias })), perfiles: r.perfiles.map((x) => ({ nombre: x.nombre, pivs: x.pivs.length })), superficies: r.superficies.map((x) => ({ nombre: x.nombre, puntos: x.puntos.length })), perdidas: r.no_soportado, advertencias: r.advertencias, archivo: art.rel });
+    }
+    if (a.accion === 'verificar_dxf') {
+      const { doc } = C.cargar(p, n); const art = [...(doc.artifacts || [])].reverse().find((x) => x.kind === 'dxf_lineal' && (!a.ruta || x.rel === a.ruta)); if (!art) throw new UserError('SIN_ARTEFACTO', 'El caso no tiene un DXF lineal generado.');
+      const abs = sandbox.resolve(p, art.rel).abs; const v = verificarDxfLineal(fs.readFileSync(abs, 'utf8'), art.meta);
+      return ok(v.ok ? 'DXF coherente con el modelo (releído con lector independiente).' : `DXF NO coherente: ${v.problemas.length} problema(s).`, { archivo: art.rel, ...v });
+    }
+    // generar_lineal
+    const f = a.unidad === 'mm' ? 0.001 : a.unidad === 'cm' ? 0.01 : 1; if (!a.tramos?.length) throw new UserError('FALTA_ALINEACION', 'Indique la alineación (tramos).');
+    let al; let pf = null; const secs = []; const claims = [];
+    try {
+      const tr = a.tramos.map((t) => (t.type === 'straight' ? { type: 'straight', length: (t.length ?? NaN) * f } : { type: 'arc', radius: (t.radius ?? NaN) * f, angle_deg: t.angle_deg ?? NaN, turn: t.turn })); const ini = a.inicio || {};
+      al = new Alineamiento(tr, { x: (ini.x || 0) * f, y: (ini.y || 0) * f, azimut_deg: ini.azimut_deg || 0, progresiva: (ini.progresiva || 0) * f });
+      if (a.pivs?.length) pf = new Perfil(a.pivs.map((q) => ({ s: q.s * f, z: q.z * f, curva: (q.curva || 0) * f })));
+      for (const s of a.secciones || []) { let interior = null; if (s.tipo === 'herradura_revestida') { const e = (s.espesor ?? NaN) * f; const b = (s.luz ?? NaN) * f; interior = seccionArco({ luz: b, altura_hastial: (s.altura_hastial ?? 0) * f, flecha: b / 2 }); } const poligono = s.tipo === 'herradura_revestida' ? seccionArco({ luz: (s.luz ?? NaN) * f + 2 * (s.espesor ?? NaN) * f, altura_hastial: (s.altura_hastial ?? 0) * f, flecha: (s.luz ?? NaN) * f / 2 + (s.espesor ?? NaN) * f }) : s.tipo === 'arco' ? seccionArco({ luz: (s.luz ?? NaN) * f, altura_hastial: (s.altura_hastial ?? 0) * f, flecha: (s.flecha ?? NaN) * f }) : s.tipo === 'rectangular' ? seccionRectangular((s.ancho ?? NaN) * f, (s.alto ?? NaN) * f) : seccionTrapecio((s.base ?? NaN) * f, s.talud_h_por_v ?? 0, (s.altura ?? NaN) * f); if (s.progresiva * f < al.s0 - 1e-9 || s.progresiva * f > al.s1 + 1e-9) throw new GeoError('OUT_OF_RANGE', `La sección ${s.nombre || s.progresiva} está fuera de la alineación.`); secs.push({ progresiva: s.progresiva * f, nombre: s.nombre, poligono, interior, ancho: Math.max(...poligono.map((q) => q[0])) * 2, alto: Math.max(...poligono.map((q) => q[1])) }); }
+    } catch (e) { if (e instanceof GeoError) throw new UserError(e.code, e.message, 'Revise las dimensiones y el rango de validez; no se generó nada.'); throw e; }
+    const { dxf, meta } = generarDxfLineal({ alineamiento: al, perfil: pf, terreno: a.terreno?.map(([s, z]) => [s * f, z * f]) || null, secciones: secs, exageracion_vertical: a.exageracion_vertical || 10, paso_progresivas: a.paso_progresivas || 20, titulo: a.titulo || n });
+    const ver = verificarDxfLineal(dxf, meta); if (!ver.ok) throw new UserError('DXF_INCOHERENTE', `El DXF generado no concuerda con el modelo: ${ver.problemas.map((x) => x.mensaje).join(' · ')}`, 'No se guardó nada.');
+    // claims: largo del eje y áreas de secciones (por operaciones verificadas)
+    const modo = C.existe(p, n) ? C.cargar(p, n).doc.mode : 'professional';
+    const rl = ejecutarOperacion('geo.alignment.length', { path: { value: a.tramos.map((t) => (t.type === 'straight' ? { type: 'straight', length: t.length } : t)), unit: a.unidad || 'm' } }, { modo }); claims.push(...claimsOp(rl, { modo, etiqueta: 'Longitud del eje' }));
+    for (const s of secs) { const rs = ejecutarOperacion('geo.polygon.properties', { vertices: { value: s.poligono, unit: 'm' } }, { modo }); claims.push(...claimsOp(rs, { modo, etiqueta: `Área ${s.interior ? 'excavada ' : ''}sección PK ${formatoProgresiva(s.progresiva)}` })); if (s.interior) { const ri = ejecutarOperacion('geo.polygon.properties', { vertices: { value: s.interior, unit: 'm' } }, { modo }); claims.push(...claimsOp(ri, { modo, etiqueta: `Área interior sección PK ${formatoProgresiva(s.progresiva)}` })); } }
+    if (!C.existe(p, n)) C.crear(p, n, modo); const art = C.escribirArtefacto(p, n, `${(a.nombre || 'lineal').replace(/[\\/:*?"<>|]/g, '_')}.dxf`, dxf);
+    const g = C.guardar(p, n, (doc) => { const L = new Ledger(doc.claims); claims.forEach((c) => L.add(c)); doc.claims = L.list(); (doc.artifacts = doc.artifacts || []).push({ kind: 'dxf_lineal', rel: art.rel, sha256: art.sha256, meta, creado: new Date().toISOString() }); return 'DXF lineal generado'; });
+    return ok(`DXF lineal generado y verificado con lector independiente (${ver.entidades} entidades): planta, ${pf ? 'perfil, ' : ''}${secs.length} sección(es). Guardado en ${art.rel} (${g.version}).`, { archivo: art.rel, sha256: art.sha256, caso_version: g.version, verificacion: { ok: ver.ok, largo_eje_releido_m: ver.medidos.largo_eje_m, areas_releidas_m2: ver.medidos.areas_secciones_m2, unidades: ver.unidades }, perfil: meta.perfil ? { exageracion_vertical: meta.perfil.exageracion_vertical, nota: 'El perfil se dibuja con exageración vertical declarada en el propio plano.' } : null, claims: claims.map((c) => ({ id: c.id, texto: c.statement, valor: c.value, unidad: c.unit })), aviso: AVISO });
+  });
+
+  reg('tannia_cic_entregable', {
+    title: 'Generar entregables EDITABLES del caso: memoria de cálculo (Markdown + PDF) y planilla de cantidades (XLSX)',
+    description: 'Construye los documentos SOLO desde los claims, datos y supuestos del caso (encargo, fuentes con su estado de aprobación, procedimiento con hipótesis y rango de validez, resultados con operación/madurez/hash, brechas y pendientes). ANTES de escribir verifica el texto: toda cifra con unidad o moneda debe coincidir con un claim o dato registrado; si no, NO se genera y se informa cuál. Los números sin unidad (páginas, ids, versiones, constantes) no se bloquean. El modo académico agrega la marca «EJERCICIO ACADÉMICO». No sobrescribe: crea nombres nuevos. ' + AVISO,
+    inputSchema: { proyecto, caso, version: z.string().optional(), tipos: z.array(z.enum(['memoria_md', 'memoria_pdf', 'cantidades_xlsx'])).optional().describe('por defecto los tres'), nota_adicional: z.string().max(1500).optional().describe('texto libre breve para la memoria (se verifica igual que el resto)') }, annotations: RW,
+  }, async ({ proyecto: p, caso: n, version, tipos, nota_adicional }) => {
+    const { doc, id } = C.cargar(p, n, version); const fuentes = K.listar(p); const nombre = doc.nombre || n; const T = tipos?.length ? tipos : ['memoria_md', 'memoria_pdf', 'cantidades_xlsx'];
+    const B = bloquesMemoria({ ...doc, nombre }, { fuentes, version_caso: id }); if (nota_adicional) B.splice(B.length - 3, 0, { h: 2, t: 'Nota adicional' }, { p: nota_adicional });
+    const L = new Ledger(doc.claims); const texto = bloquesATexto(B);
+    const v = verificarEntregable({ texto }, { claims: L, entradas: new Set((doc.magnitudes || []).map((m) => m.name)), valoresEntrada: (doc.magnitudes || []).filter((m) => typeof m.value === 'number').map((m) => ({ value: m.value, unit: m.unit })) });
+    if (!v.ok) throw new UserError('ENTREGABLE_NO_VERIFICADO', `Cifras con unidad sin respaldo: ${v.bloqueos.slice(0, 6).map((b) => b.texto).join(', ')}.`, 'Registre esos valores como datos (tannia_cic_encargo magnitudes) o calcúlelos con tannia_cic_calcular; no se generó ningún archivo.', { bloqueos: v.bloqueos });
+    const base = nombre.replace(/[\\/:*?"<>|]/g, '_').slice(0, 40); const arch = []; const pol = politicaDe(doc.mode);
+    if (T.includes('memoria_md')) arch.push({ tipo: 'memoria_md', ...C.escribirArtefacto(p, n, `${base}-memoria-${id}.md`, texto) });
+    if (T.includes('memoria_pdf')) arch.push({ tipo: 'memoria_pdf', ...C.escribirArtefacto(p, n, `${base}-memoria-${id}.pdf`, await bloquesAPdf(B, { marca: pol.marca })) });
+    if (T.includes('cantidades_xlsx')) arch.push({ tipo: 'cantidades_xlsx', ...C.escribirArtefacto(p, n, `${base}-cantidades-${id}.xlsx`, await planillaCantidades({ ...doc, nombre }, { fuentes, version_caso: id })) });
+    const g = C.guardar(p, n, (d) => { (d.artifacts = d.artifacts || []).push(...arch.map((a) => ({ kind: a.tipo, rel: a.rel, sha256: a.sha256, desde_version: id, creado: new Date().toISOString() }))); return 'Entregables generados'; });
+    return ok(`Entregables generados desde ${id} (${arch.length}): todas las cifras con unidad coinciden con claims o datos registrados. ${pol.marca}`, { caso_version: g.version, archivos: arch.map((a) => ({ tipo: a.tipo, ruta: a.rel, sha256: a.sha256, ya_existia_identico: !!a.reutilizado })), verificacion_texto: { ok: true, estadisticas: v.stats, avisos: v.avisos.map((x) => x.mensaje) }, marca: pol.marca });
   });
 }

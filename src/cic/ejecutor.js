@@ -3,12 +3,16 @@
 import { ejecutarOperacion, OpError } from './ops/index.js';
 import { claimsDeOperacion } from './claims.js';
 import { Ledger } from './claims.js';
-import { ordenTopologico, esRef } from './interpretacion.js';
+import { ordenTopologico, esRef, esRefs, refsDe } from './interpretacion.js';
 import { sha256 } from './hash.js';
 
 const SIN_REINTENTO = new Set(['generate_cad', 'generate_doc']);
 
-function resolverEntrada(v, { doc, L, porPaso }) {
+function resolverEntrada(v, ctx) {
+  if (esRefs(v)) { const xs = v.refs.map((r) => resolverEntrada({ ref: r }, ctx)); const u = xs[0].unit; if (xs.some((x) => x.unit !== u)) throw new OpError('DIMENSION_INCOMPATIBLE', 'Las referencias de una lista deben tener la misma unidad.'); return { value: xs.map((x) => x.value), unit: u }; }
+  return resolverUno(v, ctx);
+}
+function resolverUno(v, { doc, L, porPaso }) {
   if (!esRef(v)) return v; const [tipo, resto] = [v.ref.split(':')[0], v.ref.slice(v.ref.indexOf(':') + 1)];
   if (tipo === 'magnitude') { const m = (doc.magnitudes || []).find((x) => x.name === resto); if (!m || m.value === null || m.value === undefined) throw new OpError('ENTRADA_FALTANTE', `Magnitud "${resto}" sin valor.`); return { value: m.value, unit: m.unit }; }
   if (tipo === 'claim') { const c = L.get(resto); if (!c || c.status === 'stale' || c.value === null) throw new OpError('CLAIM_NO_VIGENTE', `El claim ${resto} no existe o no está vigente.`); return { value: c.value, unit: c.unit }; }
@@ -33,7 +37,7 @@ export function ejecutarPlan(doc, { modo, solo = null, ahora = () => new Date().
       const entradas = {}; for (const [k, v] of Object.entries(s.inputs)) entradas[k] = resolverEntrada(v, { doc, L, porPaso });
       const hash = sha256({ op: s.capability_id, entradas, modo }); if (s.status === 'done' && s.input_hash === hash) { informe.omitidos.push({ id: s.id, estado: 'done', razon: 'idempotente: mismas entradas' }); continue; }
       const rehace = s.status === 'done' || s.status === 'stale'; const res = ejecutarOperacion(s.capability_id.slice(3), entradas, { modo });
-      const claims = claimsDeOperacion(res, { modo, etiqueta: s.goal, depende_de: Object.values(s.inputs).filter((v) => esRef(v) && v.ref.startsWith('claim:')).map((v) => v.ref.slice(6)), ahora });
+      const claims = claimsDeOperacion(res, { modo, etiqueta: s.goal, depende_de: Object.values(s.inputs).flatMap((v) => refsDe(v)).filter((r) => r.startsWith('claim:')).map((r) => r.slice(6)), ahora });
       if (rehace) { const inv = L.invalidar(s.result_claims.filter((c) => !claims.some((n) => n.id === c))); informe.invalidados.push(...inv); informe.recomputados.push(s.id); }
       claims.forEach((c) => L.add(c)); s.result_claims = claims.map((c) => c.id); s.input_hash = hash; s.status = 'done'; s.error = null; s.reason = res.warnings.join(' · ') || null;
       const o = {}; for (const c of claims) o[c.statement.split('→ ').pop().trim()] = c; porPaso.set(s.id, o); informe.ejecutados.push({ id: s.id, claims: s.result_claims, madurez: res.maturity });
