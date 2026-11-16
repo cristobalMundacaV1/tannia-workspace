@@ -2,11 +2,44 @@
 ## 0. Tesis
 Un encargo desconocido se trata como **problema de composición**, no como búsqueda de plantilla. El CIC es un servicio de dominio **determinista** (registrar, validar, planificar, ejecutar, verificar) con Claude como interlocutor que **interpreta, propone y explica**, pero **nunca** produce las cifras: las cifras salen de operaciones del catálogo y quedan como *claims* con procedencia. Es la misma regla de TW-10 («código calcula, Claude explica»), generalizada.
 
+## 0.1 Interpretación propuesta y validación por el backend (revisión CIC-01)
+**Principio:** el backend **no comprende** encargos; **verifica propiedades verificables** de una interpretación que propone Claude. No existe clasificador léxico en el camino crítico. Ninguna capacidad transversal (unidades, geometría, cantidades, claims, conocimiento, cronograma, entregables) exige una disciplina para usarse: su acceso depende **solo de las precondiciones de la capacidad** (entradas, modo, permisos, riesgo).
+```jsonc
+// tw.cic.interpretation/1  — la escribe Claude; el servidor la valida
+{ "schema":"tw.cic.interpretation/1","engagement_id":"eng-…|null","mode":"academic|professional|unspecified",
+  "restatement":"…",                                   // lo que Claude entendió, para confirmar con la usuaria
+  "intents":[{"kind":"deliver_artifact|answer_question|research|compute|verify|teach|plan","text":"…"}],  // varias a la vez
+  "research_questions":[{"id":"q1","text":"…","needed_for":["d1"],"status":"open|answered|unanswerable_with_sources"}],
+  "deliverables":[{"id":"d1","kind":"…libre…","status":"confirmed|assumed|unknown"}],
+  "disciplines_proposed":[{"tag":"túneles","registry_id":null,"rationale":"…"}],   // 0..n, multi-disciplina, SIN efecto de acceso
+  "antecedents":[{"ref":"psg-…|src-…","quote":"extracto literal","use":"…"}],       // verificados contra el almacén
+  "magnitudes":[{"name":"…","value":null,"unit":null,"origin":"user|source|assumed|unknown","ref":null}],
+  "methods_proposed":[{"operation_id":"…|null","free_text":"…","source_ref":"…|null","why":"…"}],
+  "assumptions":[{"text":"…","editable":true}],
+  "unknowns":[{"what":"…","blocks":["d1"],"resolution":"ask_user|retrieve|research_external|external_professional"}],
+  "risk_flags_proposed":["…"],                        // Claude solo puede AGREGAR restricciones (invariante I2)
+  "proposed_steps":[{"id":"s1","goal":"…","capability_id":"…|null","inputs":{},"depends_on":[]}] }
+```
+**Validación determinista (`tannia_cic_encargo` con `interpretacion`; modo `solo_validar` disponible):**
+| Chequeo | Falla ⇒ |
+|---|---|
+| Esquema Zod, ids únicos, DAG sin ciclos | `rejected(schema)` |
+| Cada `antecedent` existe en el almacén y `quote` coincide con el texto/hash del pasaje (anti-cita inventada) | el antecedente se marca `unverified_citation` y **no** sustenta claims |
+| Cada `operation_id` existe; dimensiones/unidades de entradas compatibles; entradas disponibles | el paso pasa a `gap` (`new_tool` o `ask_user`), **no** se rechaza el encargo |
+| `magnitudes` sin unidad con dimensión | pregunta pendiente, nunca suposición |
+| `method.free_text` sin `operation_id` | se conserva como *método propuesto no ejecutable* + `gap` |
+| Permisos del modo (E-level mínimo, `risk_class` de la capacidad) | paso `blocked_policy` con razón |
+| Disciplinas propuestas | **sin chequeo de acceso**; si hay especialización instalada, se *ofrece* como ayuda (plantillas, métodos, límites), nunca se exige |
+Resultados posibles: `accepted | accepted_with_gaps | needs_input | rejected` (este último solo por esquema/seguridad, nunca por «dominio no reconocido»).
+**Invariantes:** **I1** lo que Claude afirma y el servidor no puede verificar se guarda como `model_asserted` y nunca eleva madurez, vigencia ni nivel de evidencia. **I2** metadatos propuestos por Claude (riesgo, restricciones, revisión requerida) solo pueden **agregar** restricciones, no levantarlas. **I3** el nivel de riesgo efectivo de un paso es `max(risk_class de la capacidad, propuesto)`. **I4** un encargo sin disciplina, multi-disciplina, solo de investigación o incompleto es **válido**; produce plan con brechas y preguntas.
+**Degradación:** si el cliente no envía interpretación estructurada, el backend devuelve ≤3 preguntas y una plantilla vacía de `interpretation/1`; un extractor léxico opcional (reuso de cláusulas TW-10) puede **sugerir** campos, siempre marcados `lexical_hint` y sin efecto de acceso.
+**Pruebas (G4):** proyectos con jerga inventada y sin especialización (mutación de vocabulario) obtienen asistencia equivalente; una interpretación con cita falsa se detecta; una con disciplina «incorrecta» **no** cambia el acceso a capacidades (test de invarianza: mismas capacidades accesibles con cualquier etiqueta).
+
 ## 1. Ciclo de resolución (contrato de 11 pasos → componentes)
 | Paso (directiva) | Componente CIC | Salida persistida |
 |---|---|---|
-| 1 Interpretar problema y entregables | `Engagement` (interpretación) | `engagement/1` |
-| 2 Clasificar disciplinas | `DisciplineMap` (léxico+registro de especializaciones, multi-etiqueta, `no_clasificado` permitido) | `engagement.disciplines[]` |
+| 1 Interpretar problema y entregables | **Claude propone** `interpretation/1`; el backend la **valida** (§0.1) y solo entonces se registra `Engagement` | `engagement/1` |
+| 2 Identificar disciplinas | **Etiquetas propuestas por Claude** (0..n, texto libre + id de registro opcional), **informativas, nunca una puerta** (ver §0.1) | `interpretation.disciplines_proposed[]` |
 | 3 Recuperar antecedentes | `Knowledge.retrieve` + inventario del proyecto | `evidence_pack/1` |
 | 4 Magnitudes, unidades, variables, desconocidos | `QuantityLedger` (dimensional) | `engagement.magnitudes[]`, `unknowns[]` |
 | 5 Métodos, herramientas, fuentes | `CapabilityRegistry` + `MethodCards` | `method_selection[]` |
@@ -54,13 +87,13 @@ Un encargo desconocido se trata como **problema de composición**, no como búsq
   "preconditions":["autocad_activo","documento_por_ruta"],"side_effects":"read|write_copy|write_project",
   "validation":{"level":"N1","evidence":["test/tw17…","real: pending"]},"limits":["…"],"cost":"fast|slow" }
 ```
-Reglas: (i) un `workplan` **no se acepta** si un paso referencia una capacidad inexistente (debe ser `gap`), si hay ciclos o si las unidades/dimensiones no encajan; (ii) todo número que aparezca en un entregable debe provenir de un `claim` (el generador de entregables rechaza literales numéricos sin claim); (iii) un `claim.kind='calculation'` exige `method_ref` con hash de entradas (igual que `decision/1`); (iv) `pending` nunca se imprime como resultado.
+Reglas: (i) un `workplan` **no se acepta** si un paso referencia una capacidad inexistente (debe ser `gap`), si hay ciclos o si las unidades/dimensiones no encajan; (ii) todo **número técnico del proyecto** que aparezca en un entregable debe provenir de un `claim` o de un parámetro de entrada registrado; los demás roles numéricos (constantes matemáticas, identificadores, numeración documental, metadatos) están **exentos por diseño** (§8 Roles numéricos); (iii) un `claim.kind='calculation'` exige `method_ref` con hash de entradas (igual que `decision/1`); (iv) `pending` nunca se imprime como resultado.
 
 ## 3. Cómo se compone sin plantillas
 - **Registro por capacidades, no por proyectos.** `CapabilityRegistry` se construye al arrancar desde: (a) el catálogo de 72 herramientas (envoltorio automático con nivel N1/N0 declarado en un manifiesto versionado), (b) operaciones de cálculo (§ doc 04), (c) especializaciones (doc 05).
 - **Planner en dos capas.** Claude propone un plan en lenguaje; el servidor lo **traduce a `workplan/1` y lo valida** (`tannia_cic_plan`). El servidor además sugiere pasos por *coincidencia de entradas/salidas* (grafo de tipos: «tengo un eje + secciones» → «volumen por secciones»), no por nombre de proyecto.
 - **Brechas como ciudadanos de primera clase.** Un paso sin capacidad pasa a `gap` con resolución (`ask_user`, `new_tool`, `external_professional`) y **no bloquea** los pasos independientes.
-- **Estrategia para dominio desconocido** (`engagement.disciplines=[no_clasificado]`): se activa el flujo general: (1) preguntar/recuperar el *tipo de entregable*, (2) buscar `MethodCards` por entregable, (3) inventariar datos de entrada faltantes, (4) ejecutar lo geométrico/dimensional/documental que sea común, (5) emitir plan con brechas y qué evidencia las cerraría.
+- **Estrategia para dominio desconocido o sin especialización** (no es un estado especial: ocurre cuando `disciplines_proposed` está vacío o sin especialización instalada). El flujo general siempre está disponible: (1) preguntar/recuperar el *tipo de entregable*, (2) buscar `MethodCards` por entregable, (3) inventariar datos de entrada faltantes, (4) ejecutar lo geométrico/dimensional/documental que sea común, (5) emitir plan con brechas y qué evidencia las cerraría.
 - **Recuperación ante errores:** cada paso es idempotente y versionado; fallo → estado `failed` con causa tipificada; `retry` solo para pasos de lectura/cálculo puro (misma regla que el adaptador COM: nunca reintentar escrituras).
 
 ## 4. Herramientas MCP nuevas (máximo 9; las 72 actuales no cambian)
@@ -95,6 +128,19 @@ Reutiliza `Estudios`/`commitConHistorial`: `03 Trabajo/Ingenieria/<encargo>/` co
 ## 7. Honestidad estructural (qué impide «texto genérico»)
 1. El plan es **dato validado**, no prosa.
 2. Los entregables rechazan números sin claim.
-3. La clasificación admite `no_clasificado` y activa el flujo general.
+3. Ninguna capacidad transversal depende de una etiqueta de disciplina; encargos sin disciplina o sin especialización reciben el flujo general (§0.1).
 4. Cada capacidad declara `validation.level`; el resumen para Claude lo incluye («ejecutable pero N1/simulado»).
 5. Pruebas adversariales (doc 06) que fallan si aparecen resultados geotécnicos/estructurales sin operación E2+.
+
+## 8. Roles numéricos y política de claims (revisión CIC-05)
+Los entregables se generan desde **plantillas con ranuras tipadas**; cada número que entra a un entregable tiene un rol:
+| Rol | Ejemplos | Exigencia |
+|---|---|---|
+| `technical_result` | volumen, área, costo, plazo, pendiente calculada | **claim `calculation`** con operación y entradas (bloquea si falta) |
+| `input_parameter` | longitud dada por la usuaria, espesor del enunciado, precio unitario aportado | referencia a la **entrada registrada** (`user_stated`/`reported_by_source`) — no requiere cálculo |
+| `source_datum` | valor citado de un documento | claim `data` con localizador |
+| `math_constant` | π, 2, 1/2, factores de la fórmula mostrada | exento |
+| `identifier` | código de partida, N.º de plano, id de nodo | exento |
+| `doc_numbering` | página, sección, versión, fecha, N.º de revisión | exento (los genera el sistema) |
+| `metadata` | tolerancia declarada, SHA, nombre de archivo | exento |
+**Bloqueo vs advertencia:** bloquea (a) toda ranura `technical_result`/`source_datum` sin claim, (b) en **texto libre**, todo número **con unidad o símbolo de moneda** que no coincida con un claim/entrada registrada. Un número sin unidad en prosa libre (p. ej. «3 secciones», «ítem 4») produce **advertencia** en el reporte de verificación, nunca bloqueo. El verificador devuelve falsos positivos medidos: la métrica de G2 incluye **tasa de falsos bloqueos = 0** sobre un corpus de entregables correctos con numeración, constantes y ids.

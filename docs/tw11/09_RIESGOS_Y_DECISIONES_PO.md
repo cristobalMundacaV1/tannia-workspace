@@ -3,7 +3,7 @@
 | # | Riesgo | Prob. | Impacto | Mitigación |
 |---|---|---|---|---|
 | R1 | El «motor integral» se interpreta como competencia de ingeniería real | Alta | Muy alto | Madurez E0–E3, `requires_review_by`, gaps explícitos, textos obligatorios |
-| R2 | Sobreajuste a fixtures (túnel de ejemplo) | Alta | Alto | Retenidos/mutación, gap ≤10 pp, test de literales |
+| R2 | Sobreajuste a fixtures (túnel de ejemplo) | Alta | Alto | Retenidos externos confidenciales, umbrales absolutos (doc 06 §5), brecha ≤10 pp secundaria, test de literales |
 | R3 | Calidad de conocimiento (corpus sin licencia/obsoleto) | Media | Alto | Clases A–D, vigencia, `binding`, citas limitadas, actualización controlada |
 | R4 | Ampliar herramientas satura el contexto de Claude | Media | Medio | Medición, `catalogo` agrupado, ADR |
 | R5 | Geometría nueva sin AutoCAD real | Alta | Medio | Marcar UNVERIFIED; validar DXF con lectores independientes; gate externo |
@@ -12,15 +12,16 @@
 | R8 | Tamaño del bundle/instalación | Baja | Medio | Presupuesto +30 %, sin nativos |
 | R9 | Integridad académica | Media | Medio | `assistance_log`, énfasis en explicar, rúbrica |
 | R10 | Deriva de alcance a BIM/IFC | Media | Medio | Fuera de alcance explícito; ADR de rechazo |
-## Decisiones solicitadas al PO (el plan avanza con el *valor recomendado* si no hay respuesta, salvo D1/D2 que bloquean)
-| # | Decisión | Recomendación |
+## Decisiones (estado tras la directiva de revisión arquitectónica)
+| # | Decisión | Estado |
 |---|---|---|
-| D1 | Aprobar el plan TW-11 y autorizar implementación (¿por gates con PR borrador apilado?) | Sí, por gates |
-| D2 | ¿Corpus A/B real de Tannia (apuntes «Obras Civiles II», pauta)? Sin él se usa corpus sintético | Aportar 1 curso piloto (privado) |
-| D3 | ¿Nivel de asistencia académica deseado/política de la universidad? | Registro de asistencia activado |
-| D4 | Embeddings locales: ¿explorar ADR-004? | Sí, solo ADR |
-| D5 | Revisor independiente para casos retenidos (ingeniero civil) | Sí; hasta entonces, mutación |
-| D6 | Orden de especializaciones tras el vertical túnel/lineal (¿carreteras o edificación multi-nivel primero?) | Lineal primero (reusa G5) |
-| D7 | Tope de crecimiento de herramientas (81) | Aceptar con medición |
+| D1 | Aprobar conceptualmente el CIC; **no iniciar implementación integral** antes de resolver los hallazgos CIC-01…07 (ver doc 11) | **Aprobada conceptualmente**; implementación **no autorizada** hasta la revisión de esta versión |
+| D2 | Corpus sintético inicial; corpus académico real después | Adoptada |
+| D3 | Asistencia académica trazable y **configurable** (`assistance_log`; política ajustable por la usuaria/curso) | Adoptada |
+| D4 | Embeddings solo mediante ADR | Adoptada |
+| D5 | Revisor independiente y casos retenidos **externos** (desconocidos para Claude Code) | Adoptada; **bloquea la aprobación de G10** hasta designar revisor |
+| D6 | Geometría transversal primero, con casos funcionales de túnel y departamento | Adoptada |
+| D7 | Presupuesto de herramientas basado en **mediciones** (doc 08, G0), no en una cifra fija | Adoptada |
+Riesgos añadidos: **R11** dependencia de un revisor externo que aún no existe (mitigación: no aprobar G10 sin él; planificar su designación antes de PR-6); **R12** falsos bloqueos del verificador de números (mitigación: roles tipados, métrica 0 falsos bloqueos); **R13** hipótesis geométricas mal aplicadas (mitigación: `section_plane` y condiciones declaradas, oráculos independientes); **R14** la procedencia de investigación externa no es verificable por el servidor (limitación declarada, confirmación humana, cita verificable contra extracto).
 ## Supuestos
 Node 22 sin nativos; Windows+Ubuntu en CI; sin AutoCAD/Desktop reales en el entorno de ingeniería; la red del servidor sigue deshabilitada.

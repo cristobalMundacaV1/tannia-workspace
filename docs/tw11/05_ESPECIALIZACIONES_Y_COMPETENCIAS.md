@@ -31,7 +31,7 @@ Leyenda: **O** orquestación+geometría/cantidades (sin juicio de ingeniería) �
 | Presupuestos | **C** (existente) | APU, presupuesto XLSX | precios del usuario |
 | Planificación y control | **C** (CPM, curva S, valor ganado) | cronograma XLSX/PDF, informe de avance | duraciones/recursos del usuario |
 | Medio ambiente / seguridad en obra / geotecnia | K (solo recuperación de apuntes) | resúmenes con fuente | **X** |
-| Disciplina no listada | flujo general («no_clasificado») | estrategia + brechas | ver Caso C |
+| Disciplina no listada | flujo general (siempre disponible; sin puerta de disciplina) | estrategia + brechas | ver Caso C |
 
 ## 3. Competencias profesionales que el sistema NO reemplaza (registro `required_validation`)
 Ingeniero civil estructural/geotécnico/hidráulico/vial/de túneles, arquitecto patrocinante, topógrafo, prevencionista, revisor independiente de proyecto, ITO. El sistema **señala** quién debe validar cada claim con `requires_review_by` y refleja la aprobación solo como evidencia aportada por el PO/revisor (campo manual), nunca la «concede».
@@ -40,4 +40,4 @@ Ingeniero civil estructural/geotécnico/hidráulico/vial/de túneles, arquitecto
 Interpretar enunciados y rúbricas, descomponer en pasos, explicar fórmulas y supuestos, verificar coherencia dimensional, generar planos/cuantías/informes editables, indicar qué parte del ejercicio **debe** hacer ella, mantener un registro de asistencia (`assistance_log`). Plantilla: «qué se pidió → qué se sabe → qué falta → plan → cálculo → verificación → qué debes revisar tú».
 
 ## 5. Evolución independiente
-Cada especialización avanza `draft → active` solo con: golden queries (G3), operaciones ≥ su madurez declarada (G5/G6), casos de aceptación propios (≥3 conocidos + ≥2 retenidos) y revisión de contenido por la persona competente (registro manual). Retirar una especialización no cambia el núcleo ni otras.
+Cada especialización avanza `draft → active` solo con: golden queries (G3), operaciones ≥ su madurez declarada (G5/G6), casos de aceptación propios (≥3 de desarrollo + ≥2 retenidos externos evaluados por el revisor) y revisión de contenido por la persona competente (registro manual). Retirar una especialización no cambia el núcleo ni otras.

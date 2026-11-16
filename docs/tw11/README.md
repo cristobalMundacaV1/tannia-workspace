@@ -1,5 +1,5 @@
 # TW-11 — Construction Intelligence Core · Expediente de planificación
-**Estado:** planificación únicamente. **No hay código implementado, ni validación en AutoCAD/Claude Desktop reales, ni revisión profesional.** TW-10 / PR #12 permanece en borrador con sus validaciones de campo pendientes.
+**Estado:** planificación únicamente, **revisión R1** (CIC-01…07). La implementación integral **no está autorizada**. **No hay código implementado, ni validación en AutoCAD/Claude Desktop reales, ni revisión profesional.** TW-10 / PR #12 permanece en borrador con sus validaciones de campo pendientes.
 | Doc | Contenido |
 |---|---|
 | [01](01_AUDITORIA_ARQUITECTONICA.md) | Auditoría TW-00→TW-10 |
@@ -12,3 +12,4 @@
 | [08](08_ROADMAP_EJECUTABLE.md) | Historias, dependencias, gates |
 | [09](09_RIESGOS_Y_DECISIONES_PO.md) | Riesgos y decisiones D1–D7 |
 | [10](10_HANDOFF_CLAUDE_CODE.md) | Handoff de implementación |
+| [11](11_MATRIZ_RESOLUCION_CIC.md) | Matriz de resolución CIC-01…07 |

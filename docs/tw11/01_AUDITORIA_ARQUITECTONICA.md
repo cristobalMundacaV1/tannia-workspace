@@ -2,6 +2,8 @@
 **Base auditada:** rama `feat/tw10-architectural-reasoning` @ `64cdec3` (código `f0141fa`; PR #12 draft). Hechos verificados leyendo el repositorio el 2026-11-16 (tamaños en líneas de JS; `src/`). **Auditoría estática**: no se ejecutó AutoCAD ni Claude Desktop reales. Una capacidad *implementada* no es una capacidad *validada en hardware real* (columna «Nivel»).
 Niveles de validación usados en todo el expediente: **N0** solo documentado · **N1** implementado y probado con simuladores/fixtures (CI) · **N2** probado con herramienta real (AutoCAD/Claude Desktop) por el PO · **N3** revisado por profesional competente.
 
+> **Revisión R1:** esta auditoría no cambia; sus hallazgos H1 y H3 se resuelven con el contrato de interpretación (doc 02 §0.1) y la política de roles numéricos (doc 02 §8). Ver `11_MATRIZ_RESOLUCION_CIC.md`.
+
 ## 1. Inventario real
 | Área | Módulo (`src/…`) | Líneas | Qué hace realmente | Nivel |
 |---|---|---|---|---|
