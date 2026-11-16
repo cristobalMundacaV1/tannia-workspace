@@ -1,0 +1,153 @@
+{
+  "macrofase": "TW-11",
+  "nombre": "Construction Intelligence Core",
+  "estado": "PLANIFICACION_REVISADA_R1_ESPERA_REVISION_ARQUITECTONICA",
+  "rama_base": "feat/tw10-architectural-reasoning",
+  "sha_base": "64cdec3ba13e98e93ff3ec1d3cf77aafa3934663",
+  "gates": {
+    "G0": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G1": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G2": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G3": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G4": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G5": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "GV1": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G6": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G7": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G8": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G9": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G10": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G11": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    },
+    "G12": {
+      "estado": "pendiente",
+      "sha": null,
+      "ci": null,
+      "evidencia": null
+    }
+  },
+  "reglas": {
+    "sin_merge_sin_po": true,
+    "pr12_permanece_borrador": true,
+    "no_declarar_validacion_real_no_ejecutada": true,
+    "tools_existentes_72_intactas": true,
+    "flag_TANNIA_CIC_default": "off"
+  },
+  "pendientes_externos": [
+    "Claude Desktop real",
+    "AutoCAD real",
+    "Taller con Tannia",
+    "Revision independiente",
+    "Decision PO",
+    "Designar revisor independiente y casos retenidos externos"
+  ],
+  "implementacion_autorizada": false,
+  "agrupacion_prs": {
+    "PR-1": [
+      "G0",
+      "G1",
+      "G2"
+    ],
+    "PR-2": [
+      "G3",
+      "G4"
+    ],
+    "PR-3": [
+      "G5",
+      "GV1"
+    ],
+    "PR-4": [
+      "G6",
+      "G7"
+    ],
+    "PR-5": [
+      "G8"
+    ],
+    "PR-6": [
+      "G9",
+      "G10"
+    ]
+  },
+  "decisiones_po": {
+    "D1": "conceptual_aprobada_implementacion_no_autorizada",
+    "D2": "adoptada",
+    "D3": "adoptada",
+    "D4": "adoptada",
+    "D5": "adoptada_revisor_pendiente",
+    "D6": "adoptada",
+    "D7": "adoptada_medicion_en_G0"
+  },
+  "hallazgos_resueltos_en_diseno": [
+    "CIC-01",
+    "CIC-02",
+    "CIC-03",
+    "CIC-04",
+    "CIC-05",
+    "CIC-06",
+    "CIC-07"
+  ]
+}
