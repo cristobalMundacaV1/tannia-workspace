@@ -34,6 +34,20 @@ const insumoSchema = z.object({
 
 export const TOOL_NAMES = [];
 
+/** Escribe sin sobrescribir jamás: si existe idéntico lo reutiliza; si es distinto, agrega " (2)", " (3)"… Devuelve la ruta final. */
+export function escribirSinSobrescribir(destino, contenido) {
+  const buf = Buffer.isBuffer(contenido) ? contenido : Buffer.from(contenido);
+  const { dir, name, ext } = path.parse(destino); let cand = destino; let k = 1;
+  for (;;) {
+    try { fs.writeFileSync(cand, buf, { flag: 'wx' }); return cand; }
+    catch (e) {
+      if (e.code !== 'EEXIST') throw e;
+      if (fs.readFileSync(cand).equals(buf)) return cand;
+      cand = path.join(dir, `${name} (${++k})${ext}`);
+    }
+  }
+}
+
 export function registerTools(server, { sandbox, log, g, cad, config, detectar }) {
   const reg = (name, def, fn) => { TOOL_NAMES.push(name); server.registerTool(name, def, g(fn)); };
   const P = (name) => new Project(sandbox, name);
@@ -278,9 +292,9 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     const archivos = [...new Set(partidas.filter((p) => p.fuente?.archivo).map((p) => p.fuente.archivo))].map((a) => ({ archivo: a, sha256: partidas.find((p) => p.fuente?.archivo === a).fuente.sha256 }));
     const buf = await buildMemoriaPdf({ proyecto: pr.name, generado: new Date().toISOString(), estado: m.estado, partidas, presupuesto: B, archivos, advertencias: partidas.filter((p) => p.desactualizada).map((p) => `Partida ${p.codigo} desactualizada respecto del archivo de origen.`) });
     const rel = `${FOLDERS.informes}/Memoria ${stamp()}.pdf`;
-    const { abs } = sandbox.resolveWritable(pr.name, rel); fs.writeFileSync(abs, buf);
-    pr.audit('informe_generado', { archivo: rel });
-    return ok('Memoria PDF generada.', { archivo: rel, bytes: buf.length, sha256: sha256File(abs) });
+    const { abs: abs0 } = sandbox.resolveWritable(pr.name, rel); const abs = escribirSinSobrescribir(abs0, buf); const relFinal = path.relative(pr.root, abs).split(path.sep).join('/');
+    pr.audit('informe_generado', { archivo: relFinal });
+    return ok('Memoria PDF generada.', { archivo: relFinal, bytes: buf.length, sha256: sha256File(abs) });
   });
 
   reg('tannia_entregable_exportar', {
@@ -293,9 +307,10 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     const x = latest(FOLDERS.presupuestos, '.xlsx'), pdf = latest(FOLDERS.informes, '.pdf');
     if (!x || !pdf) throw new UserError('FALTAN_ARCHIVOS', 'Genere antes el presupuesto (XLSX) y la memoria (PDF).');
     const out = []; for (const [dir, f] of [[FOLDERS.presupuestos, x], [FOLDERS.informes, pdf]]) {
-      const dest = sandbox.resolveWritable(pr.name, `${FOLDERS.entregables}/${f}`).abs; fs.copyFileSync(pr.p(dir, f), dest); out.push({ archivo: `${FOLDERS.entregables}/${f}`, sha256: sha256File(dest) });
+      // Nunca se reemplaza un entregable existente: idéntico → se reutiliza; distinto → se guarda con otro nombre
+      const dest0 = sandbox.resolveWritable(pr.name, `${FOLDERS.entregables}/${f}`).abs; const dest = escribirSinSobrescribir(dest0, fs.readFileSync(pr.p(dir, f))); out.push({ archivo: path.relative(pr.root, dest).split(path.sep).join('/'), sha256: sha256File(dest) });
     }
-    fs.writeFileSync(sandbox.resolveWritable(pr.name, `${FOLDERS.entregables}/HUELLAS-SHA256.txt`).abs, out.map((o) => `${o.sha256}  ${path.basename(o.archivo)}`).join('\n') + '\n');
+    escribirSinSobrescribir(sandbox.resolveWritable(pr.name, `${FOLDERS.entregables}/HUELLAS-SHA256.txt`).abs, Buffer.from(out.map((o) => `${o.sha256}  ${path.basename(o.archivo)}`).join('\n') + '\n'));
     pr.setEstado('entregable', 'Entregables exportados'); return ok('Entregables exportados.', { archivos: out });
   });
 

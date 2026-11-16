@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import { UserError } from '../mcp/util.js';
 import { FOLDERS } from '../security/sandbox.js';
 import { Project, atomicWriteJson, readJson } from '../project/store.js';
+import { commitVersion, reconciliar } from '../project/transaccion.js';
 import { VERSION } from '../version.js';
 import { construirPrimitivas } from './geometria.js';
 import { aplicarOperaciones3d } from './operaciones.js';
@@ -23,20 +24,21 @@ export class Modelos3d {
   #hist(project, nombre) {
     const { rel } = this.#dir(nombre); const f = this.#abs(project, `${rel}/historial.json`);
     if (!fs.existsSync(f)) throw new UserError('MODELO3D_NO_EXISTE', `No existe el modelo 3D "${nombre}".`, 'Créelo con tannia_3d_crear o consulte los existentes con tannia_3d_ver.');
-    return { h: readJson(f, null), f, rel };
+    const h = readJson(f, null); try { reconciliar(this.#abs(project, rel), h.versiones.map((v) => v.id)); } catch { /* la reconciliación nunca bloquea la lectura */ }
+    return { h, f, rel };
   }
   listar(project) {
     const base = this.#abs(project, `${FOLDERS.trabajo}/${RAIZ}`); if (!fs.existsSync(base)) return [];
     return fs.readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory() && fs.existsSync(path.join(base, d.name, 'historial.json'))).map((d) => { const h = readJson(path.join(base, d.name, 'historial.json'), {}); return { nombre: h.nombre, head: h.head, versiones: (h.versiones || []).length }; });
   }
-  #escribir(project, rel, id, registro, modelo) {
+  #escribir(project, rel, id, registro, modelo, actualizar) {
     const built = construirPrimitivas(modelo);
     // Registro de supuestos DERIVADO del modelo final (se actualiza con cada cambio de altura/espesor; nunca queda desfasado)
     built.modelo.supuestos = { niveles: built.modelo.niveles.map((n) => ({ id: n.id, altura_mm: n.altura_mm, fuente: n.fuente_altura || 'indicada' })), espesores_losa_mm: [...new Set(built.modelo.losas.map((l) => l.espesor_mm))], nota: 'Alturas y espesores verticales: supuestos preliminares editables (no normativos).' };
     const reg = { ...registro, modelo: built.modelo, modelo_sha256: sha(built.modelo), primitivas: built.primitivas, capas: built.capas, nota: built.nota, resumen_geometria: built.resumen, supuestos_lista: built.supuestos, advertencias: built.advertencias, generado_por: `tannia-workspace ${VERSION}` };
-    const f = this.#abs(project, `${rel}/${id}.json`); fs.mkdirSync(path.dirname(f), { recursive: true });
-    if (fs.existsSync(f)) throw new UserError('VERSION_EXISTE', `La versión ${id} ya existe (las versiones son inmutables).`);
-    atomicWriteJson(f, reg); return reg;
+    // Transacción: staging + journal + manifiesto con hashes + historial como último paso (commit lógico)
+    commitVersion({ dir: this.#abs(project, rel), id, archivos: [{ nombre: `${id}.json`, contenido: JSON.stringify(reg, null, 2) }], actualizarHistorial: actualizar, hook: this.hook || undefined });
+    return reg;
   }
   /** Crea v001. `modelo` estructurado O `desde_anteproyecto:{nombre,version?}` + parámetros (alturas/cubierta como supuestos explícitos). */
   crear(project, { nombre, modelo, desde_anteproyecto, parametros = {}, solicitud }) {
@@ -50,8 +52,7 @@ export class Modelos3d {
       m = modeloDesdeGeo(c.geo, { ...parametros, altura_2d_mm: c.modelo.altura_piso_cielo_mm, origen });
     }
     const id = `v${num3(1)}`; const creada = new Date().toISOString();
-    const reg = this.#escribir(project, rel, id, { id, numero: 1, padre: null, creada, descripcion: 'Versión inicial', solicitud: solicitud || null, operaciones: [], origen }, m);
-    atomicWriteJson(fh, { nombre: n, creado: creada, head: id, redo: [], versiones: [{ id, padre: null, creada, descripcion: reg.descripcion }] });
+    const reg = this.#escribir(project, rel, id, { id, numero: 1, padre: null, creada, descripcion: 'Versión inicial', solicitud: solicitud || null, operaciones: [], origen }, m, () => atomicWriteJson(fh, { nombre: n, creado: creada, head: id, redo: [], versiones: [{ id, padre: null, creada, descripcion: 'Versión inicial' }] }));
     new Project(this.sandbox, project).audit('modelo3d_creado', { nombre: n, version: id });
     return { nombre: n, version: id, reg, rel };
   }
@@ -78,8 +79,8 @@ export class Modelos3d {
     if (operaciones?.length) { const r = aplicarOperaciones3d(m, operaciones); m = r.modelo; resumen.push(...r.resumen); }
     else if (!actualizar_desde_anteproyecto) throw new UserError('SIN_OPERACIONES', 'Indique operaciones o actualizar_desde_anteproyecto.');
     const numero = Math.max(...h.versiones.map((v) => Number(v.id.slice(1)))) + 1; const id = `v${num3(numero)}`; const creada = new Date().toISOString();
-    const reg = this.#escribir(project, rel, id, { id, numero, padre: cur.id, creada, descripcion: descripcion || resumen.join('; '), operaciones: operaciones || [], origen }, m);
-    h.versiones.push({ id, padre: cur.id, creada, descripcion: reg.descripcion }); h.head = id; h.redo = []; atomicWriteJson(f, h);
+    const desc = descripcion || resumen.join('; ');
+    const reg = this.#escribir(project, rel, id, { id, numero, padre: cur.id, creada, descripcion: desc, operaciones: operaciones || [], origen }, m, () => { h.versiones.push({ id, padre: cur.id, creada, descripcion: desc }); h.head = id; h.redo = []; atomicWriteJson(f, h); });
     new Project(this.sandbox, project).audit('modelo3d_modificado', { nombre: h.nombre, version: id });
     return { nombre: h.nombre, version: id, padre: cur.id, resumen, reg, rel };
   }
