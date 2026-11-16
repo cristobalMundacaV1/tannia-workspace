@@ -1,0 +1,77 @@
+{
+  "estudio": "Estudio ejemplo",
+  "version_estudio": "v005",
+  "alternativa": "alt-L_con_patio",
+  "publicacion": "p001",
+  "fecha": "2026-11-16",
+  "esquema_sha256": "341f1a57d4950471366796babf7eaebc4052ff44c9d728e1453419e57d807ee2",
+  "analisis_input_hash": "6cb9bba5315d150b",
+  "motor": "mraa-0.1.0",
+  "verificacion_dxf": {
+    "ok": true,
+    "recintos_dxf": 8,
+    "area_util_dxf_m2": 75.8582,
+    "area_util_modelo_m2": 75.8582,
+    "capas_medidas": [
+      "TW_MURO_EXT",
+      "TW_MURO_INT",
+      "TW_RECINTO",
+      "TW_PUERTA",
+      "TW_VENTANA",
+      "TW_EJES",
+      "TW_COTA"
+    ],
+    "textos": 31,
+    "motor_dxf_necesita_revision": false,
+    "discrepancias": []
+  },
+  "estado_global": "con_alertas_criticas",
+  "alertas": [
+    {
+      "id": "piscina_barrera",
+      "severidad": "critica",
+      "texto": "Piscina en el programa: se requiere barrera independiente, control de acceso y supervisión activa, verificados por un profesional con la normativa vigente. La visual desde la casa no los reemplaza."
+    },
+    {
+      "id": "puerta_directa_P-LIV-PATIO",
+      "severidad": "critica",
+      "texto": "La puerta P-LIV-PATIO da directamente al patio con piscina sin control de acceso definido: no puede declararse seguridad demostrada."
+    },
+    {
+      "id": "planta_irregular",
+      "severidad": "media",
+      "texto": "La planta tiene 1 esquina(s) entrante(s): una planta no rectangular exige que el ingeniero estructural revise su regularidad (no se afirma nada sobre sismo)."
+    },
+    {
+      "id": "priv_0",
+      "severidad": "media",
+      "texto": "La ventana V-R-DP de zona privada mira a un deslinde a 2500 mm (<8000 mm de referencia heurística): posible vista desde/hacia el vecino."
+    },
+    {
+      "id": "priv_1",
+      "severidad": "media",
+      "texto": "La ventana V-R-D2 de zona privada mira a un deslinde a 2500 mm (<8000 mm de referencia heurística): posible vista desde/hacia el vecino."
+    },
+    {
+      "id": "priv_2",
+      "severidad": "media",
+      "texto": "La ventana V-R-D3 de zona privada mira a un deslinde a 2500 mm (<8000 mm de referencia heurística): posible vista desde/hacia el vecino."
+    },
+    {
+      "id": "sin_clima",
+      "severidad": "info",
+      "texto": "Sin clima cargado: no se evalúa viento ni confort."
+    }
+  ],
+  "disclaimers": [
+    "ANTEPROYECTO conceptual: no apto para construcción ni para tramitación.",
+    "No acredita cumplimiento normativo (OGUC/RT/IPT), estructura, instalaciones ni seguridad.",
+    "Los resultados son geométricos/heurísticos; la decisión y la responsabilidad son de la profesional habilitada."
+  ],
+  "modelo_3d": {
+    "nombre": "Estudio ejemplo alt-L_con_patio p001",
+    "version": "v001",
+    "sha256": "6713ae3828002aabd9e5fde3a8b8ec71be2706986423f247685e6b566553573c",
+    "solidos": 60
+  }
+}

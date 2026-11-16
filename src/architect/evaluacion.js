@@ -67,9 +67,9 @@ export function evaluarEsquema({ esq, geo, brief = null, sitio = null, perfil = 
   const at = dura('area_target'); if (at) { const dev = (geo.huella.area_m2 - at.value) / at.value; G('superficie_objetivo', Math.abs(dev) <= 0.035, `Huella ${geo.huella.area_m2} m² vs objetivo ${at.value} m² (${R2(dev * 100)} %; tolerancia ±3,5 %).`); }
   const dorm = dura('bedrooms'); if (dorm) { const n = Object.values(geo.recintos).filter((r) => r.tipo === 'dormitorio' || r.tipo === 'dormitorio_principal').length; G('dormitorios', n === dorm.value, `${n} dormitorios (pedidos: ${dorm.value}).`); }
   const bn = dura('bathrooms'); if (bn) { const n = Object.values(geo.recintos).filter((r) => r.tipo === 'bano').length; G('banos', n === bn.value, `${n} baños (pedidos: ${bn.value}).`); }
-  const fc = dura('footprint_class'); if (fc) G('clase_de_huella', fc.value === esq.concept, `Partido ${esq.concept} (pedido: ${fc.value}).`);
+  const fc = dura('footprint_class'); if (fc) G('clase_de_huella', fc.value === esq.concept, `Partido ${esq.concept} (pedido: ${fc.value}). Informativo: las otras ideas se muestran como contraste y no se bloquean.`);
   if (sitio?.parcel_polygon_mm) { const v = verificarContraSitio(geo, sitio, null).verificaciones.find((x) => x.id === 'encaje'); G('encaje_en_predio', v.estado === 'consistente_con_dato', v.detalle); }
-  const bloqueada = gates.some((g) => !g.passed);
+  const bloqueada = gates.some((g) => !g.passed && g.id !== 'clase_de_huella'); // la clase de huella pedida orienta, no bloquea: la usuaria quiere ver alternativas
 
   // ---- objetivos ----
   const objetivos = [];

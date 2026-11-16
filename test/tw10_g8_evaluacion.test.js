@@ -95,3 +95,10 @@ test('viento/ventilación: sin norte → no concluyente; ventilación solo poten
   const v = ventilacionPotencial({ esq: a.esquema, geo: a.geo }); assert.match(v.limites, /GEOMÉTRICO/); assert.ok(v.recintos.length > 0);
   void derivarEsquema;
 });
+
+test('«en L» orienta pero no bloquea: la compacta sigue elegible como contraste y el requisito se informa', () => {
+  const { brief } = interpretarEncargo('Casa de 90 m2 en L, 3 dormitorios, 2 baños', { projectId: 'p' }); assert.ok(brief.hard_constraints.some((h) => h.kind === 'footprint_class'));
+  const alts = generarAlternativas({ programa: programaDeBrief(brief) });
+  const c = alts.alternativas.find((a) => a.esquema.id === 'alt-compacta'); const e = evaluarEsquema({ esq: c.esquema, geo: c.geo, brief });
+  assert.equal(e.bloqueada, false); const g = e.analisis.hard_gates.find((x) => x.id === 'clase_de_huella'); assert.equal(g.passed, false); assert.match(g.detalle, /Informativo/);
+});

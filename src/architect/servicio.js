@@ -62,10 +62,10 @@ export class Estudios {
 
   // ---------- cálculo determinista de evaluaciones ----------
   calcular(estado) {
-    const evals = Object.values(estado.alternativas).map((a) => { const esq = a.esquema; const geo = derivarEsquema(esq); const aleros = estado.aleros?.[esq.id] ?? []; const e = evaluarEsquema({ esq, geo, brief: estado.brief, sitio: estado.sitio, perfil: estado.clima?.perfiles ?? null, aleros }); return { id: esq.id, ...e, esq, geo, gatesFallidos: e.analisis.hard_gates.filter((g) => !g.passed).map((g) => g.id) }; });
+    const evals = Object.values(estado.alternativas).map((a) => { const esq = a.esquema; const geo = derivarEsquema(esq); const aleros = estado.aleros?.[esq.id] ?? []; const e = evaluarEsquema({ esq, geo, brief: estado.brief, sitio: estado.sitio, perfil: estado.clima?.perfiles ?? null, aleros }); return { id: esq.id, ...e, esq, geo, gatesFallidos: e.analisis.hard_gates.filter((g) => !g.passed && g.id !== 'clase_de_huella').map((g) => g.id) }; });
     const comparacion = evals.length ? compararMultiobjetivo(evals) : null; return { evals, comparacion };
   }
-  #resumenAlt(e) { return { id: e.id, concepto: e.esq.concept, huella_m2: e.geo.huella.area_m2, util_m2: e.geo.areas.util_neta_m2, clase_huella: e.detalle.constructibilidad.clase_huella, bloqueada: e.bloqueada, requisitos_fallidos: e.gatesFallidos, estado_global: e.analisis.global_state, alertas_criticas: e.analisis.alerts.filter((a) => a.severidad === 'critica').length, objetivos: e.objetivos.map((o) => ({ id: o.id, objetivo: o.kind, estado: o.estado, indice: o.score, aviso: o.aviso, razon: o.razon })), motivo: e.esq.rationale }; }
+  #resumenAlt(e) { return { id: e.id, concepto: e.esq.concept, huella_m2: e.geo.huella.area_m2, util_m2: e.geo.areas.util_neta_m2, clase_huella: e.detalle.constructibilidad.clase_huella, bloqueada: e.bloqueada, requisitos_fallidos: e.gatesFallidos, clase_de_huella_pedida_cumplida: e.analisis.hard_gates.find((g) => g.id === 'clase_de_huella')?.passed ?? null, estado_global: e.analisis.global_state, alertas_criticas: e.analisis.alerts.filter((a) => a.severidad === 'critica').length, objetivos: e.objetivos.map((o) => ({ id: o.id, objetivo: o.kind, estado: o.estado, indice: o.score, aviso: o.aviso, razon: o.razon })), motivo: e.esq.rationale }; }
 
   crear(project, { nombre, texto }) {
     const { n } = this.#dir(nombre); const r = interpretarEncargo(texto, { projectId: new Project(this.sandbox, project).name });
