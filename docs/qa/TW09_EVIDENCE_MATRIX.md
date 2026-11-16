@@ -22,3 +22,10 @@ Estados: `AUTOMATIZADO` (pruebas en CI Windows+Ubuntu sobre el SHA indicado) · 
 | T9-16 | Construcción 3D real, persistencia real y `AUDIT` | **NO VERIFICADO (HW)** | `PRUEBA_REAL_TW09.md` |
 | T9-17 | Conversación natural con la usuaria (15 encargos) | **NO VERIFICADO (usuaria)** | pendiente |
 | T9-18 | Cumplimiento normativo / aptitud estructural | **NUNCA afirmado**: fuera de alcance del producto | — |
+| T9-19 | Con `ruta_esperada` se localiza ese documento o se falla (sin `ActiveDocument`); la respuesta confirma la ruta; dos dibujos con handles/conteos idénticos; cambio de foco; dibujo cerrado | AUTOMATIZADO + PowerShell simulado (CI Windows) | `tw25`, `tw09` |
+| T9-20 | `Documents.Item(i).FullName` coincide con la ruta esperada en AutoCAD 2027 real (mayúsculas, tildes, `\\?\`) | **NO VERIFICADO (HW)** | pendiente |
+| T9-21 | Una sesión no puede apartar/borrar temporales de una escritura viva; operaciones abandonadas se recuperan sin pérdida; SIGKILL real; dos procesos simultáneos | AUTOMATIZADO (procesos reales) | `tw26` |
+| T9-22 | Exclusión entre procesos sobre carpetas sincronizadas (OneDrive), antivirus, carpetas de red | **NO VERIFICADO (HW)** — el bloqueo asume FS local | pendiente |
+| T9-23 | Destino de importación canónico: enlaces/junctions, TOCTOU, enlaces colgantes, colisiones de Windows, MAX_PATH | AUTOMATIZADO (symlinks en Linux; junctions en CI Windows) | `tw27` |
+| T9-24 | ACL reales de Windows y junctions con permisos restringidos | **NO VERIFICADO (HW)** | pendiente |
+

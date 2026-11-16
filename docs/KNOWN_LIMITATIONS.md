@@ -41,4 +41,6 @@
 - **Diseño 2D:** generador de un piso, planta rectangular, 2–3 dormitorios, 1–2 baños, 55–130 m². Otros encargos: modelo 3D estructurado, sin estructura ni mobiliario; BIM/IFC, cálculo estructural, instalaciones y planos de permiso: no soportados.
 - **Coherencia 2D↔3D:** compara huella, vanos, altos/antepechos, espesores y altura libre; no es una verificación estructural ni normativa.
 - **Versiones:** transaccionales con reconciliación; el DWG aún no tiene manifiesto propio.
+- **Exclusión entre procesos:** el bloqueo de versiones asume sistema de archivos local; no hay garantías en carpetas de red ni se probó con OneDrive/antivirus activos. La recuperación de un bloqueo con pid reutilizado espera al vencimiento del latido (10 min); nunca pierde datos.
+- **Identidad documental:** verificada con PowerShell simulado y CI Windows; no contra la normalización real de rutas de AutoCAD 2027.
 
