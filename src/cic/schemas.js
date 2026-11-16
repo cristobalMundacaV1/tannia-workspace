@@ -24,7 +24,7 @@ export const FuenteSchema = z.object({
   origin: z.object({ kind: z.enum(['file', 'url', 'user_text']), path_or_url: z.string().nullable(), retrieved_at: z.string().nullable().optional(), retrieved_by: z.enum(['user', 'claude_web', 'import', 'system']) }).strict(),
   sha256: z.string().regex(/^[0-9a-f]{64}$/), state: ESTADO_FUENTE,
   // Distinción P02: registrada ≠ aprobada ≠ contenido disponible ≠ extracto comprobado ≠ cita verificable
-  approval: z.object({ approved: z.boolean(), by: z.enum(['human_elicitation', 'human_out_of_band', 'system_import', 'none']), at: z.string().nullable() }).strict(),
+  approval: z.object({ approved: z.boolean(), by: z.enum(['human_elicitation', 'human_dialog', 'human_out_of_band', 'system_import', 'none']), at: z.string().nullable() }).strict(),
   content: z.object({ available: z.boolean(), storage: z.enum(['none', 'hash_only', 'excerpt', 'full_private']), chars: z.number().int().nonnegative(), verified_by_server: z.boolean() }).strict(),
   license: z.object({ status: z.enum(['public', 'licensed', 'unknown']), quote_limit_chars: z.number().int().positive() }).strict(),
   binding: BINDING, supersedes: z.string().nullable().optional(), valid_from: z.string().nullable().optional(), valid_until: z.string().nullable().optional(),

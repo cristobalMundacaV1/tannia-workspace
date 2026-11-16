@@ -13,7 +13,7 @@ import { detectarContradicciones } from '../cic/contradicciones.js';
 import { InterpretacionSchema } from '../cic/schemas.js';
 import { validarInterpretacion } from '../cic/interpretacion.js';
 import { fusionar, conflictos } from '../cic/fusion.js';
-import { Consentimientos } from '../cic/consentimiento.js';
+import { AprobacionHumana } from '../cic/aprobacion_humana.js';
 import { ejecutarPlan } from '../cic/ejecutor.js';
 import { claimDeDato, claimSupuesto } from '../cic/claims.js';
 import { sha256 } from '../cic/hash.js';
@@ -52,7 +52,7 @@ export function registerCic(reg, { sandbox, server, herramientas }) {
     const d = r.structuredContent || {}; const crit = advertenciasCriticas(d); const nv = COM.resolver({ project: args?.proyecto || null }); const t = r.content[0].text; const k = t.indexOf('\n\n```json'); const cab = k >= 0 ? t.slice(0, k) : t; const resto = k >= 0 ? t.slice(k) : '';
     return { ...r, content: [{ type: 'text', text: `${cab}${crit.length ? `\n⚠ Atención: ${crit.join(' | ')}.` : ''}\n[Nivel de respuesta: ${nv.nivel} (${nv.origen}). ${GUIA_COM[nv.nivel]}]${resto}` }, ...r.content.slice(1)], structuredContent: { ...d, nivel_respuesta: { nivel: nv.nivel, origen: nv.origen } } };
   });
-  const C = new Casos(sandbox); const K = new Conocimiento(sandbox); cargarIntegradas(); if (process.env.TANNIA_CIC_ESPECIALIZACIONES) cargarDesdeDirectorio(process.env.TANNIA_CIC_ESPECIALIZACIONES);
+  const AH = new AprobacionHumana(sandbox); const C = new Casos(sandbox); const K = new Conocimiento(sandbox, AH); cargarIntegradas(); if (process.env.TANNIA_CIC_ESPECIALIZACIONES) cargarDesdeDirectorio(process.env.TANNIA_CIC_ESPECIALIZACIONES);
 
   reg('tannia_cic_catalogo', {
     title: 'Catálogo de capacidades, operaciones de cálculo y especializaciones (con su nivel de validación)',
@@ -117,7 +117,6 @@ export function registerCic(reg, { sandbox, server, herramientas }) {
     const out = []; for (const [sid, ids] of porFuente) { const vg = K.vigencia(p, sid); if (!vg.vigente) out.push({ source_id: sid, titulo: vg.titulo || null, motivo: vg.motivo, reemplazada_por: vg.reemplazada_por || null, vigente_hasta: vg.vigente_hasta || null, claims: ids.length }); }
     return out;
   };
-  const CS = new Consentimientos(sandbox);
   const locator = z.object({ page: z.number().int().positive().optional(), slide: z.number().int().positive().optional(), sheet: z.string().optional(), section: z.string().optional() });
   reg('tannia_cic_conocimiento', {
     title: 'Conocimiento técnico del proyecto: buscar con citas, registrar documentos, proponer fuentes investigadas y verificar citas',
@@ -146,7 +145,7 @@ export function registerCic(reg, { sandbox, server, herramientas }) {
       }
       case 'proponer_fuente': {
         const r = K.proponerFuente(p, { titulo: a.titulo || 'Fuente externa', url: a.url, publisher: a.publisher, clase: a.clase || 'A', binding: a.binding || 'unknown', licencia: a.licencia || 'unknown', extracto: a.extracto, fecha_acceso: a.fecha_acceso, disciplinas: a.disciplinas || [], fecha: a.fecha, version: a.version, valid_until: a.vigente_hasta, almacenamiento: a.almacenamiento || 'excerpt' });
-        return ok(`Fuente CANDIDATA ${r.fuente.id}: no sustenta entregables hasta que una PERSONA la apruebe (decidir_fuente). El servidor no verifica lo que dice la web.`, { id: r.fuente.id, estado: r.fuente.state, contenido_verificado_por_servidor: false, ya_existia: r.ya_existia, aprobacion_fuera_de_banda: r.archivo_aprobacion || null });
+        return ok(`Fuente CANDIDATA ${r.fuente.id}: no sustenta entregables hasta que una PERSONA la apruebe (decidir_fuente). El servidor no verifica lo que dice la web.`, { id: r.fuente.id, estado: r.fuente.state, contenido_verificado_por_servidor: false, ya_existia: r.ya_existia, aprobacion_fuera_de_banda: r.aprobacion_fuera_de_banda?.archivo_aprobacion || null });
       }
       case 'decidir_fuente': {
         if (!a.id) throw new UserError('FALTA_ID', 'Indique el id de la fuente.');
@@ -305,10 +304,10 @@ export function registerCic(reg, { sandbox, server, herramientas }) {
     if (obsoletos.length || noVig.length) {
       const razon = [...obsoletos.map((x) => `${x.id}: ${x.reason || 'base desactualizada'}`), ...noVig.map((f) => `fuente «${f.titulo || f.source_id}» ${f.motivo}${f.reemplazada_por ? ` (reemplazada por ${f.reemplazada_por})` : ''}${f.vigente_hasta ? ` (vigente hasta ${f.vigente_hasta})` : ''}`)];
       if (!borrador_desactualizado) throw new UserError(obsoletos.length ? 'BASE_DESACTUALIZADA' : 'FUENTE_NO_VIGENTE', `Los resultados ya no son vigentes: ${razon.join(' · ')}. Un informe o presupuesto saldría con cifras o respaldos que ya no corresponden.`, obsoletos.length ? 'Recalcule con tannia_cic_ejecutar (con otra fuente o datos de la usuaria si la fuente se retiró) antes de entregar. No se generó nada.' : 'Apunte los datos a una fuente vigente (tannia_cic_encargo) y recalcule. No se generó nada.', { pasos: obsoletos.map((x) => x.id), fuentes: noVig });
-      const idc = `bor-${n.replace(/[^A-Za-z0-9]+/g, '-').slice(0, 20)}-${sha256([id, obsoletos.map((x) => x.id), noVig.map((f) => `${f.source_id}:${f.motivo}`)]).slice(0, 8)}`; const desc = `generar un BORRADOR DESACTUALIZADO del caso ${n} (${id}); NO es una entrega válida`; const sol = CS.solicitar(p, idc, desc);
+      const idc = `bor-${n.replace(/[^A-Za-z0-9]+/g, '-').slice(0, 20)}-${sha256([id, obsoletos.map((x) => x.id), noVig.map((f) => `${f.source_id}:${f.motivo}`)]).slice(0, 8)}`; const desc = `Generar un BORRADOR DESACTUALIZADO del caso ${n} (${id}).\nMotivo: ${razon.join('; ')}\nNO es una entrega válida; solo para revisión.`; const sol = AH.solicitar(p, idc, desc);
       const cap = server?.server?.getClientCapabilities?.()?.elicitation; const elicitar = cap ? () => server.server.elicitInput({ message: `¿Autoriza una exportación de REVISIÓN con base desactualizada?\n\nCaso: ${n} (${id})\nMotivo: ${razon.join('; ')}\n\nSaldrá rotulada «BORRADOR DESACTUALIZADO» y NO es una entrega válida.`, requestedSchema: { type: 'object', properties: { aprobar: { type: 'boolean', title: 'Autorizar el borrador desactualizado' } }, required: ['aprobar'] } }) : null;
-      const dec = await CS.decidir(p, idc, { elicitar });
-      if (!dec.por) throw new UserError('CONSENTIMIENTO_HUMANO_REQUERIDO', `Para exportar un BORRADOR DESACTUALIZADO se necesita el consentimiento de una persona; Claude no puede darlo. Ella puede confirmarlo en la ventana del cliente (si existe) o crear el archivo ${sol.archivo_aprobacion} con la línea indicada en ${sol.codigo_en}.`, 'Mientras tanto, recalcule para obtener una entrega válida. No se generó nada.', { id_consentimiento: idc, archivo_aprobacion: sol.archivo_aprobacion, motivos: razon });
+      const dec = await AH.decidir(p, idc, { descripcion: desc, elicitar });
+      if (!dec.por) throw new UserError('CONSENTIMIENTO_HUMANO_REQUERIDO', dec.rechazado ? 'La persona rechazó exportar un BORRADOR DESACTUALIZADO. No se generó nada.' : `Para exportar un BORRADOR DESACTUALIZADO se necesita el consentimiento de una persona; Claude no puede darlo. Ella puede confirmarlo en la ventana del cliente o en el diálogo del sistema, o crear el archivo ${sol.archivo_aprobacion} con la línea «${sol.formato}» (carpeta de configuración de Tannia Workspace, fuera de los proyectos).`, 'Mientras tanto, recalcule para obtener una entrega válida. No se generó nada.', { id_consentimiento: idc, rechazado: !!dec.rechazado, archivo_aprobacion: sol.archivo_aprobacion, motivos: razon });
       borrador = { por: dec.por, id: idc, motivos: razon };
     }
     const claimsStale = doc.claims.filter((c) => c.status === 'stale').length; const fuentes = K.listar(p); const nombre = doc.nombre || n; const T = tipos?.length ? tipos : ['memoria_md', 'memoria_pdf', 'cantidades_xlsx'];

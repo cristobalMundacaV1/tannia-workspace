@@ -16,7 +16,7 @@ import { claimDeDato } from '../src/cic/claims.js';
 
 const P = 'Curso Obras Civiles II';
 const put = (home, rel, buf) => { const f = path.join(home, 'Proyectos', P, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, buf); return rel; };
-async function entorno(extra = {}) { const home = tmpHome('Tannia ñ cic3 '); const cl = await startClient(home, undefined, { TANNIA_CIC: 'on', ...extra }); assert.ok(!(await call(cl.client, 'tannia_proyecto_crear', { nombre: P })).isError); return { home, ...cl }; }
+async function entorno(extra = {}) { const home = tmpHome('Tannia ñ cic3 '); const cl = await startClient(home, undefined, { TANNIA_CIC: 'on', TANNIA_SIN_DIALOGO: '1', ...extra }); assert.ok(!(await call(cl.client, 'tannia_proyecto_crear', { nombre: P })).isError); return { home, ...cl }; }
 const K = (c, a) => call(c, 'tannia_cic_conocimiento', { proyecto: P, ...a });
 
 test('extractores: localizadores de página, sección, diapositiva, hoja y línea; formatos no soportados y ZIP hostil', async () => {
@@ -74,12 +74,10 @@ test('T18/ADR-003: una fuente externa propuesta por Claude NO puede aprobarse so
     r = await call(c, 'tannia_cic_conocimiento', { proyecto: P, accion: 'decidir_fuente', id, aprobado: true, aprobar: true, humano: true, confirmado_por_usuario: true });
     assert.equal(data(r).estado, 'candidate'); assert.equal(data(r).pendiente_aprobacion_humana, true);
     assert.equal(data(await K(c, { accion: 'listar' })).fuentes.find((f) => f.id === id).estado, 'candidate');
-    // archivo con nonce incorrecto: no aprueba
-    const aprob = path.join(home, 'Proyectos', P, '01 Antecedentes', 'Aprobaciones', `${id}.txt`); fs.mkdirSync(path.dirname(aprob), { recursive: true });
-    fs.writeFileSync(aprob, `APRUEBO ${id} 0000000000\n`); assert.equal(data(await K(c, { accion: 'decidir_fuente', id })).estado, 'candidate');
-    // la persona lee el código del archivo local y crea el archivo de aprobación
-    const codigo = fs.readFileSync(path.join(home, 'Proyectos', P, '03 Trabajo', 'Conocimiento', 'pendientes', `${id}.codigo.txt`), 'utf8').match(/APRUEBO \S+ (\S+)/)[1];
-    fs.writeFileSync(aprob, `APRUEBO ${id} ${codigo}\n`); r = data(await K(c, { accion: 'decidir_fuente', id })); assert.equal(r.estado, 'registered'); assert.equal(r.por, 'human_out_of_band'); assert.match(r.nota, /NO significa que su contenido haya sido verificado/);
+    // un archivo dentro del proyecto NO aprueba; solo la persona, en la carpeta de configuración (fuera de los proyectos), después de la solicitud
+    const aprobDentro = path.join(home, 'Proyectos', P, '01 Antecedentes', 'Aprobaciones', `${id}.txt`); fs.mkdirSync(path.dirname(aprobDentro), { recursive: true }); fs.writeFileSync(aprobDentro, `APRUEBO ${id}\n`); assert.equal(data(await K(c, { accion: 'decidir_fuente', id })).estado, 'candidate');
+    const { AprobacionHumana } = await import('../src/cic/aprobacion_humana.js'); const { Sandbox } = await import('../src/security/sandbox.js'); const aprob = new AprobacionHumana(new Sandbox(home)).archivoAprobacion(P, id);
+    fs.writeFileSync(aprob, `APRUEBO ${id}\n`); r = data(await K(c, { accion: 'decidir_fuente', id })); assert.equal(r.estado, 'registered'); assert.equal(r.por, 'human_out_of_band'); assert.match(r.nota, /NO significa que su contenido haya sido verificado/);
     const reg = data(await K(c, { accion: 'buscar', consultas: ['espesor del sostenimiento según clase de roca'] })); assert.equal(reg.resultados[0].aprobada_por, 'human_out_of_band'); assert.equal(reg.resultados[0].binding, 'recommendation'); assert.equal(reg.resultados[0].contenido_verificado_por_servidor, false);
     // la cita sobre un extracto aprobado es verificable contra el extracto almacenado, pero el contenido no está verificado por el servidor
     const v = data(await K(c, { accion: 'verificar_cita', id, cita: 'se define según la clase de roca' })); assert.equal(v.estado, 'verified_exact'); assert.equal(v.contenido_verificado_por_servidor, false);
@@ -92,10 +90,10 @@ test('T18/ADR-003: una fuente externa propuesta por Claude NO puede aprobarse so
 
 async function clienteConElicitacion(home, respuesta) {
   const client = new Client({ name: 'test-elic', version: '1' }, { capabilities: { elicitation: {} } }); client.setRequestHandler(ElicitRequestSchema, async () => respuesta);
-  await client.connect(new StdioClientTransport({ command: process.execPath, args: [path.join(ROOT, 'src', 'main.js')], env: { ...process.env, TANNIA_HOME: home, TANNIA_CIC: 'on' }, stderr: 'pipe' })); return client;
+  await client.connect(new StdioClientTransport({ command: process.execPath, args: [path.join(ROOT, 'src', 'main.js')], env: { ...process.env, TANNIA_HOME: home, TANNIA_CIC: 'on', TANNIA_SIN_DIALOGO: '1' }, stderr: 'pipe' })); return client;
 }
 test('aprobación humana por elicitación del cliente: aceptar / rechazar / cancelar', async () => {
-  for (const [resp, esperado] of [[{ action: 'accept', content: { aprobar: true } }, 'registered'], [{ action: 'accept', content: { aprobar: false } }, 'candidate'], [{ action: 'decline' }, 'rejected'], [{ action: 'cancel' }, 'rejected']]) {
+  for (const [resp, esperado] of [[{ action: 'accept', content: { aprobar: true } }, 'registered'], [{ action: 'accept', content: { aprobar: false } }, 'rejected'], [{ action: 'decline' }, 'rejected'], [{ action: 'cancel' }, 'rejected']]) {
     const home = tmpHome('Tannia ñ elic '); const c = await clienteConElicitacion(home, resp);
     try {
       await call(c, 'tannia_proyecto_crear', { nombre: P });
