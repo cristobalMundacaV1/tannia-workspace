@@ -1,0 +1,95 @@
+{
+  "macrofase": "TW-11",
+  "nombre": "Construction Intelligence Core",
+  "estado": "EN_EJECUCION",
+  "rama_trabajo": "feat/tw11-cic-core",
+  "rama_base": "docs/tw11-construction-intelligence-plan",
+  "sha_doc_base": "e06364e5c3e22862a70e6e7fe3086208e323dff9",
+  "implementacion_autorizada": true,
+  "flag_TANNIA_CIC_default": "off",
+  "herramientas_baseline": 72,
+  "gates": {
+    "G0": {
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "5982018221837c4b2a8b26302db4059cefcdc9c0",
+      "ci": "success run 43945926639 (ubuntu+windows)"
+    },
+    "G1": {
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "5982018221837c4b2a8b26302db4059cefcdc9c0",
+      "ci": "success run 43945926639 (ubuntu+windows)"
+    },
+    "G2": {
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "5982018221837c4b2a8b26302db4059cefcdc9c0",
+      "ci": "success run 43945926639 (ubuntu+windows)"
+    },
+    "G3": {
+      "estado": "pendiente",
+      "sha_codigo": null,
+      "ci": null
+    },
+    "G4": {
+      "estado": "pendiente",
+      "sha_codigo": null,
+      "ci": null
+    },
+    "G5": {
+      "estado": "pendiente",
+      "sha_codigo": null,
+      "ci": null
+    },
+    "GV1": {
+      "estado": "pendiente",
+      "sha_codigo": null,
+      "ci": null
+    },
+    "G6": {
+      "estado": "pendiente",
+      "sha_codigo": null,
+      "ci": null
+    },
+    "G7": {
+      "estado": "pendiente",
+      "sha_codigo": null,
+      "ci": null
+    },
+    "G8": {
+      "estado": "pendiente",
+      "sha_codigo": null,
+      "ci": null
+    },
+    "G9": {
+      "estado": "pendiente",
+      "sha_codigo": null,
+      "ci": null
+    },
+    "G10": {
+      "estado": "pendiente",
+      "sha_codigo": null,
+      "ci": null
+    }
+  },
+  "precisiones": {
+    "P01": "registrada",
+    "P02": "registrada",
+    "P03": "registrada"
+  },
+  "pendientes_externos": [
+    "AutoCAD real",
+    "Claude Desktop real",
+    "Evaluacion retenida independiente (G10)",
+    "Revision profesional por especialidad",
+    "Taller con Tannia",
+    "Decision del PO",
+    "Merge y distribucion"
+  ],
+  "prohibido": [
+    "merge",
+    "release",
+    "main",
+    "autoaprobacion",
+    "modificar proyectos reales de Tannia"
+  ],
+  "siguiente_gate_habilitado": "G3"
+}
