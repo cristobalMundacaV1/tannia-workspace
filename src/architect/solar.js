@@ -79,7 +79,7 @@ export function desfaseMinutos(ms, zonaIana) {
 /** Vector unitario hacia el sol en ejes locales (+X derecha del plano, +Y arriba del plano, +Z altura).
  *  `norte_deg`: ángulo en que el norte verdadero está medido desde +Y local en sentido horario (campo true_north_deg_from_local_plus_y_clockwise). */
 export function vectorSolLocal(azimut_deg, elevacion_deg, norte_deg) {
-  const azLocal = (azimut_deg - norte_deg) * RAD; // azimut relativo a +Y local, horario
+  const azLocal = (azimut_deg + norte_deg) * RAD; // rumbo local (horario desde +Y) = ángulo del norte verdadero + rumbo geográfico
   const el = elevacion_deg * RAD;
   return [Math.sin(azLocal) * Math.cos(el), Math.cos(azLocal) * Math.cos(el), Math.sin(el)];
 }

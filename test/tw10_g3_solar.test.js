@@ -43,8 +43,10 @@ test('solar: hemisferio sur — al mediodía solar el sol está al NORTE; hemisf
 
 test('solar: vector local respeta el norte dibujado (rotar el norte rota el sol, no la casa)', () => {
   const v0 = vectorSolLocal(0, 30, 0); assert.ok(v0[1] > 0.8 && Math.abs(v0[0]) < 1e-9);
-  const v90 = vectorSolLocal(0, 30, 90); // el norte verdadero está a 90° horarios de +Y: el sol (norte) queda hacia +X? => azLocal=-90 => -X
-  assert.ok(v90[0] < -0.8);
+  const v90 = vectorSolLocal(0, 30, 90); // el norte verdadero está a 90° horarios de +Y (apunta a +X): un sol al norte queda hacia +X
+  assert.ok(v90[0] > 0.8);
+  const e = vectorSolLocal(90, 30, 0); assert.ok(e[0] > 0.8, 'sol al este con norte arriba: +X');
+  const e2 = vectorSolLocal(90, 30, 90); assert.ok(e2[1] < -0.8, 'norte a la derecha: el este queda abajo (−Y)');
   const n = Math.hypot(...vectorSolLocal(123, 41, 17)); assert.ok(Math.abs(n - 1) < 1e-12);
 });
 
