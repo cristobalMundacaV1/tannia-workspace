@@ -45,4 +45,9 @@ Leyenda: **HECHO** = implementado + pruebas automatizadas verdes (CI Windows/Ubu
 | H4 Escrituras anteriores a la validación canónica (`.tannia` enlazada, migración, manifiesto final, sustitución durante la operación) | HECHO (automatizado) · HW pendiente (junctions/OneDrive reales) | `tw28` |
 | H5 Bloqueo con dueño vivo y latido vencido | HECHO (automatizado, procesos reales) · HW pendiente (PowerShell/OneDrive) | `tw29` |
 
+## Incidente del instalador (Claude Desktop, Windows)
+| Incidente | Estado | Evidencia |
+|---|---|---|
+| «path escape» por «/» en el nombre visible del paquete H4/H5 | CORREGIDO localmente (validación previa + paquete r2 verificado como cliente MCP) · **causa y resultado en Claude Desktop real: NO VERIFICADOS** | `tw30`, `docs/qa/TW09_INSTALADOR_FIX.md`, `docs/qa/REEMPLAZO_INSTALADOR_TW09.md` |
+
 **Gates:** G0 parcial · G1 automatizado cumplido, real HW pendiente · G2 cumplido · G3 cumplido (importación real HW) · G4 automatizado parcial · G5 parcial · G6 parcial (sin transcripciones reales) · G7 parcial · G8 **no alcanzado** (sin piloto ni validación real).

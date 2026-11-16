@@ -31,4 +31,6 @@ Estados: `AUTOMATIZADO` (pruebas en CI Windows+Ubuntu sobre el SHA indicado) · 
 | T9-25 | Ninguna escritura (id, respaldo, manifiestos, auditoría, JSON de proyecto, historiales) sale del proyecto con `.tannia`/carpetas enlazadas ni con sustitución durante la operación; el manifiesto final se valida justo antes y se deshace lo copiado si falla | AUTOMATIZADO (symlinks en Linux; junctions en CI Windows) | `tw28` |
 | T9-26 | Un dueño de bloqueo VIVO con latido vencido nunca se interviene; caída real y pid reutilizado se recuperan sin pérdida | AUTOMATIZADO (procesos reales) | `tw29` |
 | T9-27 | Identidad de proceso en Windows real (`Get-Process … StartTime`) y bloqueo con OneDrive/antivirus | **NO VERIFICADO (HW)** | pendiente |
+| T9-28 | Nombres y rutas del paquete compatibles con Windows (validación previa al empaquetado); el bundle inicia, responde a `initialize`, publica exactamente las 61 herramientas sin esquemas inválidos; el servidor es idéntico al del paquete que falló | AUTOMATIZADO (cliente MCP sobre stdio, CI Windows+Ubuntu) | `tw30`, `.mcpb.verificacion.json` |
+| T9-29 | El «path escape» de Claude Desktop se debía al «/» del nombre visible y el nuevo paquete se instala sin el aviso; reinstalación sobre la anterior conservando la carpeta de datos | **NO VERIFICADO (Claude Desktop real)** | `REEMPLAZO_INSTALADOR_TW09.md` |
 
