@@ -1,0 +1,8 @@
+export default {
+  schema: 'tw.cic.specialization/1', id: 'transversal.cubicaciones', version: '0.1.0', parent: null, status: 'active', title: 'Cubicaciones y presupuestos con trazabilidad',
+  concepts: [{ term: 'cubicación', synonyms: ['metrado', 'cantidades de obra'] }, { term: 'partida', synonyms: ['ítem'] }, { term: 'APU', synonyms: ['análisis de precios unitarios'] }],
+  inputs: [{ name: 'plano DXF/PDF con unidad confirmada', kind: 'geometry', required: false }, { name: 'parámetros constructivos (espesor, altura, pérdida)', kind: 'datum', required: true }, { name: 'precios unitarios con fuente y fecha', kind: 'datum', required: false }],
+  deliverables: [{ kind: 'planilla_de_cantidades', editable: true }, { kind: 'presupuesto_con_formulas', editable: true }],
+  methods: [{ id: 'mc-cubicacion-trazable', title: 'Del plano a la partida con claims', steps: ['Medir el DXF con la unidad confirmada (tannia_cic_geometria medir_dxf)', 'Aplicar la regla constructiva con parámetros de la usuaria (qty.product, qty.apply_loss)', 'Valorizar con precios aportados (bud.rollup)', 'Verificar y entregar (tannia_cic_verificar, tannia_cic_entregable)'], operations: ['qty.product', 'qty.apply_loss', 'bud.rollup', 'geo.polygon.properties'], tools: ['tannia_cic_geometria', 'tannia_cubicar_dxf', 'tannia_presupuesto_generar'] }],
+  automation_limits: ['Nunca inventa precios, rendimientos, pérdidas ni espesores', 'Las cantidades son borrador hasta que una persona las verifique'], required_validation: [{ what: 'Aprobación de cantidades y presupuesto', by: 'profesional de costos competente' }], competencies: ['cubicación', 'presupuesto'], gaps: [],
+};

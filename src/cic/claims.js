@@ -8,10 +8,10 @@ export const claimId = (clave) => `clm-${sha256(clave).slice(0, 16)}`;
 export function claimsDeOperacion(res, { modo = 'professional', etiqueta = '', depende_de = [], ahora = () => new Date().toISOString() } = {}) {
   const claims = [];
   for (const [nombre, o] of Object.entries(res.outputs)) {
-    if (o.value === null || o.value === undefined) continue;
+    if (o.value === null || o.value === undefined) continue; let valor = o.value; if (valor && typeof valor === 'object' && !(Array.isArray(valor) && valor.every((x) => typeof x === 'number'))) valor = JSON.stringify(valor);
     claims.push(ClaimSchema.parse({
       schema: 'tw.cic.claim/1', id: claimId({ op: res.operation_id, v: res.version, h: res.input_hash, out: nombre }), kind: 'calculation',
-      statement: `${etiqueta ? `${etiqueta}: ` : ''}${res.operation_id} → ${nombre}`, value: o.value, unit: o.unit, dimension: o.dimension, source_refs: [],
+      statement: `${etiqueta ? `${etiqueta}: ` : ''}${res.operation_id} → ${nombre}`, value: valor, unit: o.unit, dimension: o.dimension, source_refs: [],
       method_ref: { operation_id: res.operation_id, version: res.version, input_hash: res.input_hash, maturity: res.maturity }, depends_on: depende_de,
       status: 'computed', requires_review_by: res.requires_review_by || [], created_at: ahora(), mode: modo,
     }));

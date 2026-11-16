@@ -9,7 +9,7 @@ import { madurezPermitida, politicaDe } from './politica.js';
 const REF = /^(magnitude|claim|step):(.+)$/;
 export const esRef = (v) => v && typeof v === 'object' && typeof v.ref === 'string' && REF.test(v.ref);
 export const esRefs = (v) => v && typeof v === 'object' && Array.isArray(v.refs) && v.refs.length > 0 && v.refs.every((r) => typeof r === 'string' && REF.test(r));
-export const refsDe = (v) => (esRef(v) ? [v.ref] : esRefs(v) ? v.refs : []);
+export const refsDe = (v) => (esRef(v) ? [v.ref] : esRefs(v) ? v.refs : Array.isArray(v) ? v.flatMap(refsDe) : v && typeof v === 'object' ? Object.values(v).flatMap(refsDe) : []);
 
 function aciclico(pasos) {
   const g = new Map(pasos.map((p) => [p.id, p.depends_on])); const estado = new Map();

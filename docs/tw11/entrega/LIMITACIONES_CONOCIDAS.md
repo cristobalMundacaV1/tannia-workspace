@@ -1,0 +1,10 @@
+# Limitaciones conocidas — TW-11
+- **Sin validación real:** AutoCAD real, Claude Desktop real, usuarios reales y profesionales: pendientes. La elicitación de aprobación de fuentes se probó con un cliente MCP simulado; si Claude Desktop no la soporta, queda el archivo fuera de banda.
+- **Niveles:** operaciones E2 = verificadas contra oráculos del repositorio (no revisión profesional E3); `edu.*` es E1 (solo académico).
+- **No se calcula:** geotecnia, sostenimiento, estructuras, hidráulica de diseño, normativa, ventilación, seguridad.
+- **Geometría:** alineamientos de rectas y arcos (sin clotoides); barrido horizontal con sección vertical; sin pendiente longitudinal en el barrido; TIN por Delaunay (≤ ~2000 puntos); LandXML parcial con pérdidas declaradas; sin IFC/BIM.
+- **Departamentos:** generador por franjas rectangulares; sin circulación vertical, ductos, estructura ni instalaciones; orientación real desconocida.
+- **Conocimiento:** sin OCR (PDF escaneados no se indexan); BM25 con sinónimos (sin embeddings: ADR pendiente); el servidor no puede verificar lo que dice una página web ni impedir que Claude envíe datos a una búsqueda externa.
+- **Verificador de números:** cifras con unidad en texto libre se verifican; una cifra técnica escrita sin unidad no se detecta (los entregables se generan desde claims para minimizar esto).
+- **Programación:** solo fin-a-inicio, sin calendarios ni recursos.
+- **Rendimiento:** `tools/list` crece (ver `fixtures/tw11/tools_cic.json`); el umbral de D7 lo fija el PO con esos datos.

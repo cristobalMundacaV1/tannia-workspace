@@ -17,6 +17,14 @@ export const REGLAS = {
   conteo: { magnitud: 'conteo', params: [], unidad: 'un', formula: 'Nº de elementos' },
 };
 
+/** Reglas añadidas por TW-11 (NO forman parte del esquema de tannia_cubicar_dxf: las 72 herramientas permanecen idénticas). */
+export const REGLAS_TW11 = {
+  perimetro_por_altura: { magnitud: 'perimetro', params: ['altura_m'], unidad: 'm2', formula: 'Σ perímetros × altura' },
+  perimetro_por_altura_por_espesor: { magnitud: 'perimetro', params: ['altura_m', 'espesor_m'], unidad: 'm3', formula: 'Σ perímetros × altura × espesor' },
+  area_por_altura: { magnitud: 'area', params: ['altura_m'], unidad: 'm3', formula: 'Σ áreas × altura (prisma)' },
+  longitud_por_tasa: { magnitud: 'longitud', params: ['tasa_m3_por_m'], unidad: 'm3', formula: 'Σ longitudes × tasa (m³ por metro lineal)' },
+};
+const TODAS = { ...REGLAS, ...REGLAS_TW11 };
 const positive = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
 
 /**
@@ -24,8 +32,8 @@ const positive = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
  * Devuelve la partida con cantidad, fórmula visible, trazabilidad y estado.
  */
 export function computeQuantity({ medicion, archivo, sha256, capas, regla, parametros = {}, descuentos = [], perdida_pct, instancia_bloque }) {
-  const R = REGLAS[regla];
-  if (!R) throw new UserError('REGLA_DESCONOCIDA', `Regla "${regla}" no existe.`, `Reglas: ${Object.keys(REGLAS).join(', ')}.`);
+  const R = TODAS[regla];
+  if (!R) throw new UserError('REGLA_DESCONOCIDA', `Regla "${regla}" no existe.`, `Reglas: ${Object.keys(TODAS).join(', ')}.`);
   if (medicion.unidades.conversion !== 'aplicada') {
     throw new UserError('UNIDAD_NO_CONFIRMADA', 'No se puede calcular una cantidad: la unidad real del dibujo no está confirmada.', 'Pregunte a la usuaria la unidad real del dibujo (mm, cm, m) y repita con unidad_confirmada.');
   }

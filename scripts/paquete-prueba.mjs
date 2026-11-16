@@ -12,12 +12,20 @@ import { verificarBundle } from './lib/verificar_bundle.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = path.join(raiz, 'node_modules', '@anthropic-ai', 'mcpb', 'dist', 'cli', 'cli.js');
-export async function crearPaquetePrueba({ etiqueta, revision, id = 'tannia-workspace-tw09', nombre, descripcion, salida, esperadas, fase = 'tw09' }) {
+/** Lista las herramientas que publica el bundle construido con el flag CIC encendido (para declararlas en el manifiesto del candidato CIC). */
+async function herramientasConCic(origen) {
+  const { Client } = await import('@modelcontextprotocol/sdk/client/index.js'); const { StdioClientTransport } = await import('@modelcontextprotocol/sdk/client/stdio.js');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'cic-tools ')); const c = new Client({ name: 'cic-tools', version: '1' });
+  await c.connect(new StdioClientTransport({ command: process.execPath, args: [path.join(origen, 'server', 'index.js')], env: { ...process.env, TANNIA_HOME: home, TANNIA_CIC: 'on' }, stderr: 'pipe' }));
+  try { return (await c.listTools()).tools.map((t) => ({ name: t.name, description: t.description })); } finally { await c.close(); fs.rmSync(home, { recursive: true, force: true }); }
+}
+export async function crearPaquetePrueba({ etiqueta, revision, id = 'tannia-workspace-tw09', nombre, descripcion, salida, esperadas, fase = 'tw09', cic = false }) {
   if (!/^[a-z0-9]+$/.test(fase)) throw new Error('--fase solo admite minúsculas y dígitos (ej. tw10)');
   if (!etiqueta || !/^[0-9A-Za-z._-]+$/.test(etiqueta)) throw new Error('--etiqueta es obligatoria y solo admite letras, dígitos . _ -');
   const origen = path.join(raiz, 'dist', 'mcpb'); if (!fs.existsSync(path.join(origen, 'manifest.json'))) throw new Error('Falta dist/mcpb: ejecute `npm run build` primero.');
   const base = JSON.parse(fs.readFileSync(path.join(origen, 'manifest.json'), 'utf8'));
   const m = { ...base, name: id, version: `0.1.0-${fase}.${etiqueta}${revision ? `.${revision}` : ''}`, display_name: nombre ?? `Tannia Workspace - PRUEBA ${etiqueta}`, description: descripcion ?? `PAQUETE DE PRUEBA (código del commit ${etiqueta}). No sustituye a rc.3. No verificado en AutoCAD ni Claude Desktop reales.` };
+  if (cic) { m.tools = await herramientasConCic(origen); m.server = { ...m.server, mcp_config: { ...m.server.mcp_config, env: { ...(m.server.mcp_config.env || {}), TANNIA_CIC: 'on' } } }; }
   const v = validarManifest(m); if (v.errores.length) throw new Error(`Manifiesto no válido, no se empaqueta:\n - ${v.errores.join('\n - ')}`);
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'paquete-prueba ')); fs.cpSync(origen, stage, { recursive: true }); fs.writeFileSync(path.join(stage, 'manifest.json'), JSON.stringify(m, null, 2));
   const rutas = []; const walk = (d, rel = '') => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const r = rel ? `${rel}/${e.name}` : e.name; if (e.isDirectory()) walk(path.join(d, e.name), r); else rutas.push(r); } }; walk(stage);
@@ -34,7 +42,7 @@ export async function crearPaquetePrueba({ etiqueta, revision, id = 'tannia-work
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const arg = (k) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : undefined; };
-  crearPaquetePrueba({ etiqueta: arg('etiqueta'), revision: arg('revision'), id: arg('id'), nombre: arg('nombre'), salida: arg('salida'), esperadas: arg('esperadas') ? Number(arg('esperadas')) : undefined, fase: arg('fase') })
+  crearPaquetePrueba({ etiqueta: arg('etiqueta'), revision: arg('revision'), id: arg('id'), nombre: arg('nombre'), salida: arg('salida'), cic: process.argv.includes('--cic'), esperadas: arg('esperadas') ? Number(arg('esperadas')) : undefined, fase: arg('fase') })
     .then((r) => { console.log(JSON.stringify({ archivo: r.archivo, sha256: r.sha256, ...r.manifiesto, ok: r.verificacion.ok, herramientas: r.verificacion.datos.herramientas, problemas: r.verificacion.problemas }, null, 2)); process.exit(r.verificacion.ok ? 0 : 1); })
     .catch((e) => { console.error(String(e.message)); process.exit(2); });
 }

@@ -29,7 +29,10 @@ export function ejecutarOperacion(id, entradas = {}, { modo = 'professional' } =
     if (typeof e !== 'object' || !('value' in e)) throw new OpError('ENTRADA_INVALIDA', `La entrada "${spec.name}" debe tener la forma {value, unit}.`);
     crudo[spec.name] = { value: e.value, unit: e.unit ?? null };
     try {
-      if (spec.dimension === null) { // sin dimensión: sin conversión de longitud (admite % y adimensionales con unidad opcional)
+      if (spec.dimension === 'any') { // cualquier dimensión: se entrega {v (SI), dim, unit} y la operación decide qué es válido
+        if (!esNum(e.value)) throw new OpError('ENTRADA_INVALIDA', `"${spec.name}" debe ser un número finito.`); if (!e.unit) throw new UnitError('UNIDAD_FALTANTE', `"${spec.name}" requiere unidad (no se supone ninguna).`);
+        const m = unidad(e.unit); inp[spec.name] = { v: e.value * m.factor, dim: m.dim, unit: m.nombre, valor: e.value };
+      } else if (spec.dimension === null) { // sin dimensión: sin conversión de longitud (admite % y adimensionales con unidad opcional)
         let f = 1; if (e.unit) { const u = unidad(e.unit); if (!dimEq(u.dim, { L: 0, M: 0, T: 0 })) throw new UnitError('DIMENSION_INCOMPATIBLE', `"${spec.name}" es adimensional.`); f = u.factor; }
         inp[spec.name] = spec.shape === 'vector' ? e.value.map((x) => x * f) : (typeof e.value === 'number' ? e.value * f : e.value);
       } else if (spec.shape === 'scalar') {
@@ -52,7 +55,7 @@ export function ejecutarOperacion(id, entradas = {}, { modo = 'professional' } =
   const outputs = {};
   for (const o of meta.outputs) {
     if (!(o.name in r.outputs)) throw new Error(`La operación ${id} no produjo "${o.name}"`);
-    outputs[o.name] = { value: r.outputs[o.name], unit: o.unit_out, dimension: o.dimension };
+    const ov = r.units?.[o.name]; outputs[o.name] = { value: r.outputs[o.name], unit: ov ? ov.unit : o.unit_out, dimension: ov ? ov.dimension : o.dimension };
   }
   return { operation_id: id, version: meta.version, maturity: meta.maturity, input_hash: sha256({ id, version: meta.version, entradas: crudo }), outputs, warnings: r.warnings || [], requires_review_by: meta.requires_review_by };
 }
