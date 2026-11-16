@@ -3,8 +3,8 @@
 Hay dos paquetes: **no instale ambos a la vez**.
 | Paquete | Qué es | Cuándo usarlo |
 |---|---|---|
-| `…-tw11-…-cic-off.mcpb` | Igual que rc3: **72 herramientas**, el motor nuevo está APAGADO | Compatibilidad / volver atrás |
-| `…-tw11-…-cic-on.mcpb` | 72 + herramientas `tannia_cic_*` (motor de ingeniería ACTIVADO solo en este paquete) | Pruebas controladas del CIC |
+| `tannia-workspace-tw11-<sha>-cicoff.mcpb` | Igual que rc3: **72 herramientas**, el motor nuevo está APAGADO | Compatibilidad / volver atrás |
+| `tannia-workspace-tw11-<sha>-cicon.mcpb` | 72 + herramientas `tannia_cic_*` (motor de ingeniería ACTIVADO solo en este paquete) | Pruebas controladas del CIC |
 ## Pasos
 1. Cierre Claude Desktop por completo.
 2. Haga doble clic en el `.mcpb` elegido (o Configuración → Extensiones → Instalar extensión).

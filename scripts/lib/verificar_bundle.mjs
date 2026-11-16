@@ -26,6 +26,8 @@ function esquemasInvalidos(tools) {
 }
 
 /** @returns { ok, problemas[], datos } — nunca lanza por un fallo del paquete: lo informa. */
+/** Entorno EXACTO del manifiesto (como lo daría Claude Desktop): ${user_config.carpeta_tannia} → carpeta de prueba; no se hereda TANNIA_CIC del entorno de quien verifica. */
+function entornoDelManifiesto(cfg, home) { const base = { ...process.env }; delete base.TANNIA_CIC; const env = { ...base, TANNIA_HOME: home }; for (const [k, v] of Object.entries(cfg.env || {})) env[k] = String(v).replace('${user_config.carpeta_tannia}', home); return env; }
 export async function verificarBundle(mcpbPath, { esperadas } = {}) {
   const problemas = []; const datos = { archivo: path.basename(mcpbPath), sha256: sha(mcpbPath), bytes: fs.statSync(mcpbPath).size };
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'Verif bundle ñ '));
@@ -41,7 +43,7 @@ export async function verificarBundle(mcpbPath, { esperadas } = {}) {
     // Mismo comando y argumentos que el manifiesto (con ${__dirname} sustituido por la carpeta de instalación)
     const cfg = manifest.server.mcp_config; const args = cfg.args.map((a) => String(a).replace('${__dirname}', dir));
     const home = path.join(tmp, 'Carpeta Tannia ñ'); fs.mkdirSync(home);
-    const transporte = new StdioClientTransport({ command: cfg.command === 'node' ? process.execPath : cfg.command, args, env: { ...process.env, TANNIA_HOME: home }, stderr: 'pipe' });
+    const transporte = new StdioClientTransport({ command: cfg.command === 'node' ? process.execPath : cfg.command, args, env: entornoDelManifiesto(cfg, home), stderr: 'pipe' });
     cliente = new Client({ name: 'verificador-de-paquete', version: '1.0.0' });
     await cliente.connect(transporte); // realiza `initialize`
     const info = cliente.getServerVersion(); datos.initialize = { servidor: info?.name, version: info?.version, instrucciones: !!cliente.getInstructions(), capacidades: Object.keys(cliente.getServerCapabilities() ?? {}) };

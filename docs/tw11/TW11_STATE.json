@@ -1,8 +1,8 @@
 {
   "macrofase": "TW-11",
   "nombre": "Construction Intelligence Core",
-  "estado": "EN_EJECUCION",
-  "rama_trabajo": "feat/tw11-cic-core",
+  "estado": "ESPERA_VALIDACION_EXTERNA",
+  "rama_trabajo": "feat/tw11-paquete-evaluacion",
   "rama_base": "docs/tw11-construction-intelligence-plan",
   "sha_doc_base": "e06364e5c3e22862a70e6e7fe3086208e323dff9",
   "implementacion_autorizada": true,
@@ -12,60 +12,82 @@
     "G0": {
       "estado": "tecnicamente_superado_N1",
       "sha_codigo": "5982018221837c4b2a8b26302db4059cefcdc9c0",
-      "ci": "success run 43945926639 (ubuntu+windows)"
+      "ci": "success 43945926639",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G1": {
       "estado": "tecnicamente_superado_N1",
       "sha_codigo": "5982018221837c4b2a8b26302db4059cefcdc9c0",
-      "ci": "success run 43945926639 (ubuntu+windows)"
+      "ci": "success 43945926639",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G2": {
       "estado": "tecnicamente_superado_N1",
       "sha_codigo": "5982018221837c4b2a8b26302db4059cefcdc9c0",
-      "ci": "success run 43945926639 (ubuntu+windows)"
+      "ci": "success 43945926639",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G3": {
-      "estado": "pendiente",
-      "sha_codigo": null,
-      "ci": null
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "3786d1b88901b07607066f5d1bea5ccc2c7fe61a",
+      "ci": "success 43947384730",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G4": {
-      "estado": "pendiente",
-      "sha_codigo": null,
-      "ci": null
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "3786d1b88901b07607066f5d1bea5ccc2c7fe61a",
+      "ci": "success 43947384730",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G5": {
-      "estado": "pendiente",
-      "sha_codigo": null,
-      "ci": null
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "c264dbc784dca49e29960baa0fbb249e9ff76b9a",
+      "ci": "success 43949392711",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "GV1": {
-      "estado": "pendiente",
-      "sha_codigo": null,
-      "ci": null
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "c264dbc784dca49e29960baa0fbb249e9ff76b9a",
+      "ci": "success 43949392711",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G6": {
-      "estado": "pendiente",
-      "sha_codigo": null,
-      "ci": null
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "dcc658b71f8f560a95cdacb1e6de1eee3b5f05b8",
+      "ci": "success 43954370335",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G7": {
-      "estado": "pendiente",
-      "sha_codigo": null,
-      "ci": null
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "dcc658b71f8f560a95cdacb1e6de1eee3b5f05b8",
+      "ci": "success 43954370335",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G8": {
-      "estado": "pendiente",
-      "sha_codigo": null,
-      "ci": null
+      "estado": "tecnicamente_superado_N1",
+      "sha_codigo": "dcc658b71f8f560a95cdacb1e6de1eee3b5f05b8",
+      "ci": "success 43954370335",
+      "evidencia": "docs/tw11/EVIDENCE_MATRIX.md"
     },
     "G9": {
-      "estado": "pendiente",
+      "estado": "tecnicamente_superado_local_N1",
+      "sha_codigo": "cab78cdd81f606d70fc743c45c01633099eadcb6",
+      "ci": "success 43954614508",
+      "evidencia": "test/tw11_g9_paquete.test.js; fixtures/tw11/tools_cic.json"
+    },
+    "G10": {
+      "estado": "EJECUTOR_LISTO_APROBACION_PENDIENTE_EXTERNA",
+      "sha_codigo": "cab78cdd81f606d70fc743c45c01633099eadcb6",
+      "ci": "success 43954614508 (solo ejecutor)",
+      "evidencia": "scripts/tw11-eval.mjs"
+    },
+    "G11": {
+      "estado": "BLOCKED_EXTERNAL",
       "sha_codigo": null,
       "ci": null
     },
-    "G10": {
-      "estado": "pendiente",
+    "G12": {
+      "estado": "BLOCKED_EXTERNAL",
       "sha_codigo": null,
       "ci": null
     }
@@ -91,5 +113,33 @@
     "autoaprobacion",
     "modificar proyectos reales de Tannia"
   ],
-  "siguiente_gate_habilitado": "G3"
+  "siguiente_gate_habilitado": "G11 (revisión independiente: externo)",
+  "pruebas_locales": {
+    "total": 375,
+    "pasan": 358,
+    "fallan": 0,
+    "omitidas": 17
+  },
+  "bloqueos": [
+    {
+      "clase": "BLOCKED_EXTERNAL",
+      "item": "revisor independiente y casos retenidos (G10)"
+    },
+    {
+      "clase": "BLOCKED_EXTERNAL",
+      "item": "AutoCAD real / Claude Desktop real / Tannia / revisión profesional"
+    },
+    {
+      "clase": "BLOCKED_EXTERNAL",
+      "item": "decisión del PO sobre presupuesto de herramientas (D7)"
+    }
+  ],
+  "paquetes_candidatos": [
+    {
+      "zip": "TW11-entrega-cab78cd.zip",
+      "sha256": "0dddfec760f6101d96faf81b85effe81f61b809ea42bd2a40a16415cfc5f5b03",
+      "cicoff_sha256": "a0c73654c38ab05e68c34a372f683c5edc5bfae2195b09725724d49c3d6c1557",
+      "cicon_sha256": "679f9ebfab302e93cbf561367d50d32bd07f0ae08f036375483f74e1c71be9e9"
+    }
+  ]
 }
