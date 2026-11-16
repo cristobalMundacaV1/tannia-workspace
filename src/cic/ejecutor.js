@@ -8,7 +8,12 @@ import { sha256 } from './hash.js';
 
 const SIN_REINTENTO = new Set(['generate_cad', 'generate_doc']);
 
+function profundo(v, ctx) {
+  if (esRef(v)) { const r = resolverUno({ ref: v.ref }, ctx); return v.as === 'quantity' ? { value: r.value, unit: r.unit } : r.value; }
+  if (Array.isArray(v)) return v.map((x) => profundo(x, ctx)); if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, profundo(x, ctx)])); return v;
+}
 function resolverEntrada(v, ctx) {
+  if (v && typeof v === 'object' && !esRef(v) && !esRefs(v) && 'value' in v && refsDe(v.value).length) return { value: profundo(v.value, ctx), unit: v.unit ?? null };
   if (esRefs(v)) { const xs = v.refs.map((r) => resolverEntrada({ ref: r }, ctx)); const u = xs[0].unit; if (xs.some((x) => x.unit !== u)) throw new OpError('DIMENSION_INCOMPATIBLE', 'Las referencias de una lista deben tener la misma unidad.'); return { value: xs.map((x) => x.value), unit: u }; }
   return resolverUno(v, ctx);
 }
@@ -16,7 +21,8 @@ function resolverUno(v, { doc, L, porPaso }) {
   if (!esRef(v)) return v; const [tipo, resto] = [v.ref.split(':')[0], v.ref.slice(v.ref.indexOf(':') + 1)];
   if (tipo === 'magnitude') { const m = (doc.magnitudes || []).find((x) => x.name === resto); if (!m || m.value === null || m.value === undefined) throw new OpError('ENTRADA_FALTANTE', `Magnitud "${resto}" sin valor.`); return { value: m.value, unit: m.unit }; }
   if (tipo === 'claim') { const c = L.get(resto); if (!c || c.status === 'stale' || c.value === null) throw new OpError('CLAIM_NO_VIGENTE', `El claim ${resto} no existe o no está vigente.`); return { value: c.value, unit: c.unit }; }
-  const [sid, out] = resto.split('.'); const c = porPaso.get(sid)?.[out]; if (!c) throw new OpError('ENTRADA_FALTANTE', `El paso ${sid} aún no produjo "${out}".`); return { value: c.value, unit: c.unit };
+  const [sid, out0] = resto.split('.'); const mi = /^(\w+)\[(\d+)\]$/.exec(out0 || ''); const out = mi ? mi[1] : out0; const c = porPaso.get(sid)?.[out]; if (!c) throw new OpError('ENTRADA_FALTANTE', `El paso ${sid} aún no produjo "${out}".`);
+  if (mi) { if (!Array.isArray(c.value) || Number(mi[2]) >= c.value.length) throw new OpError('ENTRADA_FALTANTE', `"${out}" no tiene el elemento ${mi[2]}.`); return { value: c.value[Number(mi[2])], unit: c.unit }; } return { value: c.value, unit: c.unit };
 }
 
 /** Ejecuta pasos `ready`/`planned` cuyo resultado sea determinista. Modifica `doc` (plan, claims). Devuelve el informe. */

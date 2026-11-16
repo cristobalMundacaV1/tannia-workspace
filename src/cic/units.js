@@ -18,6 +18,7 @@ const T = {
   'm3/m': [1, D(2)], 'm2/m': [1, D(1)],
   'm/s': [1, D(1, 0, -1)], 'km/h': [1 / 3.6, D(1, 0, -1)], 'm3/s': [1, D(3, 0, -1)], 'l/s': [1e-3, D(3, 0, -1)],
   rad: [1, D()], deg: [Math.PI / 180, D()], '°': [Math.PI / 180, D()], grad: [Math.PI / 200, D()],
+  CLP: [1, D()], UF: [1, D()], USD: [1, D()], 'CLP/m3': [1, D(-3)], 'CLP/m2': [1, D(-2)], 'CLP/m': [1, D(-1)],
   '1': [1, D()], adim: [1, D()], '%': [0.01, D()], '‰': [0.001, D()],
 };
 const ALIAS = { 'm²': 'm2', 'm³': 'm3', 'mm²': 'mm2', 'cm²': 'cm2', 'mm³': 'mm3', 'cm³': 'cm3', 'km²': 'km2', 'ft²': 'ft2', 'ft³': 'ft3', metros: 'm', metro: 'm', 'm3_por_m': 'm3/m', lt: 'l', litro: 'l', litros: 'l', grados: 'deg', 'ton': 't' };

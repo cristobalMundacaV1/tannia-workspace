@@ -5,6 +5,8 @@ import { Anteproyectos } from '../design/servicio.js';
 import { Modelos3d } from '../arq3d/servicio.js';
 import { resolverProyecto, resumenProyecto, importarArchivos, asegurarId, FORMATOS_IMPORTABLES } from '../project/gestion.js';
 import { POLITICA, evaluarEncargo } from '../politica/autonomia.js';
+import { cicActivo } from '../cic/flag.js';
+import { adaptarEnrutador } from '../cic/enrutador.js';
 import { listProjects } from '../project/projects.js';
 
 const RO = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
@@ -40,7 +42,7 @@ export function registerProyectos(reg, { sandbox }) {
       dormitorios: z.number().int().min(0).max(10).optional(), banos: z.number().int().min(0).max(10).optional(), forma: z.enum(['rectangular', 'irregular', 'desconocida']).optional(), dimensiones_conocidas: z.boolean().optional(),
       antecedentes: z.object({ dxf: z.boolean().optional(), dwg: z.boolean().optional(), pdf: z.boolean().optional(), imagen: z.boolean().optional() }).optional(), pide: z.array(z.string().max(60)).max(10).optional(),
     }, annotations: RO,
-  }, async (args) => { const r = evaluarEncargo(args); return ok(r.soportado ? `Capacidad: ${r.capacidad}. Faltan: ${r.datos_esenciales_faltantes.length ? r.datos_esenciales_faltantes.join(' ') : 'nada esencial'}` : r.capacidad === 'no_soportado' ? `No soportado: ${r.limites_a_comunicar.join(' ')}` : 'Faltan datos para clasificar el encargo.', r); });
+  }, async (args) => { let r = evaluarEncargo(args); if (cicActivo()) r = { ...r, cic: adaptarEnrutador(r, `${args.solicitud || ''} ${(args.pide || []).join(' ')}`) }; return ok(r.soportado ? `Capacidad: ${r.capacidad}. Faltan: ${r.datos_esenciales_faltantes.length ? r.datos_esenciales_faltantes.join(' ') : 'nada esencial'}` : r.capacidad === 'no_soportado' ? (r.cic ? `No hay un generador dedicado: ${r.limites_a_comunicar.join(' ')} ${r.cic.mensaje}` : `No soportado: ${r.limites_a_comunicar.join(' ')}`) : 'Faltan datos para clasificar el encargo.', r); });
 
   reg('tannia_politica_autonomia', {
     title: 'Política de autonomía: cuándo actuar, suponer y declarar, preguntar o detenerse',

@@ -4,6 +4,7 @@ import { unidad, UnitError, dimEq } from './units.js';
 
 const UN = 'mm2|cm2|m2|km2|mm3|cm3|m3|m²|m³|cm²|mm²|km²|cm³|mm|cm|dm|km|m|kg|ha|t|l|min|h|d|días|dias|%|‰|°|deg|rad|CLP|UF|USD';
 const RE = new RegExp(String.raw`(?<![\w.,/-])(\$\s?)?(\d{1,3}(?:[.,\s]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)(?:\s?(${UN})(?![\p{L}\d_]))?`, 'gu');
+const ESTATICA = /^\s*(?:[-•*]\s*)?(?:F[óo]rmula|Hip[óo]tesis|Rango de validez|Cota de error)\s*:/i;
 const FECHA = /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g;
 
 /** Interpreta un número en notación es/en. Devuelve posibles valores (puede ser ambiguo "1.234"). */
@@ -53,7 +54,8 @@ export function verificarEntregable(entregable, ctx = {}) {
     stats.verificados++;
   }
   if (typeof entregable.texto === 'string') {
-    const t = entregable.texto.replace(FECHA, ' ');
+    // Documentación ESTÁTICA de las operaciones (fórmula, hipótesis, rango de validez, cota de error): no son cifras del proyecto (p. ej. «<90°»).
+    const t = entregable.texto.split('\n').filter((ln) => { if (ESTATICA.test(ln)) { stats.texto_estatico = (stats.texto_estatico || 0) + 1; return false; } return true; }).join('\n').replace(FECHA, ' ');
     const claims = L?.list ? L.list().filter(claimValido) : [];
     for (const m of t.matchAll(RE)) {
       const mon = m[1]; const raw = m[2]; const un = m[3] ? m[3].replace('²', '2').replace('³', '3') : (mon ? 'CLP' : null);

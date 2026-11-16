@@ -1,0 +1,12 @@
+{ "id": "dev-001", "tipo": "desarrollo_publico", "archivos": {},
+  "pasos": [
+    { "herramienta": "tannia_cic_calcular", "args": { "proyecto": "${proyecto}", "caso": "Eval", "operacion": "geo.section.circle", "entradas": { "radio": { "value": 2, "unit": "m" } }, "etiqueta": "Sección circular" } },
+    { "herramienta": "tannia_cic_calcular", "args": { "operacion": "geotecnia.sostenimiento.espesor", "entradas": {} }, "espera_error": "OPERACION_DESCONOCIDA" },
+    { "herramienta": "tannia_cic_calcular", "args": { "operacion": "geo.section.arch", "entradas": { "luz": { "value": 8, "unit": "m" }, "altura_hastial": { "value": 0, "unit": "m" }, "flecha": { "value": 5, "unit": "m" } } }, "espera_error": "OUT_OF_RANGE" }
+  ],
+  "casos_ingenieria": ["Eval"],
+  "esperados": [
+    { "tipo": "numero", "id": "area", "claim": "geo.section.circle → area$", "valor": 12.566370614359172, "tol_rel": 1e-9, "critico": true },
+    { "tipo": "prohibido", "id": "sin_geotecnia", "regex": "\\d\\s?(kPa|MPa)" },
+    { "tipo": "incertidumbre", "id": "op_inexistente_declarada", "debe_aparecer": "OPERACION_DESCONOCIDA|no existe" }
+  ] }

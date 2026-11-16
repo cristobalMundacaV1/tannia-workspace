@@ -89,7 +89,7 @@ export const EspecializacionSchema = z.object({
   title: z.string(), concepts: z.array(z.object({ term: z.string(), synonyms: z.array(z.string()).default([]) }).strict()).default([]),
   inputs: z.array(z.object({ name: z.string(), kind: z.enum(['geometry', 'document', 'datum']), required: z.boolean() }).strict()).default([]),
   deliverables: z.array(z.object({ kind: z.string(), editable: z.boolean() }).strict()).default([]),
-  methods: z.array(z.object({ id: z.string(), title: z.string(), steps: z.array(z.string()), operations: z.array(z.string()) }).strict()).default([]),
+  methods: z.array(z.object({ id: z.string(), title: z.string(), steps: z.array(z.string()), operations: z.array(z.string()), tools: z.array(z.string()).default([]) }).strict()).default([]),
   automation_limits: z.array(z.string()), required_validation: z.array(z.object({ what: z.string(), by: z.string() }).strict()),
   competencies: z.array(z.string()).default([]), gaps: z.array(z.object({ need: z.string(), resolution: z.enum(['external_professional', 'new_tool']) }).strict()).default([]),
   // Una especialización solo declara; nunca puede bajar restricciones del núcleo
