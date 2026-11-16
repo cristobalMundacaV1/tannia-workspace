@@ -1,0 +1,98 @@
+{
+  "phase": "TW-10",
+  "contract_version": "autonomia-e2e-v2",
+  "overall_status": "IMPLEMENTANDO",
+  "branch": "feat/tw10-architectural-reasoning",
+  "head_sha": null,
+  "base_sha_verified": "eb767891fe2dacbb4d3070653b1353ebde245243",
+  "pr_url": null,
+  "updated_utc": "2026-11-16T15:02:09.177Z",
+  "current_gate": "G0",
+  "current_story": "TW10-00-01",
+  "next_action": "Completar G0 (ADR, matrices, regresión) y continuar a G1",
+  "gates": {
+    "G0": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G1": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G2": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G3": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G4": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G5": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G6": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G7": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G8": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G9": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "G10": {
+      "status": "NO_INICIADA",
+      "sha": null,
+      "evidence": [],
+      "blockers": []
+    }
+  },
+  "ci_windows": {
+    "status": "VERDE_EN_BASE",
+    "sha": "eb767891fe2dacbb4d3070653b1353ebde245243",
+    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43880085863"
+  },
+  "ci_ubuntu": {
+    "status": "VERDE_EN_BASE",
+    "sha": "eb767891fe2dacbb4d3070653b1353ebde245243",
+    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43880085863"
+  },
+  "external_required": [
+    "AutoCAD 2027 real",
+    "revisión arquitectónica independiente",
+    "aprobación del PO"
+  ],
+  "unresolved_p0_p1": [],
+  "last_session_result": null
+}
