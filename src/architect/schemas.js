@@ -50,7 +50,7 @@ export const SiteV1 = z.object({
   view_targets: z.array(z.object({ id, x_mm: z.number(), y_mm: z.number(), z_mm: z.number().default(1500), desirable: z.boolean() }).strict()).max(40),
   noise_sources: z.array(z.object({ id, side: z.enum(['S', 'N', 'E', 'O']) }).strict()).max(20),
   urban_constraints: z.array(z.object({ id, requirement: texto, value: z.union([z.number(), z.string()]).nullable(), source_doc: texto, source_date: z.string().nullable(), status: estadoEpistemico }).strict()).max(50),
-  sources: z.array(z.object({ id, kind: z.enum(['user', 'cip', 'prc', 'survey', 'epw', 'other']), ref: texto, sha256: z.string().regex(/^[0-9a-f]{64}$/).nullable() }).strict()).max(50),
+  sources: z.array(z.object({ id, kind: z.enum(['user', 'cip', 'prc', 'survey', 'epw', 'other']), ref: texto, sha256: z.string().regex(/^[0-9a-f]{64}$/).nullable(), scale_legible: z.boolean().optional() }).strict()).max(50),
   status: z.enum(['insufficient_for_real_solar_study', 'solar_study_possible', 'parcel_known_only']),
 }).strict();
 

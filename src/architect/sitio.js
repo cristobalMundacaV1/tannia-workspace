@@ -44,7 +44,7 @@ export function actualizarSitio(previo, cambios = {}) {
   if (cambios.vegetacion) s.vegetation = cambios.vegetacion.map((v, i) => ({ id: v.id ?? `veg${i + 1}`, x_mm: v.x_mm, y_mm: v.y_mm, radius_mm: v.radio_mm, height_mm: v.altura_mm ?? null, deciduous: v.caduca ?? null }));
   if (cambios.vistas) s.view_targets = cambios.vistas.map((v, i) => ({ id: v.id ?? `vista${i + 1}`, x_mm: v.x_mm, y_mm: v.y_mm, z_mm: v.z_mm ?? 1500, desirable: v.deseable ?? true }));
   if (cambios.ruidos) s.noise_sources = cambios.ruidos.map((v, i) => ({ id: v.id ?? `ruido${i + 1}`, side: v.lado }));
-  if (cambios.fuentes) s.sources = [...s.sources, ...cambios.fuentes.map((f, i) => ({ id: f.id ?? `fuente${s.sources.length + i + 1}`, kind: f.tipo, ref: f.ref, sha256: f.sha256 ?? null }))];
+  if (cambios.fuentes) s.sources = [...s.sources, ...cambios.fuentes.map((f, i) => ({ id: f.id ?? `fuente${s.sources.length + i + 1}`, kind: f.tipo, ref: f.ref, sha256: f.sha256 ?? null, ...(f.escala_legible != null ? { scale_legible: f.escala_legible } : {}) }))];
   s.status = estadoSitio(s);
   const r = validar('site', s); if (!r.ok) throw new UserError('SITIO_INVALIDO', `El sitio no es válido: ${r.errores.join(' | ')}`);
   return r.valor;
@@ -74,6 +74,7 @@ export function antecedentesFaltantes(s) {
 export function agregarRestriccionUrbana(s, { requisito, valor, fuente_id, fecha_fuente, estado = 'confirmed' }) {
   const fuente = s.sources.find((x) => x.id === fuente_id);
   if (!fuente || !['cip', 'prc', 'other'].includes(fuente.kind)) throw new UserError('SIN_FUENTE_URBANA', 'Una restricción urbanística necesita una fuente registrada (CIP/IPT) con documento y fecha; no se infiere de la comuna.', 'Registre primero el documento como fuente.');
+  if (fuente.scale_legible === false) throw new UserError('FUENTE_SIN_ESCALA_LEGIBLE', 'El documento fuente no tiene escala/medidas legibles: no se extrae ninguna condición ni medida de él.', 'Pida el documento original legible o una escala validada por la profesional.');
   if (!fecha_fuente) throw new UserError('SIN_FECHA_FUENTE', 'Indique la fecha del documento fuente (la norma depende de la versión vigente).');
   const n = structuredClone(s); n.urban_constraints.push({ id: `urb${n.urban_constraints.length + 1}`, requirement: requisito, value: valor ?? null, source_doc: `${fuente.id}: ${fuente.ref}`, source_date: fecha_fuente, status: estado });
   return n;

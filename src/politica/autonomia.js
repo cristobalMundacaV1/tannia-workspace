@@ -54,6 +54,12 @@ export function evaluarEncargo(e = {}) {
     if (ant.dwg) limites.push('Un DWG no se lee fuera de AutoCAD: se trabaja con AutoCAD abierto (tannia_cad_*) o exportando a DXF.');
     if (ant.pdf) limites.push('Un PDF exige calibración de escala verificada; un PDF escaneado no se mide.');
     if (ant.imagen) limites.push('Las imágenes no se miden; sirven de referencia visual.');
+  } else if (vivienda && /\b(en l|con patio|patio|piscina|alternativas|partido|sombras?|asoleamiento|orientaci\w+|viento|aleros?|norte|vista a|ver .* desde)\b/.test(txt)) {
+    capacidad = 'diseno_arquitectonico_razonado';
+    pasos.push('tannia_proyecto_resolver / tannia_proyecto_crear', 'tannia_arq_encargo (con las palabras de la usuaria)', 'tannia_arq_generar_alternativas (≥3 partidos distintos si son factibles)', 'tannia_arq_sitio / tannia_arq_clima cuando haya terreno, norte y clima', 'tannia_arq_evaluar, tannia_arq_comparar y tannia_arq_decisiones', 'tannia_arq_refinar y tannia_arq_publicar (DXF/SVG/3D; luego tannia_3d_a_autocad)');
+    supuestos.push('Partidos iniciales y espesores/alturas de práctica, todos editables; la posición de una piscina es un supuesto.');
+    faltan.push('Superficie deseada (m²) — no se supone.');
+    limites.push('Sin norte verdadero, coordenadas y zona horaria no se afirma sol ni sombra real. La visual a una piscina no es seguridad. Anteproyecto: no apto para construcción ni verificación normativa.');
   } else if (dentroVivienda && e.dimensiones_conocidas !== true) {
     capacidad = 'anteproyecto_vivienda';
     pasos.push('tannia_proyecto_resolver / tannia_proyecto_crear', 'tannia_diseno_crear (programa de la usuaria)', 'tannia_diseno_inspeccionar y tannia_diseno_previsualizar para refinar', ...(pide3d ? ['tannia_3d_crear (desde_anteproyecto)', 'tannia_3d_a_autocad', 'tannia_3d_verificar y tannia_cad_verificar_persistencia'] : ['tannia_diseno_a_autocad', 'tannia_diseno_verificar_dwg']));

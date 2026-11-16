@@ -384,6 +384,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   registerDiseno(reg, { sandbox, cad });
   registerArq3d(reg, { sandbox, cad });
   registerProyectos(reg, { sandbox });
+  registerArquitectura(reg, { sandbox, cad });
 }
 
 // La verificación es el acto de revisión: no invalida el estado (sí invalida cualquier cambio de datos).
@@ -404,3 +405,4 @@ import { registerCad } from './cad.js';
 import { registerDiseno } from './diseno.js';
 import { registerArq3d } from './arq3d.js';
 import { registerProyectos } from './proyectos.js';
+import { registerArquitectura } from './arquitectura.js';
