@@ -82,7 +82,7 @@ export function generarAlternativas(entrada) {
       if (!mejor || cand.puntaje_orientacion > mejor.puntaje_orientacion + 1e-9) mejor = cand;
     }
     if (!mejor) { descartadas.push({ concepto: c, motivo: 'No cabe en el predio con el acceso indicado en ninguna orientación.' }); continue; }
-    mejor.esquema.id = `alt-${c}`; mejor.esquema.engine_version = VERSION_MOTOR;
+    mejor.esquema.id = `alt-${c}`; mejor.esquema.engine_version = VERSION_MOTOR; mejor.esquema.line_of_sight_goals = (entrada.vistas ?? []).map((v, i) => ({ id: `vista${i + 1}`, from: v.from, to: v.to }));
     salida.push(mejor);
   }
   // orden determinista por semilla (rota el orden de presentación; el contenido no cambia)

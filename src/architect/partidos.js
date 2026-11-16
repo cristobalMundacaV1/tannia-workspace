@@ -180,7 +180,14 @@ function ensamblar(concepto, prog, p, ctx) {
     spaces: lay.spaces, openings: [], exterior_areas: lay.ext, separaciones_abiertas: lay.abiertas, adjacencies: [], line_of_sight_goals: [], sources: [], model_status: 'concept',
   };
   if (lay.patio) { base._patio = { x0: Math.min(...lay.patio.map((q) => q[0])), x1: Math.max(...lay.patio.map((q) => q[0])), y0: Math.min(...lay.patio.map((q) => q[1])), y1: Math.max(...lay.patio.map((q) => q[1])) }; }
-  const geo0 = derivarEsquema(base); const notas = [];
+  const notas = [];
+  if (lay.patio && prog.piscina) { // la posición de la piscina es un SUPUESTO editable (centro del patio); el control de acceso queda por revisar
+    const xs = lay.patio.map((q) => q[0]); const ys = lay.patio.map((q) => q[1]); const x0 = Math.min(...xs); const x1 = Math.max(...xs); const y0 = Math.min(...ys); const y1 = Math.max(...ys);
+    const ax = redondear((x1 - x0) / 4); const ay = redondear((y1 - y0) / 4);
+    base.exterior_areas.push({ id: 'pool_play_zone', use: 'recreation', ring: anilloDeRect({ x0: x0 + ax, y0: y0 + ay, x1: x1 - ax, y1: y1 - ay }), access_control: 'needs_review' });
+    notas.push('Zona de piscina/juego ubicada al centro del patio como SUPUESTO editable; barreras y control de acceso por revisar con la profesional.');
+  }
+  const geo0 = derivarEsquema(base);
   const ab = colocarAberturas(base, geo0, lay.plan, notas); delete base._patio; base.openings = ab;
   return { esq: base, notas, medida: lay.medida, lay };
 }
