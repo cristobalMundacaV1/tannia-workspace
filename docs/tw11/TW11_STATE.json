@@ -115,8 +115,8 @@
   ],
   "siguiente_gate_habilitado": "G11 (revisión independiente: externo)",
   "pruebas_locales": {
-    "total": 394,
-    "pasan": 377,
+    "total": 398,
+    "pasan": 381,
     "fallan": 0,
     "omitidas": 17
   },
@@ -144,9 +144,9 @@
   ],
   "paquetes_candidatos": [
     {
-      "zip": "TW11-entrega-329c8dd.zip",
-      "cicoff_sha256": "268293f27cb3bbbdd7d6ed92516f4d74d9593f67ac47e3a5641ea1ede82d0dfe",
-      "cicon_sha256": "b5e2760ca99a3d0c766f2c7b2a8193edbe852be98fff2c8ac76bd201792503d3",
+      "zip": "TW11-entrega-9858ae1.zip",
+      "cicoff_sha256": "fc506e6fa9a19fb7422496f0f7dce12ad97ba19c34acfa41a426641c6d8ce1cf",
+      "cicon_sha256": "87b8bb0eaee6b238e4dab59830cbb8df590442caebb9639dd4a36b839f80b4fd",
       "herramientas": {
         "cicoff": 72,
         "cicon": 84
@@ -154,10 +154,21 @@
     }
   ],
   "hardening": {
-    "sha_codigo": "329c8ddd103f9e537dfb9f5f1411849f1eb14e0d",
+    "sha_codigo": "9858ae1406d80f33295c9096b06f4ccfd9522119",
     "h1_h5": "corregidos_y_probados",
     "comunicacion": "servidor_verificado_conducta_del_modelo_pendiente_en_campo",
-    "ci": "success 43962157216 (329c8dd, pull_request); success 43962236250 (0c50520, push)",
-    "p1_consentimiento": "corregido_y_probado_adversarialmente"
+    "ci": "pendiente (9858ae1)",
+    "p1_consentimiento": "corregido_y_probado_adversarialmente",
+    "sec01_sec02": "corregidos_y_probados"
+  },
+  "piloto_real": {
+    "estado": "PREPARADO_NO_INICIADO",
+    "plan": "docs/tw11/entrega/PILOTO_REAL_TANNIA.md",
+    "requiere": [
+      "revisor independiente",
+      "decision D7",
+      "ejecucion previa S/D/K",
+      "consentimiento de Tannia"
+    ]
   }
 }

@@ -1,6 +1,6 @@
 # TW-11 — Matriz de evidencia
 Niveles de evidencia: **N0** documentado · **N1** implementado y probado con simuladores/fixtures/oráculos (CI) · **N2** validado en herramienta real por la PO · **N3** revisado por profesional competente. Madurez de operación: E0–E3. **Nada aquí es N2/N3.**
-Suite local en el último SHA de código (`329c8dd`): **394 pruebas, 377 pasan, 0 fallan, 17 omitidas** (PowerShell real; corren solo en CI Windows).
+Suite local en el último SHA de código (`9858ae1`): **398 pruebas, 381 pasan, 0 fallan, 17 omitidas** (PowerShell real; corren solo en CI Windows).
 
 | Gate | Estado | SHA de código | Pruebas | CI Windows+Ubuntu | Evidencia principal | Limitaciones / pendiente |
 |---|---|---|---|---|---|---|
@@ -18,6 +18,7 @@ Suite local en el último SHA de código (`329c8dd`): **394 pruebas, 377 pasan, 
 | G10 Evaluación | ejecutor listo; **APROBACIÓN PENDIENTE** | `cab78cd` | `tw11_g10_eval` | ✅ (solo el ejecutor) | `scripts/tw11-eval.mjs` con umbrales absolutos, hash de compromiso y casos de desarrollo | **requiere revisor independiente y casos retenidos externos: no existen** |
 | **Hardening H1–H5** | superado (N1) — 5/5 pruebas fallaban en `92d5d19` y pasan | `aed57ae` | `tw11_h_hardening` | ✅ run 43957962608 | `docs/tw11/HARDENING.md` | la selección real de herramientas del modelo no se prueba aquí (protocolo C15) |
 | **P1 consentimiento humano** (auditoría sobre #19) | superado (N1): el código era recuperable con herramientas (reproducido en `3a066a4`); ahora no existe ningún secreto en rutas accesibles | `329c8dd` | `tw11_seguridad_aprobacion` (+ regresión en `g3`/`h`) | ✅ run 43962157216 (PR, `329c8dd`) y 43962236250 (push, `0c50520`) | `HARDENING.md`, `adr/ADR-003` | diálogo del SO y elicitación en Claude Desktop real **no probados** (N0 de hardware); canal de archivo falsificable si el agente tuviera otra herramienta de escritura en la carpeta del usuario |
+| **SEC-01 / SEC-02** (observaciones sobre la corrección P1) | superado (N1): ambos reproducidos antes de corregir (un symlink padre importó `nota.txt`; contenido extra aprobaba) | `9858ae1` | `tw11_seguridad_sec01_sec02` | ⏳ (ver estado) | `HARDENING.md`, `adr/ADR-003` | los symlinks/junctions se omiten si el SO no permite crearlos; Windows real no probado |
 | **Contrato de comunicación** | servidor verificado (N1); **conducta del modelo NO verificada** | `aed57ae` | `tw11_comunicacion` | ✅ run 43957962608 | preferencia persistente (global/proyecto), precedencia, advertencias en el texto, datos estructurados intactos; `tannia_comunicacion` | requiere `entrega/PROTOCOLO_COMUNICACION_DESKTOP.md` en Claude Desktop real |
 | G11 Auditoría independiente | pendiente (externo) | — | — | — | expediente `entrega/AUDITORIA_TRANSFER.md` | persona |
 | G12 Decisión del PO | pendiente (humano) | — | — | — | — | persona |
@@ -32,6 +33,14 @@ Suite local en el último SHA de código (`329c8dd`): **394 pruebas, 377 pasan, 
 | RSS del servidor (kB) | 150 492 | 146 120 |
 | `.mcpb` (bytes) | 2 450 471 (rc3) | 2 450 543 (off) · 2 453 095 (on) |
 Precisión de selección de herramienta: **no medida** (requiere un cliente con modelo; pendiente en Claude Desktop).
+
+## Pendientes humanos (no aprobados)
+AutoCAD real · Claude Desktop real · evaluación retenida independiente (G10) · revisión profesional por especialidad · taller con Tannia · decisión de aceptación del PO · merge y distribución.
+
+CI Windows+Ubuntu verde: `aed57ae` (run 43957962608) y `2597296` (runs 43958068584 push y 43958101455 pull_request).
+
+## Candidato de prueba vigente (SEC-01/SEC-02)
+ZIP `TW11-entrega-9858ae1.zip`; `.mcpb` CIC apagado `fc506e6fa9a19fb7422496f0f7dce12ad97ba19c34acfa41a426641c6d8ce1cf` (72 herramientas); `.mcpb` CIC activado `87b8bb0eaee6b238e4dab59830cbb8df590442caebb9639dd4a36b839f80b4fd` (84). Los candidatos `cab78cd`, `aed57ae` y `329c8dd` quedan **superados**. Sin validación real. Plan del piloto: `entrega/PILOTO_REAL_TANNIA.md` (no iniciado).
 
 ## Pendientes humanos (no aprobados)
 AutoCAD real · Claude Desktop real · evaluación retenida independiente (G10) · revisión profesional por especialidad · taller con Tannia · decisión de aceptación del PO · merge y distribución.
