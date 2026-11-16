@@ -37,7 +37,7 @@ export class Modelos3d {
     built.modelo.supuestos = { niveles: built.modelo.niveles.map((n) => ({ id: n.id, altura_mm: n.altura_mm, fuente: n.fuente_altura || 'indicada' })), espesores_losa_mm: [...new Set(built.modelo.losas.map((l) => l.espesor_mm))], nota: 'Alturas y espesores verticales: supuestos preliminares editables (no normativos).' };
     const reg = { ...registro, modelo: built.modelo, modelo_sha256: sha(built.modelo), primitivas: built.primitivas, capas: built.capas, nota: built.nota, resumen_geometria: built.resumen, supuestos_lista: built.supuestos, advertencias: built.advertencias, generado_por: `tannia-workspace ${VERSION}` };
     // Transacción: staging + journal + manifiesto con hashes + historial como último paso (commit lógico)
-    commitConHistorial({ dir: this.#abs(project, rel), historial: this.#abs(project, `${rel}/historial.json`), id, archivos: [{ nombre: `${id}.json`, contenido: JSON.stringify(reg, null, 2) }], ...tx, hook: this.hook || undefined, esperaMs: this.esperaMs });
+    commitConHistorial({ dir: this.#abs(project, rel), historial: this.#abs(project, `${rel}/historial.json`), id, archivos: [{ nombre: `${id}.json`, contenido: JSON.stringify(reg, null, 2) }], ...tx, hook: this.hook || undefined, esperaMs: this.esperaMs, raiz: this.sandbox.projectRoot(project) });
     return reg;
   }
   /** Crea v001. `modelo` estructurado O `desde_anteproyecto:{nombre,version?}` + parámetros (alturas/cubierta como supuestos explícitos). */
@@ -89,7 +89,7 @@ export class Modelos3d {
     if (accion === 'listar') return { head: h.head, redo: h.redo, versiones: h.versiones };
     if (!['deshacer', 'rehacer', 'restaurar'].includes(accion)) throw new UserError('ACCION_INVALIDA', 'accion debe ser listar, deshacer, rehacer o restaurar.');
     // El puntero se mueve bajo el bloqueo y sobre el historial FRESCO
-    return mutarHistorial({ dir: this.#abs(project, rel), historial: f, esperaMs: this.esperaMs, fn: (h) => {
+    return mutarHistorial({ dir: this.#abs(project, rel), historial: f, esperaMs: this.esperaMs, raiz: this.sandbox.projectRoot(project), fn: (h) => {
       const hay = (id) => h.versiones.find((v) => v.id === id);
       if (accion === 'deshacer') { const v = hay(h.head); if (!v.padre) throw new UserError('NADA_QUE_DESHACER', 'Ya está en la versión inicial.'); h.redo.push(h.head); h.head = v.padre; }
       else if (accion === 'rehacer') { const r = h.redo.pop(); if (!r) throw new UserError('NADA_QUE_REHACER', 'No hay cambios deshechos.'); h.head = r; }

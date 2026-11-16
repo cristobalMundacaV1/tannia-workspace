@@ -104,10 +104,9 @@ test('bloqueo abandonado: dueño muerto o latido vencido se toma de forma atómi
     // dueño VIVO (este proceso) con latido reciente: no se toma
     fs.mkdirSync(lock); fs.writeFileSync(path.join(lock, 'owner.json'), JSON.stringify({ pid: process.pid, token: 'y', host: os.hostname(), inicio: Date.now(), latido: Date.now() }));
     assert.throws(() => commitVersion({ dir: t.dir, id: 'v003', archivos: [{ nombre: 'v003.json', contenido: 'b' }], esperaMs: 200, idsEnHistorial: () => hist(t.dir), actualizarHistorial: () => {} }), (x) => x.code === 'VERSION_EN_CURSO');
-    // dueño vivo pero con latido vencido (proceso colgado): se recupera pasada la edad máxima
+    // dueño vivo pero con latido vencido: POLÍTICA CORREGIDA por la auditoría H5 — no se interviene (ver tw29); solo un dueño muerto se recupera
     fs.writeFileSync(path.join(lock, 'owner.json'), JSON.stringify({ pid: process.pid, token: 'y', host: os.hostname(), inicio: Date.now() - 3600e3, latido: Date.now() - 3600e3 }));
-    commitVersion({ dir: t.dir, id: 'v003', archivos: [{ nombre: 'v003.json', contenido: 'b' }], edadMaxMs: 60e3, idsEnHistorial: () => hist(t.dir), actualizarHistorial: () => { fs.writeFileSync(path.join(t.dir, 'historial.json'), JSON.stringify({ versiones: [{ id: 'v001' }, { id: 'v002' }, { id: 'v003' }] })); } });
-    assert.ok(hist(t.dir).includes('v003'));
+    assert.throws(() => commitVersion({ dir: t.dir, id: 'v003', archivos: [{ nombre: 'v003.json', contenido: 'b' }], esperaMs: 200, edadMaxMs: 60e3, idsEnHistorial: () => hist(t.dir), actualizarHistorial: () => {} }), (x) => x.code === 'VERSION_EN_CURSO' && x.detalle?.propietario_vivo === true);
   } finally { t.done(); }
 });
 

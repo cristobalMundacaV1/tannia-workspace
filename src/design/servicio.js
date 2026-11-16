@@ -77,7 +77,7 @@ export class Anteproyectos {
   #escribirVersion(project, rel, id, registro, modelo, geo, coh, meta, tx) {
     const dxf = escribirDxf(modelo, geo, meta); const svg = escribirSvg(modelo, geo, meta); const cruzada = verificarDxfContraModelo(dxf, geo);
     const json = JSON.stringify({ ...registro, modelo, coherencia: coh, verificacion_dxf: cruzada, areas: geo.areas }, null, 2);
-    commitConHistorial({ dir: this.#abs(project, rel), historial: this.#abs(project, `${rel}/historial.json`), id, archivos: [{ nombre: `${id}.dxf`, contenido: dxf }, { nombre: `${id}.svg`, contenido: svg }, { nombre: `${id}.json`, contenido: json }], ...tx, hook: this.hook || undefined, esperaMs: this.esperaMs });
+    commitConHistorial({ dir: this.#abs(project, rel), historial: this.#abs(project, `${rel}/historial.json`), id, archivos: [{ nombre: `${id}.dxf`, contenido: dxf }, { nombre: `${id}.svg`, contenido: svg }, { nombre: `${id}.json`, contenido: json }], ...tx, hook: this.hook || undefined, esperaMs: this.esperaMs, raiz: this.sandbox.projectRoot(project) });
     return { dxf: `${rel}/${id}.dxf`, svg: `${rel}/${id}.svg`, cruzada };
   }
 
@@ -130,7 +130,7 @@ export class Anteproyectos {
     if (accion === 'listar') return { head: h.head, redo: h.redo, versiones: h.versiones, arbol: h.versiones.map((v) => `${v.id}${v.padre ? ` ← ${v.padre}` : ''}${v.id === h.head ? '  (actual)' : ''}: ${v.descripcion}`) };
     if (!['deshacer', 'rehacer', 'restaurar'].includes(accion)) throw new UserError('ACCION_INVALIDA', 'accion debe ser listar, deshacer, rehacer o restaurar.');
     // El puntero del historial se mueve bajo el bloqueo y sobre el historial FRESCO (no se pisan los cambios de otra sesión)
-    const r = mutarHistorial({ dir: this.#abs(project, rel), historial: f, esperaMs: this.esperaMs, fn: (h) => {
+    const r = mutarHistorial({ dir: this.#abs(project, rel), historial: f, esperaMs: this.esperaMs, raiz: this.sandbox.projectRoot(project), fn: (h) => {
       const idx = (id) => h.versiones.find((v) => v.id === id);
       if (accion === 'deshacer') { const v = idx(h.head); if (!v.padre) throw new UserError('NADA_QUE_DESHACER', 'Ya está en la versión inicial.'); h.redo.push(h.head); h.head = v.padre; }
       else if (accion === 'rehacer') { const r = h.redo.pop(); if (!r) throw new UserError('NADA_QUE_REHACER', 'No hay cambios deshechos para rehacer.'); h.head = r; }
