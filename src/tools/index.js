@@ -389,6 +389,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   registerArq3d(reg, { sandbox, cad });
   registerProyectos(reg, { sandbox });
   registerArquitectura(reg, { sandbox, cad });
+  if (cicActivo()) registerCic(reg, { sandbox, herramientas: () => [...new Set(TOOL_NAMES)] }); // TW-11: desactivado por defecto (72 herramientas)
 }
 
 // La verificación es el acto de revisión: no invalida el estado (sí invalida cualquier cambio de datos).
@@ -410,3 +411,5 @@ import { registerDiseno } from './diseno.js';
 import { registerArq3d } from './arq3d.js';
 import { registerProyectos } from './proyectos.js';
 import { registerArquitectura } from './arquitectura.js';
+import { registerCic } from './cic.js';
+import { cicActivo } from '../cic/flag.js';

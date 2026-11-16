@@ -1,0 +1,369 @@
+{
+  "cic": false,
+  "total": 72,
+  "bytes_tools_list": 79386,
+  "tokens_estimados": 19757,
+  "arranque_ms": 776,
+  "herramientas": [
+    {
+      "nombre": "tannia_3d_a_autocad",
+      "sha256_esquema": "943e4840db51a6f35778bf2122fe3bb2251bc64630bf837b7c3da181f9166084",
+      "sha256_descripcion": "2d32595a2c626df75361f7212daea5191186e8406efde5c8bbe560588ab713aa"
+    },
+    {
+      "nombre": "tannia_3d_crear",
+      "sha256_esquema": "99ab0efe769d77235cfa2d5a490aa21786a34d12a5f1217f03e754d59c2048b9",
+      "sha256_descripcion": "d75e99906b9c1c55bebc90215d653e793a9b9ed2e4f723f3f5916844525d184c"
+    },
+    {
+      "nombre": "tannia_3d_historial",
+      "sha256_esquema": "253decd1a59b474a6d18fcdc2ce98288d24c810e445e34fd9de1264345d2673f",
+      "sha256_descripcion": "b62934331c451130354e63c9abd1693648bfa4f4fe24dcf1b2bd9ef55f56f524"
+    },
+    {
+      "nombre": "tannia_3d_inspeccionar",
+      "sha256_esquema": "a0e13caab25ded78a5ef90ec1c2cd8d3cf78e0f6d50bc513e05d058c8829019b",
+      "sha256_descripcion": "c6a2879b724150d8163d7f2494d4ad7c5b83340f1ccccf03af68f9afbe93ab89"
+    },
+    {
+      "nombre": "tannia_3d_modificar",
+      "sha256_esquema": "c43c9bed4522031b05a7c85e2b022502bc215432bae3b9c99024acab27c940fe",
+      "sha256_descripcion": "f72246e5add364099c77d02d9249b592869fcd3db9263e93cd55237681d2a1f8"
+    },
+    {
+      "nombre": "tannia_3d_solido_transformar",
+      "sha256_esquema": "d0869df36bbb7a581cc16ff56dce5a9a5e377c27a61194a5edb6093d413b0b6d",
+      "sha256_descripcion": "59a7d55e6d7e939ee85b8b3b3299136959456705a404b1c872a8831ea73215c9"
+    },
+    {
+      "nombre": "tannia_3d_ver",
+      "sha256_esquema": "6e39d0ccef59f7f72c06cd35c845c15e7945fbedd46ef264f90993907164b8c5",
+      "sha256_descripcion": "6260204bfa184b5c2ea797f113d020093435b828069eb0a14c99f352b568a389"
+    },
+    {
+      "nombre": "tannia_3d_verificar",
+      "sha256_esquema": "e8d836f309011bd22218153e28c64ff13d52c584b836629b87269bd76067c27d",
+      "sha256_descripcion": "ba673145b0f4f9ace0bb46984e02611364596cb72eee56095d62a3ee3430626d"
+    },
+    {
+      "nombre": "tannia_3d_vista",
+      "sha256_esquema": "2e3a5e158ba029961a853d38581b28660549fb8477ffb2f1a29862b094af4272",
+      "sha256_descripcion": "1cda124fefe2c7d753780c2821a4d76ef3b1c9e8be353ff719989ab5036758a8"
+    },
+    {
+      "nombre": "tannia_apu_definir",
+      "sha256_esquema": "e8669c639ce91fe26f0f3ef270b3a82deb5a7392309dfe15101893152d8bb785",
+      "sha256_descripcion": "e147022a0320fac9ebfa9c15495dc88f96de3502e43870f28d54f97da704de27"
+    },
+    {
+      "nombre": "tannia_arq_clima",
+      "sha256_esquema": "81eb80bf88078ffc1127034cab173de8ada6edcef7957b1855326c7464ecd005",
+      "sha256_descripcion": "388e23633d142f115736c0e711d9be02111519c35d17c70ea39658f19b779b7a"
+    },
+    {
+      "nombre": "tannia_arq_comparar",
+      "sha256_esquema": "576dce2adcdbc08dd8f8a3f48c9d6a92035977c042cd3c3fecf9c30d0fa95f6e",
+      "sha256_descripcion": "a9035caed82d4d238fe3c5782574a309770d63621fb826d637a81245d38b84e8"
+    },
+    {
+      "nombre": "tannia_arq_decisiones",
+      "sha256_esquema": "5b760a9a660e8c7f3c43cedb05eb25e66a8d7eb050931035147ae5daf5676e9b",
+      "sha256_descripcion": "7b0a01d308695c9d4fde115bcb3d7852aca8656750a47b1ae6252b218691b92f"
+    },
+    {
+      "nombre": "tannia_arq_encargo",
+      "sha256_esquema": "d1e248dd3770d146de18d01b0ea9faace5cec1bdfe39b0d9fe42ef32f7285561",
+      "sha256_descripcion": "df08569b373677fe60228dbc6f04f1a55f72690e7631d4f9c83d665e0eb4ee87"
+    },
+    {
+      "nombre": "tannia_arq_estudiar_sol",
+      "sha256_esquema": "936325cbca8472ca66b1879fab7887c237d822e6231c104d2dfb647ca5e22c44",
+      "sha256_descripcion": "940a2faa82b2c9fd16c638e8e700e5c91d5356eb7ba011bac82188b53305f963"
+    },
+    {
+      "nombre": "tannia_arq_evaluar",
+      "sha256_esquema": "523f4b83838b760b7aecaf1810daade13a28200dfb5e9022636435ae756969ae",
+      "sha256_descripcion": "c6ce6b5eea9436d5c3a3bb44dd7cb9af64126d1df57bf61ad5a3d4bd46180b28"
+    },
+    {
+      "nombre": "tannia_arq_generar_alternativas",
+      "sha256_esquema": "d99fad421f3c447659acea614a869507cdab5cb1e4e0eb517d801e895b3316d5",
+      "sha256_descripcion": "b14fe50be5853d2383d36ed845460df47f53fde51fda4b0bfc79f4ec125a14ac"
+    },
+    {
+      "nombre": "tannia_arq_publicar",
+      "sha256_esquema": "0636948c83bbfebb655bfccc48e42ca169283cd4dc03b09f0cc587bce144c594",
+      "sha256_descripcion": "d03efb0dc5022998b02dd543dad1dadb7acf991081a8edab9b267285107c121b"
+    },
+    {
+      "nombre": "tannia_arq_refinar",
+      "sha256_esquema": "3582dd3f9ed6e506b6f8e3eaad1cd4360049f8a09c0100e27a06d679a9310a3c",
+      "sha256_descripcion": "23d655e86d435ee342fdeb74b868fb30a77eadd3d4b64b5645a6c048f4cb8030"
+    },
+    {
+      "nombre": "tannia_arq_sitio",
+      "sha256_esquema": "db7e9ab1dd4eaf5ec39fe4ba1a9c4f40ab2333119e60a971825863e64da24043",
+      "sha256_descripcion": "196c410de3563a743f306bb4ba142f6c14c3623538621be9d40577ac87e2aed3"
+    },
+    {
+      "nombre": "tannia_arq_ver",
+      "sha256_esquema": "c81aacec4899d476f3b92743b511c5dffff1d4e324f4a818cb332e56f9ca48ce",
+      "sha256_descripcion": "d9c7f8a1d678433182f744e98334290e0161f830dc10622426f66ee6920b152b"
+    },
+    {
+      "nombre": "tannia_cad_abrir_copia",
+      "sha256_esquema": "ef07c4f5cbba322f7aded8f7cc699c8cd091b289adf44c0999a8a21a3488d1f5",
+      "sha256_descripcion": "f975921d38092d095fce3f10ad9af8382fded5ba5ef049034c915ff1d02fa49f"
+    },
+    {
+      "nombre": "tannia_cad_agregar_linea",
+      "sha256_esquema": "aea1d721479e693e5b7e992afc38bbce2f6af804da3b8645cfd818837b2ee595",
+      "sha256_descripcion": "e5bf77a8bc10a0198f0e0b98365b0c729125778620b793a13e7d7935d975f5d4"
+    },
+    {
+      "nombre": "tannia_cad_agregar_lineas",
+      "sha256_esquema": "7d12238be49b5af8792e625d4f385c61d54aa4292ed3b9a5e5e103b81dccca0e",
+      "sha256_descripcion": "eedafec9034608e6701b30e220f745e20f8eae7d838be95f03c205ba9ee89c74"
+    },
+    {
+      "nombre": "tannia_cad_capacidades",
+      "sha256_esquema": "55afd3d22cd35ef3b5e3dc2e2651ad10a586f230804ece94dcd65ac7867639fb",
+      "sha256_descripcion": "2791e468dd6228eda95b72179b954605eb9a3778b3347b2296966a568e3ac9f0"
+    },
+    {
+      "nombre": "tannia_cad_estado",
+      "sha256_esquema": "55afd3d22cd35ef3b5e3dc2e2651ad10a586f230804ece94dcd65ac7867639fb",
+      "sha256_descripcion": "9c32530353834a2b9e33044348c9f66c20851fc8eb40547bb7acf6c48637cecb"
+    },
+    {
+      "nombre": "tannia_cad_leer_geometria",
+      "sha256_esquema": "995ff054ca1c9d20bfc1e70bbf6655be4df1586e42d43fcbcc63b9d456410a98",
+      "sha256_descripcion": "86887829cc19c815a46905528990d17416ad6f6632761a9fede009e88d0eb735"
+    },
+    {
+      "nombre": "tannia_cad_listar_entidades",
+      "sha256_esquema": "ed975463937b653e7082cf6eac621f99ca33eba61e928c675574899f56404f3c",
+      "sha256_descripcion": "c41886aa045558fe8dba78dac461cdbf09e92fcd3d977b2c47879422a84d8f5e"
+    },
+    {
+      "nombre": "tannia_cad_medir_entidad",
+      "sha256_esquema": "7c966bbcc0d6402a9d50504b3455cb7e2592876e18a85f80784be52b80f5c539",
+      "sha256_descripcion": "8cc422f4f4ceb2b81bc39bc18672a000b4c8700bf13e6c60bdc76b503c93d3d4"
+    },
+    {
+      "nombre": "tannia_cad_verificar_contorno",
+      "sha256_esquema": "13bc1f1c9d35470e68dee506ef6a22bd64e6ccd9c1fed441e7c2ed83d9e50d3d",
+      "sha256_descripcion": "d2bc8ee1d458bff9439f49a4c8d95c8ff672d63fbc664c4c467eae5b59f40b54"
+    },
+    {
+      "nombre": "tannia_cad_verificar_persistencia",
+      "sha256_esquema": "861e35ae8b6e7eacc015ddde21b22acca346ca4f936438b4da35864c7b6a7103",
+      "sha256_descripcion": "d26c850ceff34c40cb9a8c89ec0b4c271fd858cbdbc7ec3083e9fce7f4763897"
+    },
+    {
+      "nombre": "tannia_conocimiento_consultar",
+      "sha256_esquema": "9a6a607b4ade8ebdf89e2df86d9a09507aaace0c59585118b6733985c054e4d1",
+      "sha256_descripcion": "205c53ef94fbfc4c48da217bbb5b9a50f16b7590edbf6dde628adb720b0ad894"
+    },
+    {
+      "nombre": "tannia_copia_trabajo",
+      "sha256_esquema": "dd5f0ee27f7ebdd80ca56694e496e702689464fe742da59c9151fb4de2422a5b",
+      "sha256_descripcion": "a0e15fe0866108490c7e95099582208694e4be1a14065eb5b11d304377591685"
+    },
+    {
+      "nombre": "tannia_cubicar_dxf",
+      "sha256_esquema": "ebf520fb734ca28b74c8baf80600127e60824e2b0619f79f0ce3f60a9ae920ca",
+      "sha256_descripcion": "f2bd9a492f48e16110c1827672719644760cf12f870ad2b1f99ac5f1ae9daf3d"
+    },
+    {
+      "nombre": "tannia_diagnostico",
+      "sha256_esquema": "55afd3d22cd35ef3b5e3dc2e2651ad10a586f230804ece94dcd65ac7867639fb",
+      "sha256_descripcion": "9676e9dfbc6fbd0979860ad44729e1ad21f758b16ed0983fe000d99f3b5fe793"
+    },
+    {
+      "nombre": "tannia_diseno_a_autocad",
+      "sha256_esquema": "4dbd378ae0859b6a469d04f6cb000d1406f4d1acc0acb92dcf9c328e83dede19",
+      "sha256_descripcion": "7f10fbdd70080b58f98babb1124121b178227030f013d96907ed01f442605b32"
+    },
+    {
+      "nombre": "tannia_diseno_crear",
+      "sha256_esquema": "1f1744bd9a9f91d945547c2b66b2ef089fe28439f8c91b4364707d78770ddfa0",
+      "sha256_descripcion": "8334ff02e48ad0b58218bd56ceb446a8712e36f6d5758bbdb7d26cf5df52f48e"
+    },
+    {
+      "nombre": "tannia_diseno_cubicar",
+      "sha256_esquema": "3959253e918c5d6b93c9bba6fd9f17bf093e1b54844ab6c4ad0d4e4dbda0c3ae",
+      "sha256_descripcion": "f2e9fd5a2394365329e2fde92111720a8188814666a198c5bad590025614dbfb"
+    },
+    {
+      "nombre": "tannia_diseno_historial",
+      "sha256_esquema": "11bf629c733ad1d4246e5e3e86c3e7beb57204312278d5ad938c6d5e9f5635e9",
+      "sha256_descripcion": "4bb16264607dde0ae84c5a2b06ecb30765168c21062ba05a2e02bd623c5aa2f9"
+    },
+    {
+      "nombre": "tannia_diseno_inspeccionar",
+      "sha256_esquema": "9380d422042398c72a0cff6e0c0ce1bdfeba55c6039247a313055693c97bfc9a",
+      "sha256_descripcion": "4bcc5a5d73901d1af2263da7f655ba7a189d6dc50970c50199b7a86142e2e737"
+    },
+    {
+      "nombre": "tannia_diseno_modificar",
+      "sha256_esquema": "70aa31e5f07a2e9a7e19ce8d4bd300832f526e872ef66ddad23e54ee39820763",
+      "sha256_descripcion": "78714c88efa68b06fdb10f7a43714ef6bb7f501ba92296bc46540bb911becce5"
+    },
+    {
+      "nombre": "tannia_diseno_previsualizar",
+      "sha256_esquema": "208017c1d14e0578d8b660b80aa9791f9e4fb6b6f029c91c79c3f424849cbbf0",
+      "sha256_descripcion": "6a3c2a49431b9e37818f4b680a41cd65b3f49cb2069fb4cdca9066de3ae56dac"
+    },
+    {
+      "nombre": "tannia_diseno_ver",
+      "sha256_esquema": "0a85c007544e67d9e6a4fa1a59b174150e732de2bbfff22529f845acc34ebf6e",
+      "sha256_descripcion": "8f3079d552a7995865c7945f960317d39b18531a8154f72d04b3eadab390c673"
+    },
+    {
+      "nombre": "tannia_diseno_verificar",
+      "sha256_esquema": "4dbd378ae0859b6a469d04f6cb000d1406f4d1acc0acb92dcf9c328e83dede19",
+      "sha256_descripcion": "92b8f70f75ec6d3d5970d0252ff7a76071a3d519b6966d09f0dd58b6a2290e6f"
+    },
+    {
+      "nombre": "tannia_diseno_verificar_dwg",
+      "sha256_esquema": "936b9a8baa7cedf18fd9668cb0a0a618e53ec19f0ea6cb3a3b38e8fb5f05c191",
+      "sha256_descripcion": "490cba3c7d5842af6ecb2dfcda6b561ab79ad18a189d36b6c628c60992d9a7f6"
+    },
+    {
+      "nombre": "tannia_dxf_inspeccionar",
+      "sha256_esquema": "7fc40f5618264fea486811dbdab9f9c5e3bf9fd9e36f77b3a406df04bf6c3af8",
+      "sha256_descripcion": "5252a60872929e3b499dce788266cb7e3ee86bf7c868206962fc695907c0196b"
+    },
+    {
+      "nombre": "tannia_dxf_medir",
+      "sha256_esquema": "70f7b204c38b3d707511ffcb3f98b2087c943bfaadd09c65d3fc34bf1b6e91be",
+      "sha256_descripcion": "9aceccb4458c22b4a76f169d349aebcdc280b9607d7f29f58ed2431caf6fa37c"
+    },
+    {
+      "nombre": "tannia_encargo_evaluar",
+      "sha256_esquema": "78a919667a2b58f5dd8b8e575c0512e6910f7cf6a73f2f93d00886259fa85193",
+      "sha256_descripcion": "9da347774dbed4283d6feccec01f5870f1b509124ca3908aa002e85bd168e14a"
+    },
+    {
+      "nombre": "tannia_entregable_exportar",
+      "sha256_esquema": "f24a1a49b35a1df35090a92bb0e2d3cb05592d80557d05acfe290cb648c895e6",
+      "sha256_descripcion": "fb958a7d12ba163d8ab6e6f2cc3e76ac62d3baf40f38baee7601b2e458009322"
+    },
+    {
+      "nombre": "tannia_informe_generar",
+      "sha256_esquema": "f24a1a49b35a1df35090a92bb0e2d3cb05592d80557d05acfe290cb648c895e6",
+      "sha256_descripcion": "e0598cfa3ce2dc0cd69575d448f34fd051d9ae44da4025ca5b26f61fe2450182"
+    },
+    {
+      "nombre": "tannia_listar_proyectos",
+      "sha256_esquema": "55afd3d22cd35ef3b5e3dc2e2651ad10a586f230804ece94dcd65ac7867639fb",
+      "sha256_descripcion": "3d3aa222ac28d72ab7d7e001c6ca379d18f6488f003ffb018cdd64caf27fe29e"
+    },
+    {
+      "nombre": "tannia_normativa_consultar",
+      "sha256_esquema": "4a3c483ad80e7f5cc839394667b8c5f8d3fc253a79192dc7b99de05483b33500",
+      "sha256_descripcion": "231c4bcb8c8e5423b7373c9714199910657c5e567ff99e24cae97d25dc1ebcb5"
+    },
+    {
+      "nombre": "tannia_originales_registrar",
+      "sha256_esquema": "f24a1a49b35a1df35090a92bb0e2d3cb05592d80557d05acfe290cb648c895e6",
+      "sha256_descripcion": "506db87a0553609ae38a7f8e354966a980fbd3acc5a67d3a7a17516b12e342bb"
+    },
+    {
+      "nombre": "tannia_originales_verificar",
+      "sha256_esquema": "f24a1a49b35a1df35090a92bb0e2d3cb05592d80557d05acfe290cb648c895e6",
+      "sha256_descripcion": "7cd71df938a54343215eabb1b095fa347821d9a16e9f1a83584e0dbf3390dc42"
+    },
+    {
+      "nombre": "tannia_partida_asignar_apu",
+      "sha256_esquema": "15f20a376b80e00435b74383332c34dd159e167bdcd0824f0e076a38ed6bd685",
+      "sha256_descripcion": "56084a91059ae944b677ffc422852114467283d53812a8e43399f7ba6a167ad3"
+    },
+    {
+      "nombre": "tannia_partida_manual",
+      "sha256_esquema": "6843588d737b87825e5c3f30a439f646f062537af7f0fc5ff027db471fca0c2e",
+      "sha256_descripcion": "43f52329e07feb074eb2925ef5305d71b4738f5952b1b64a625e20ce6587058e"
+    },
+    {
+      "nombre": "tannia_partida_verificar",
+      "sha256_esquema": "a85b6a86f1fd80d6fe0124cdc87cbb44433dcfaa16157bdbcc963060b8e45e44",
+      "sha256_descripcion": "8a7ebdfe1e2a8f46c446ec4c786d89dbd1a4632935ab5e9b0429d54a99c96876"
+    },
+    {
+      "nombre": "tannia_partidas_listar",
+      "sha256_esquema": "f24a1a49b35a1df35090a92bb0e2d3cb05592d80557d05acfe290cb648c895e6",
+      "sha256_descripcion": "11291a7c726ebea6bec456f2f30fa24f94a073288e64528f43ae6c698bf2d6d8"
+    },
+    {
+      "nombre": "tannia_pdf_calibrar",
+      "sha256_esquema": "7dfb89068dcac73b95e95767c3b60078850f08f0f49f016d3bd755a2c4f513ff",
+      "sha256_descripcion": "b77c32682028d470fb707b160f64e3dd0835847e542af3d67f490ced0706f71f"
+    },
+    {
+      "nombre": "tannia_pdf_inspeccionar",
+      "sha256_esquema": "7fc40f5618264fea486811dbdab9f9c5e3bf9fd9e36f77b3a406df04bf6c3af8",
+      "sha256_descripcion": "bd9e946d1a75f48030a354f1ce1b90d974454bddc50764fbbb4d15a5ca050468"
+    },
+    {
+      "nombre": "tannia_pdf_medir",
+      "sha256_esquema": "fc800a80a0919d0f7d6319be69d6a71903d268c66f154159f2ca0e39c49e4c5f",
+      "sha256_descripcion": "3cca5e2a5187d95c5727e5f8c2b8e87811ff4603112e756c810625f84591a93b"
+    },
+    {
+      "nombre": "tannia_pdf_trazos",
+      "sha256_esquema": "87391de0475e2092510087c2ce12d8e7568cb434d267decd50d39e388c2f964c",
+      "sha256_descripcion": "79e29dcd6af810814d9993adfe1597abea0e27aa92c28e47e6f1d16b4b5dc9df"
+    },
+    {
+      "nombre": "tannia_politica_autonomia",
+      "sha256_esquema": "55afd3d22cd35ef3b5e3dc2e2651ad10a586f230804ece94dcd65ac7867639fb",
+      "sha256_descripcion": "066c9a1a5a8a54748f958c3f845588b23f5846ad7d05e80e0ce8a28fac4db6c3"
+    },
+    {
+      "nombre": "tannia_presupuesto_config",
+      "sha256_esquema": "84f9b5913ef48f72c8711f5528075172f8a1f2a731dad5c3fd603d3f628b15dc",
+      "sha256_descripcion": "b79dde09fae80ca1a671d3ee3c4c93e18ae5b6a78b26d8878da36d736aab822d"
+    },
+    {
+      "nombre": "tannia_presupuesto_generar",
+      "sha256_esquema": "f24a1a49b35a1df35090a92bb0e2d3cb05592d80557d05acfe290cb648c895e6",
+      "sha256_descripcion": "7f4d17a9c43142cfdcd36ec1f4c729a7b3eb4e9c5b3a6806147d58a80a4c0833"
+    },
+    {
+      "nombre": "tannia_proyecto_avanzar",
+      "sha256_esquema": "78b68b9b364a0bed1f9f97e08e2fa613ebe7fddd9638798e035d794edb10fe58",
+      "sha256_descripcion": "233193390ea45a00913c831e28607d870c46f969ea540a39a0c88e271070f1ea"
+    },
+    {
+      "nombre": "tannia_proyecto_crear",
+      "sha256_esquema": "663ba39f725103492a87b29998eae5a1bc3d762e6b33abba3ba1354c34b51a8d",
+      "sha256_descripcion": "19115409fe7db8bacb8bcbf7788680193476e1d36310405ff77387cf3631abe1"
+    },
+    {
+      "nombre": "tannia_proyecto_estado",
+      "sha256_esquema": "f24a1a49b35a1df35090a92bb0e2d3cb05592d80557d05acfe290cb648c895e6",
+      "sha256_descripcion": "71366bbfc8cb6809e9e4be02eb42f62e0fbc1d2dd3d584cc2a1828e951e326ab"
+    },
+    {
+      "nombre": "tannia_proyecto_importar",
+      "sha256_esquema": "ffb182c04761252c2de6b8b8eea5324c408742089f322f8ef4cd3467cf52c63e",
+      "sha256_descripcion": "dc9e11659d0a7b5d6d54cb66cd478c6396e3bfab2ba7652bad2e0d0b307b4934"
+    },
+    {
+      "nombre": "tannia_proyecto_reparar",
+      "sha256_esquema": "f24a1a49b35a1df35090a92bb0e2d3cb05592d80557d05acfe290cb648c895e6",
+      "sha256_descripcion": "57e9c24933798bb1fbfb9675280dc87daf02410f66dbfe9d3cec8de24026df92"
+    },
+    {
+      "nombre": "tannia_proyecto_resolver",
+      "sha256_esquema": "eb84243b803684b5856d9941b3e90a9e37bf288e9ed668d28654da8d374a2285",
+      "sha256_descripcion": "205362d9ddca0d7d3346ca0fda812ac45e6064752c6814b8683ed0695d388fbf"
+    },
+    {
+      "nombre": "tannia_proyecto_resumen",
+      "sha256_esquema": "1dd58dee0dfffbb95eab80aeabea73c0f4ebc9f35848efc4a16a2fea32e8353b",
+      "sha256_descripcion": "79b6020e7dc10cc6453ca806ddd85312535d18b9776ac090093eddc866966345"
+    }
+  ]
+}
