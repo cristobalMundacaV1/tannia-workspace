@@ -9,9 +9,13 @@
 3. Continuar en `current_gate` / `current_story` del estado. Ciclo: prueba roja → implementación mínima → pruebas enfocadas + completas → CI en el SHA exacto → commit/push → actualizar estado y matriz.
 4. Máximo 3 intentos correctivos por causa; luego `BLOQUEADA_TECNICA` documentada y continuar con lo independiente.
 
-## Mapa del código nuevo
-`src/architect/` (módulos de dominio deterministas): `schemas.js` (contratos Zod), `solar.js` (posición solar + IANA), … ver `TW10_EVIDENCE_MATRIX.md`.
-Oráculos de desarrollo (no se empaquetan): pvlib `spa_python` → `fixtures/tw10/solar_oracle.json`.
+## Estado actual (ver TW10_STATE.json)
+`ESPERA_EXTERNA`: G0–G9 superadas en lo automatizable; G10 requiere AutoCAD 2027 real, taller con Tannia y revisión independiente, y decisión del PO. **No hay nada más que el agente pueda hacer sin esos externos**, salvo: corregir defectos que reporten, completar los parciales declarados (generador de patio central; consultas Open-Meteo si el PO las autoriza) o reaccionar a revisión del PR #12.
 
-## Estado de campo (siempre pendiente hasta ejecución real)
-AutoCAD 2027 real · Claude Desktop real · revisión arquitectónica independiente · aprobación del PO. Protocolo: `docs/tw10/TW10_FIELD_VALIDATION.md` (G10).
+## Mapa del código nuevo (`src/architect/`)
+`schemas.js` contratos Zod · `solar.js` posición solar + IANA · `clima.js` EPW/ERA5-caché/rosa · `sitio.js` predio/norte/fuentes · `briefing.js` encargo→brief · `poligonos.js`, `derivar_poly.js`, `a3d.js`, `convertir.js` geometría de scheme/2 y puente 3D · `partidos.js`, `alternativas.js`, `diversidad.js` generación y diversidad · `sombras.js` ray casting · `habitabilidad.js` recorridos/visuales/seguridad/privacidad/constructibilidad · `evaluacion.js` evaluador, Pareto, crítica, ledger · `reporte.js` SVG · `servicio.js` estudios versionados · herramientas en `src/tools/arquitectura.js` (11 `tannia_arq_*`).
+Oráculos de desarrollo (no se empaquetan): pvlib `spa_python` → `fixtures/tw10/solar_oracle.json`.
+Convención de signos: `true_north_deg_from_local_plus_y_clockwise` = n ⇒ rumbo local = n + rumbo geográfico (corregido en G3; ver historial de commits).
+
+## Reanudar tras interrupción
+1. `git status`; `git log -3`; leer `TW10_STATE.json`. 2. `npm ci && npm test`. 3. Si cambió el código: regenerar ejemplos (`node scripts/ejemplos-tw10.mjs`), `npm run build`, y el paquete: `node scripts/paquete-prueba.mjs --fase tw10 --etiqueta <sha7> --revision rcN --id tannia-workspace-tw10 --nombre "Tannia Workspace - PRUEBA TW-10 (<sha7>)" --esperadas 72`.
