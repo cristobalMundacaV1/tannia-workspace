@@ -119,6 +119,26 @@ Add-Member -InputObject $acad -MemberType ScriptMethod -Name ZoomExtents -Value 
 $usado = 'AutoCAD.Application.26'
 $doc = New-Object PSObject -Property @{ Name = 'previo.dwg'; FullName = $env:TANNIA_TEST_DOC; Saved = $true }
 `;
+
+// Dos dibujos abiertos con LOS MISMOS handles y conteo (A y B); el ACTIVO es B. Sirve para demostrar que, con ruta esperada, el script
+// real localiza exactamente ese documento o falla, y que nunca cae al documento activo.
+const MOCK_MULTI = `function global:NuevoDoc($ruta, $capa) {
+  $ms = New-Object System.Collections.ArrayList
+  foreach ($k in 1..3) { [void]$ms.Add((New-Object PSObject -Property @{ Handle = ('{0:X}' -f (100 + $k)); ObjectName = 'AcDbLine'; Layer = $capa; StartPoint = @(0.0, 0.0, 0.0); EndPoint = @(1.0, 0.0, 0.0); Length = 1.0 })) }
+  $lay = New-Object PSObject -Property @{ L = (New-Object System.Collections.ArrayList) }
+  foreach ($n in '0', $capa) { [void]$lay.L.Add((New-Object PSObject -Property @{ Name = $n })) }
+  Add-Member -InputObject $lay -MemberType ScriptProperty -Name Count -Value { $this.L.Count }
+  Add-Member -InputObject $lay -MemberType ScriptMethod -Name Item -Value { param($i) return $this.L[$i] }
+  $d = New-Object PSObject -Property @{ Name = [IO.Path]::GetFileName($ruta); FullName = $ruta; Saved = $true; Layers = $lay; ModelSpace = $ms }
+  Add-Member -InputObject $d -MemberType ScriptMethod -Name HandleToObject -Value { param($h) foreach ($x in $this.ModelSpace) { if ($x.Handle -eq $h) { return $x } }; throw 'handle inexistente' }
+  Add-Member -InputObject $d -MemberType ScriptMethod -Name GetVariable -Value { param($n) return 4 }
+  return $d
+}
+$docA = NuevoDoc 'C:\\Dibujos\\Casa A.dwg' 'CAPA_A'; $docB = NuevoDoc 'C:\\Dibujos\\Casa B.dwg' 'CAPA_B'
+$docs = New-Object System.Collections.ArrayList; [void]$docs.Add($docA); [void]$docs.Add($docB)
+$acad = New-Object PSObject -Property @{ Version = '26.0s (simulado)'; Name = 'AutoCAD'; Documents = $docs; ActiveDocument = $docB }
+$usado = 'AutoCAD.Application.26'
+`;
 function entorno(prefix = "'Tannia Workspace ó ñ ") {
   const home = tmpHome(prefix); const sb = new Sandbox(home);
   const P = "Prueba de integración AutoCAD ñ'"; createProject(sb, P);
@@ -227,7 +247,7 @@ test('PowerShell real: original activo => ORIGINAL_PROTEGIDO sin escribir; el do
     assert.deepEqual(leer(e.log), []);
     // estado ve la copia; al dibujar, el "usuario" ya cambió a otro dibujo (el original)
     const com = adaptador(e, e.work, {}, (input) => (input.ruta_esperada ? { TANNIA_TEST_DOC: e.orig } : {}));
-    await assert.rejects(() => com.agregarLineas(e.P, { lineas: L4, capa: 'TW_PRUEBA' }), (x) => x.code === 'DOCUMENTO_CAMBIO');
+    await assert.rejects(() => com.agregarLineas(e.P, { lineas: L4, capa: 'TW_PRUEBA' }), (x) => x.code === 'DOCUMENTO_NO_ABIERTO');
     assert.deepEqual(leer(e.log), [], 'la re-verificación dentro de PowerShell impidió escribir');
     assert.equal(fs.readFileSync(e.orig, 'utf8'), 'ORIGINAL');
   } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
@@ -321,6 +341,25 @@ test('PowerShell real: construir_3d con convenciones de AutoCAD distintas a las 
       const log = leer(e.log); assert.deepEqual(log.filter((x) => /^CLOSE/.test(x)), [], 'el documento nuevo no se cierra si todo va bien'); assert.ok(log.includes('CMD _.VSCURRENT _Conceptual '));
     }
     assert.equal(fs.readFileSync(e.orig, 'utf8'), 'ORIGINAL'); assert.equal(fs.readFileSync(e.work, 'utf8'), 'COPIA', 'el dibujo previo no se toca');
+  } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
+});
+
+test('PowerShell real: con ruta esperada se localiza EXACTAMENTE ese documento (dos dibujos con los mismos handles y conteo); si no está abierto falla y nunca lee el activo', opts, async () => {
+  const e = entorno();
+  try {
+    const A = 'C:\\Dibujos\\Casa A.dwg'; const B = 'C:\\Dibujos\\Casa B.dwg';
+    const com = new AutoCadCom({ sandbox: e.sb, platform: 'win32', connect: MOCK_MULTI, runner: (script, input) => runPowerShell(script, input, { env: {} }) });
+    // sin ruta: el activo (B)
+    const sinRuta = await com.leerLote(['101']); assert.equal(sinRuta.entidades[0].capa, 'CAPA_B');
+    // con ruta A: A, aunque B sea el activo y tenga los mismos handles y conteo
+    const rA = await com.resumenDocumento(A); assert.deepEqual(rA.capas, ['0', 'CAPA_A']); assert.equal(rA.entidades, 3); assert.equal(rA.ruta, A);
+    assert.ok((await com.enumerarHandles({ ruta: A })).entidades.every((x) => x.capa === 'CAPA_A'));
+    assert.equal((await com.leerLote(['101', '102'], { ruta: A })).entidades.every((x) => x.capa === 'CAPA_A'), true);
+    assert.equal((await com.leerLote(['101'], { ruta: B })).entidades[0].capa, 'CAPA_B');
+    // mayúsculas y barra final: misma identidad en Windows
+    assert.equal((await com.resumenDocumento('c:\\dibujos\\CASA A.DWG')).capas[1], 'CAPA_A');
+    // documento esperado cerrado: falla explícita, jamás se lee el activo (B)
+    for (const f of [() => com.resumenDocumento('C:\\Dibujos\\Casa C.dwg'), () => com.enumerarHandles({ ruta: 'C:\\Dibujos\\Casa C.dwg' }), () => com.leerLote(['101'], { ruta: 'C:\\Dibujos\\Casa C.dwg' })]) await assert.rejects(f, (x) => x.code === 'DOCUMENTO_NO_ABIERTO');
   } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
 });
 

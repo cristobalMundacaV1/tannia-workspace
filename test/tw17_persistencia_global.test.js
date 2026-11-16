@@ -45,7 +45,7 @@ test('persistencia: entidad nueva fuera de la lista previa, handle perdido, otro
     assert.equal(nueva.persistencia, 'fallida'); assert.ok(nueva.verificacion_global.problemas.some((p) => p.problema === 'handles_nuevos_tras_reabrir'));
     assert.ok(nueva.verificacion_global.problemas.some((p) => p.problema === 'conteo_por_capa_distinto'));
     const perdida = await com(e, { alReabrir: (x) => x.filter((_, i) => i !== 7) }).verificarPersistencia('P', { archivo: e.rel }); assert.equal(perdida.persistencia, 'fallida'); assert.ok(perdida.verificacion_global.problemas.some((p) => p.problema === 'handles_ausentes_tras_reabrir'));
-    const otro = await com(e, { rutaReabierta: path.join(e.root, '03 Trabajo', 'otro.dwg') }).verificarPersistencia('P', { archivo: e.rel }); assert.equal(otro.persistencia, 'fallida'); assert.equal(otro.verificacion_global.documento_identico, false);
+    await assert.rejects(() => com(e, { rutaReabierta: path.join(e.root, '03 Trabajo', 'otro.dwg') }).verificarPersistencia('P', { archivo: e.rel }), (x) => x.code === 'DOCUMENTO_REABIERTO_DISTINTO', 'otro documento tras reabrir: falla explícita, no se lee');
     const g = comprobarGlobal({ resumenAntes: { entidades: 3 }, todosAntes: [{ handle: 'A' }, { handle: 'B' }, { handle: 'C' }], resumenDespues: {}, todosDespues: [{ handle: 'A' }, { handle: 'B' }, { handle: 'C' }], cierre: { entidades: 3 }, rutaEsperada: 'C:\\a.dwg', rutaDespues: 'c:\\A.dwg' });
     assert.equal(g.estado, 'no_concluyente', 'un conteo no informado no se da por bueno'); assert.equal(g.documento_identico, true, 'rutas equivalentes en Windows (mayúsculas)');
   } finally { e.done(); }
