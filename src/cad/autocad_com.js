@@ -14,7 +14,7 @@ import { UserError } from '../mcp/util.js';
 import { FOLDERS, isInside } from '../security/sandbox.js';
 import { sanitizar } from './sanitize.js';
 import { analizarContornoDeLineas } from './geometry_check.js';
-import { compararLecturas, coherenciaInterna, firmasDesdeDxf, firmasDesdeCom, compararFidelidad, clasificarTextos } from './fidelidad.js';
+import { compararLecturas, coherenciaInterna, firmasDesdeDxf, firmasDesdeCom, compararFidelidad, clasificarTextos, compararSolidos } from './fidelidad.js';
 import { parseDxf } from '../dxf/reader.js';
 import { dxfDecode } from '../design/salidas.js';
 import { sha256File } from '../security/sandbox.js';
@@ -48,6 +48,7 @@ function LeerEnt($e, $h) {
     'AcDb2dPolyline' { $o.coordenadas = DArr $e.Coordinates; $o.cerrada = DBool $e.Closed; $o.longitud = DNum $e.Length; $o.area = DNum $e.Area }
     'AcDbText' { $o.texto = [string]$e.TextString; $o.posicion = DArr $e.InsertionPoint; $o.alineacion = DNum $e.Alignment; $o.punto_alineacion = DArr $e.TextAlignmentPoint; $o.altura = DNum $e.Height; $o.rotacion = DNum $e.Rotation }
     'AcDbMText' { $o.texto = [string]$e.TextString; $o.posicion = DArr $e.InsertionPoint; $o.altura = DNum $e.Height; $o.rotacion = DNum $e.Rotation }
+    'AcDb3dSolid' { $o.volumen = DNum $e.Volume; $o.centroide = DArr $e.Centroid; $mn = $null; $mx = $null; try { $e.GetBoundingBox([ref]$mn, [ref]$mx); $o.bbox_min = DArr $mn; $o.bbox_max = DArr $mx } catch { } }
     default { $o.sin_propiedades_conocidas = $true }
   }
   return $o
@@ -144,6 +145,90 @@ $nCap = [int]$d.Layers.Count; $capas = @(); for ($i = 0; $i -lt $nCap; $i++) { $
 $total = [int]$d.ModelSpace.Count; $porCapa = @{}
 for ($i = 0; $i -lt $total; $i++) { $c = [string]$d.ModelSpace.Item($i).Layer; if ($porCapa.ContainsKey($c)) { $porCapa[$c] = $porCapa[$c] + 1 } else { $porCapa[$c] = 1 } }
 Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; entidades = $total; capas = $capas; entidades_por_capa = $porCapa; textos_normalizados = $norm; unidades_insunits = $d.GetVariable('INSUNITS') } }`,
+  // ---- Modelo 3D: sólidos (AddBox / AddWedge), vista y transformación. Los datos viajan SOLO en $in. ----
+  construir_3d: `function P3($x, $y, $z) { $a = New-Object 'double[]' 3; $a[0] = [double]$x; $a[1] = [double]$y; $a[2] = [double]$z; return ,$a }
+function Centrar($s, $obj) {
+  $cen = DArr $s.Centroid
+  if ($null -eq $cen) { return $false }
+  if ([math]::Abs($obj[0] - $cen[0]) -gt 1e-6 -or [math]::Abs($obj[1] - $cen[1]) -gt 1e-6 -or [math]::Abs($obj[2] - $cen[2]) -gt 1e-6) { $s.Move((P3 $cen[0] $cen[1] $cen[2]), (P3 $obj[0] $obj[1] $obj[2])) }
+  return $true
+}
+function CajaEnv($s) { $mn = $null; $mx = $null; $s.GetBoundingBox([ref]$mn, [ref]$mx); return @((DArr $mn), (DArr $mx)) }
+function CrearCuna($ms, $p) {
+  $horiz = ($p.alto_lado -eq '-x' -or $p.alto_lado -eq '+x')
+  $A = [double]$p.dy; $B = [double]$p.dx; if ($horiz) { $A = [double]$p.dx; $B = [double]$p.dy }
+  $c0 = P3 $p.centro_inicial[0] $p.centro_inicial[1] $p.centro_inicial[2]
+  $s = $ms.AddWedge($c0, $A, $B, [double]$p.dz)
+  $ev = CajaEnv $s; $cen = DArr $s.Centroid
+  $hx = $cen[0] - ($ev[0][0] + $ev[1][0]) / 2; $hy = $cen[1] - ($ev[0][1] + $ev[1][1]) / 2
+  if ([math]::Abs($hy) -gt [math]::Abs($hx)) {
+    $s.Delete(); $s = $ms.AddWedge($c0, $B, $A, [double]$p.dz)
+    $ev = CajaEnv $s; $cen = DArr $s.Centroid
+    $hx = $cen[0] - ($ev[0][0] + $ev[1][0]) / 2; $hy = $cen[1] - ($ev[0][1] + $ev[1][1]) / 2
+  }
+  $have = 0; if ([math]::Abs($hx) -ge [math]::Abs($hy)) { if ($hx -lt 0) { $have = 180 } } else { if ($hy -ge 0) { $have = 90 } else { $have = 270 } }
+  $want = 0; if ($p.alto_lado -eq '-x') { $want = 180 } elseif ($p.alto_lado -eq '+y') { $want = 90 } elseif ($p.alto_lado -eq '-y') { $want = 270 }
+  $giro = (($want - $have) % 360 + 360) % 360
+  if ($giro -ne 0) { $s.Rotate((P3 (($ev[0][0] + $ev[1][0]) / 2) (($ev[0][1] + $ev[1][1]) / 2) 0), $giro * [math]::PI / 180) }
+  return $s
+}
+$d = $null
+try {
+  $d = $acad.Documents.Add()
+  try { $d.SetVariable('INSUNITS', 4) } catch { }
+  foreach ($c in $in.capas) { $l = $d.Layers.Add([string]$c.nombre); try { $l.color = [int]$c.color } catch { } }
+  $ms = $d.ModelSpace; $mapa = @(); $centrado = $true
+  foreach ($p in $in.primitivas) {
+    if ($p.tipo -eq 'cuna') { $s = CrearCuna $ms $p }
+    else { $s = $ms.AddBox((P3 $p.centro_inicial[0] $p.centro_inicial[1] $p.centro_inicial[2]), [double]$p.dx, [double]$p.dy, [double]$p.dz) }
+    $ok = Centrar $s (P3 $p.centro_inicial[0] $p.centro_inicial[1] $p.centro_inicial[2])
+    if (-not $ok) { $centrado = $false }
+    if ($p.tipo -eq 'caja' -and [double]$p.rot_deg -ne 0) { $s.Rotate((P3 $p.rot_centro[0] $p.rot_centro[1] 0), [double]$p.rot_deg * [math]::PI / 180) }
+    if ($p.tipo -eq 'cuna') { $null = Centrar $s (P3 $p.esperado.centroide[0] $p.esperado.centroide[1] $p.esperado.centroide[2]) }
+    $s.Layer = [string]$p.capa
+    $mapa += @{ id = [string]$p.id; handle = [string]$s.Handle }
+  }
+  $t = $ms.AddText([string]$in.nota, (P3 $in.nota_pos[0] $in.nota_pos[1] $in.nota_pos[2]), 200.0); $t.Layer = 'TW3D_NOTAS'
+  foreach ($c in $in.capas) { if (-not $c.visible) { $d.Layers.Item([string]$c.nombre).LayerOn = $false } }
+  $vista = @{ aplicada = $false }
+  try {
+    $vp = $d.ActiveViewport; $vp.Direction = (P3 $in.vista_dir[0] $in.vista_dir[1] $in.vista_dir[2]); $d.ActiveViewport = $vp
+    $acad.ZoomExtents(); $dir = DArr $d.ActiveViewport.Direction; $vista = @{ aplicada = $true; direccion = $dir }
+  } catch { $vista = @{ aplicada = $false; error = [string](Inner $_.Exception).Message } }
+  $estilo = 'no_solicitado'
+  if ($in.estilo_cmd) { try { $d.SendCommand([string]$in.estilo_cmd); $estilo = 'solicitado' } catch { $estilo = 'fallo' } }
+  try { $d.SaveAs([string]$in.dwg, 64) } catch { $d.SaveAs([string]$in.dwg) }
+} catch {
+  $err = $_
+  try { if ($null -ne $d) { $d.Close($false) } } catch { }
+  Fail 'construir_3d' $err; exit 0
+}
+$nCap = [int]$d.Layers.Count; $capas = @(); for ($i = 0; $i -lt $nCap; $i++) { $capas += [string]$d.Layers.Item($i).Name }
+$total = [int]$d.ModelSpace.Count; $porCapa = @{}
+for ($i = 0; $i -lt $total; $i++) { $cc = [string]$d.ModelSpace.Item($i).Layer; if ($porCapa.ContainsKey($cc)) { $porCapa[$cc] = $porCapa[$cc] + 1 } else { $porCapa[$cc] = 1 } }
+Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; entidades = $total; capas = $capas; entidades_por_capa = $porCapa; mapa = $mapa; centroide_informado = $centrado; vista = $vista; estilo = $estilo; unidades_insunits = $d.GetVariable('INSUNITS') } }`,
+  vista_3d: `if ($doc.FullName -ne $in.ruta_esperada) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
+foreach ($n in $in.mostrar) { $doc.Layers.Item([string]$n).LayerOn = $true }
+foreach ($n in $in.ocultar) { $doc.Layers.Item([string]$n).LayerOn = $false }
+$vp = $doc.ActiveViewport; $vp.Direction = [double[]]@([double]$in.dir[0], [double]$in.dir[1], [double]$in.dir[2]); $doc.ActiveViewport = $vp
+$acad.ZoomExtents()
+$estilo = 'no_solicitado'
+if ($in.estilo_cmd) { try { $doc.SendCommand([string]$in.estilo_cmd); $estilo = 'solicitado' } catch { $estilo = 'fallo' } }
+$dir = DArr $doc.ActiveViewport.Direction
+$nCap = [int]$doc.Layers.Count; $vis = @{}; for ($i = 0; $i -lt $nCap; $i++) { $l = $doc.Layers.Item($i); $vis[[string]$l.Name] = [bool]$l.LayerOn }
+Emit @{ ok = $true; data = @{ documento = [string]$doc.Name; direccion_vista = $dir; estilo = $estilo; capas_visibles = $vis } }`,
+  transformar_solido: `if ($doc.FullName -ne $in.ruta_esperada) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
+$e = $doc.HandleToObject([string]$in.handle)
+if ([string]$e.ObjectName -ne 'AcDb3dSolid') { Emit @{ ok = $false; etapa = 'verificar_entidad'; codigo = 'NO_ES_SOLIDO' }; exit 0 }
+$antes = LeerEnt $e $in.handle
+$doc.StartUndoMark()
+try {
+  if ($in.operacion -eq 'mover') { $e.Move((New-Object 'double[]' 3), [double[]]@([double]$in.dx, [double]$in.dy, [double]$in.dz)) }
+  elseif ($in.operacion -eq 'rotar_z') { $e.Rotate([double[]]@([double]$in.cx, [double]$in.cy, 0.0), [double]$in.grados * [math]::PI / 180) }
+} finally { $doc.EndUndoMark() }
+$despues = LeerEnt $e $in.handle
+if ($in.guardar) { $doc.Save() }
+Emit @{ ok = $true; data = @{ antes = $antes; despues = $despues; guardado = [bool]$in.guardar; guardado_en_disco = [bool]$doc.Saved } }`,
   agregar_lineas: `if ($doc.FullName -ne $in.ruta_esperada) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
 $capaObj = $null; $creada = $false
 if ($in.capa) {
@@ -222,6 +307,10 @@ const GONE = new Set(['0x800706BA', '0x800706BE', '0x80010108', '0x800706BF']); 
 const ACCESO = '0x80070005';
 
 const MAX_ENTIDADES = 20000;
+/** Direcciones de vista (vector del objetivo hacia la cámara, como VPOINT). */
+export const VISTAS = { iso_so: [-1, -1, 1], iso_se: [1, -1, 1], iso_ne: [1, 1, 1], iso_no: [-1, 1, 1], planta: [0, 0, 1], frontal: [0, -1, 0], lateral_derecha: [1, 0, 0], posterior: [0, 1, 0], lateral_izquierda: [-1, 0, 0] };
+/** Comandos de estilo visual (se envían como comando; no es verificable por COM: se pide confirmación visual). */
+export const ESTILOS = { conceptual: '_.VSCURRENT _Conceptual ', realista: '_.VSCURRENT _Realistic ', oculto: '_.VSCURRENT _Hidden ', alambre: '_.VSCURRENT _Wireframe ', '2d': '_.VSCURRENT _2dwireframe ' };
 
 /** Entidades del DXF por capa (el reader entrega 1 por POLYLINE, igual que ModelSpace.Count en AutoCAD). */
 export function conteoPorCapa(dxf) { const c = {}; for (const e of dxf.entities) c[e.layer] = (c[e.layer] || 0) + 1; return c; }
@@ -527,6 +616,77 @@ export class AutoCadCom {
       lotes: lect.lotes, tam_lote: lect.tam_lote,
       independencia: 'Lectura COM de todas las entidades del DWG comparada con el DXF de origen; el contenido del DWG no se interpreta fuera de AutoCAD.',
     };
+  }
+
+  // ================= Modelo 3D =================
+  /**
+   * Crea un DWG 3D NUEVO (documento nuevo; no toca ningún dibujo abierto, ni originales ni el DWG 2D) con los sólidos indicados y lo
+   * guarda en `dwgRel` (debe estar en "03 Trabajo" y no existir). Verifica en disco la cabecera y por capa los conteos informados.
+   * @param primitivas [{id,tipo:'caja'|'cuna',capa,...}] de src/arq3d/geometria.js
+   */
+  async construir3d(project, { dwgRel, primitivas, capas, nota, nota_pos = [0, -1500, 0], vista = 'iso_so', estilo = 'conceptual' }) {
+    if (!Array.isArray(primitivas) || primitivas.length < 1 || primitivas.length > 2000) throw new UserError('DATO_INVALIDO', 'Indique entre 1 y 2000 sólidos.');
+    if (!VISTAS[vista]) throw new UserError('DATO_INVALIDO', `Vista no válida. Use: ${Object.keys(VISTAS).join(', ')}.`);
+    if (estilo !== null && !ESTILOS[estilo]) throw new UserError('DATO_INVALIDO', `Estilo no válido. Use: ${Object.keys(ESTILOS).join(', ')}.`);
+    for (const c of capas) if (!LAYER.test(c.nombre)) throw new UserError('DATO_INVALIDO', 'Nombre de capa no válido.');
+    const { abs: dwgAbs, root } = this.sandbox.resolveWritable(project, dwgRel);
+    if (!/\.dwg$/i.test(dwgAbs)) throw new UserError('TIPO_NO_PERMITIDO', 'El modelo 3D se guarda como .dwg.');
+    if (!isInside(path.join(root, FOLDERS.trabajo), dwgAbs)) throw new UserError('DESTINO_FUERA_DE_TRABAJO', 'El DWG 3D solo se guarda en "03 Trabajo".');
+    if (fs.existsSync(dwgAbs)) throw new UserError('DWG_YA_EXISTE', 'Ya existe un DWG 3D de esa versión; no se sobrescribe.', 'Modifique el modelo (nueva versión) o use otro nombre.');
+    const esperado = {}; for (const p of primitivas) esperado[p.capa] = (esperado[p.capa] || 0) + 1; esperado.TW3D_NOTAS = 1;
+    const r = await this.#exec('construir_3d', { dwg: dwgAbs, primitivas, capas, nota, nota_pos, vista_dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null }, { timeoutMs: 90000 + primitivas.length * 600 });
+    let cabecera = null; let bytes = 0;
+    try { const st = fs.statSync(dwgAbs); bytes = st.size; const fd = fs.openSync(dwgAbs, 'r'); const b = Buffer.alloc(6); fs.readSync(fd, b, 0, 6, 0); fs.closeSync(fd); cabecera = b.toString('latin1'); } catch { /* se informa abajo */ }
+    const valido = !!cabecera && /^AC10\d\d$/.test(cabecera) && bytes > 1000;
+    const estructura = verificarEstructura(esperado, r);
+    return { ...r, dwg: dwgRel, archivo_dwg: { bytes, cabecera, cabecera_dwg_valida: valido, sha256: valido ? sha256File(dwgAbs) : null }, verificacion_estructura: estructura,
+      verificacion: valido && estructura.ok ? 'DWG 3D guardado en disco con cabecera de AutoCAD; capas y conteos por capa coinciden con el modelo. Use tannia_3d_verificar para comprobar cada sólido.' : 'ATENCIÓN: el DWG 3D no pasó la verificación de archivo o estructura (ver archivo_dwg y verificacion_estructura).' };
+  }
+
+  /** Vista 3D del documento activo (copia en 03 Trabajo): dirección isométrica/planta/alzado, zoom a la extensión, estilo visual y capas visibles. */
+  async vista3d(project, { vista = 'iso_so', estilo = null, mostrar = [], ocultar = [] } = {}) {
+    if (!VISTAS[vista]) throw new UserError('DATO_INVALIDO', `Vista no válida. Use: ${Object.keys(VISTAS).join(', ')}.`);
+    if (estilo !== null && !ESTILOS[estilo]) throw new UserError('DATO_INVALIDO', `Estilo no válido. Use: ${Object.keys(ESTILOS).join(', ')}.`);
+    for (const c of [...mostrar, ...ocultar]) if (!LAYER.test(c)) throw new UserError('DATO_INVALIDO', 'Nombre de capa no válido.');
+    const st = await this.estado(); this.#assertWorkCopy(project, st.ruta);
+    const r = await this.#exec('vista_3d', { dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null, mostrar, ocultar, ruta_esperada: st.ruta }, { timeoutMs: 60000 });
+    return { ...r, vista, estilo_solicitado: estilo, nota: 'La vista no se guarda en el DWG hasta que lo guarde en AutoCAD. El estilo visual se solicita por comando: confírmelo en pantalla.' };
+  }
+
+  /** Inspección de solo lectura: sólidos 3D del dibujo activo (volumen, centroide, caja envolvente) por capa. */
+  async inspeccionarSolidos(project, { capa, max = 400, tam_lote = 100 } = {}) {
+    const st = await this.estado(); this.#assertWorkCopy(project, st.ruta);
+    const lista = (await this.enumerarHandles({ capa })).entidades; const sol = lista.filter((e) => e.tipo === 'AcDb3dSolid');
+    const tomar = sol.slice(0, Math.min(max, MAX_ENTIDADES)); const lect = await this.leerLote(tomar.map((e) => e.handle), { tam: tam_lote });
+    const porCapa = {}; for (const e of lect.entidades) { if (e.error) continue; const c = (porCapa[e.capa] ||= { solidos: 0, volumen_mm3: 0 }); c.solidos++; c.volumen_mm3 += e.volumen || 0; }
+    const bb = lect.entidades.filter((e) => Array.isArray(e.bbox_min) && Array.isArray(e.bbox_max));
+    const envolvente = bb.length ? { min: [0, 1, 2].map((i) => Math.min(...bb.map((e) => e.bbox_min[i]))), max: [0, 1, 2].map((i) => Math.max(...bb.map((e) => e.bbox_max[i]))) } : null;
+    return { documento: st.documento, total_entidades: lista.length, total_solidos: sol.length, leidos: lect.entidades.length, truncado: sol.length > tomar.length, por_capa: porCapa, envolvente_mm: envolvente, solidos: lect.entidades.map((e) => (e.error ? e : { handle: e.handle, capa: e.capa, volumen_mm3: e.volumen, centroide: e.centroide, bbox_min: e.bbox_min ?? null, bbox_max: e.bbox_max ?? null })), lotes: lect.lotes };
+  }
+
+  /** Mueve o rota (eje Z) UN sólido del dibujo activo (copia en 03 Trabajo). Deja una marca de deshacer. No guarda salvo guardar=true. */
+  async transformarSolido(project, { handle, operacion, dx = 0, dy = 0, dz = 0, grados = 0, centro = [0, 0], guardar = false }) {
+    if (!HANDLE.test(String(handle))) throw new UserError('DATO_INVALIDO', 'Handle no válido.');
+    if (!['mover', 'rotar_z'].includes(operacion)) throw new UserError('DATO_INVALIDO', 'operacion debe ser mover o rotar_z.');
+    for (const v of [dx, dy, dz, grados, centro[0], centro[1]]) if (!Number.isFinite(v)) throw new UserError('DATO_INVALIDO', 'Valores numéricos no válidos.');
+    if (Math.abs(dx) > 1e6 || Math.abs(dy) > 1e6 || Math.abs(dz) > 1e6) throw new UserError('DATO_INVALIDO', 'Desplazamiento fuera de rango (máx. 1 000 000 mm).');
+    const st = await this.estado(); this.#assertWorkCopy(project, st.ruta);
+    const r = await this.#exec('transformar_solido', { handle: String(handle), operacion, dx, dy, dz, grados, cx: centro[0], cy: centro[1], guardar: !!guardar, ruta_esperada: st.ruta }, { timeoutMs: 60000 });
+    return { ...r, aviso: 'El DWG ya NO coincide con el modelo 3D guardado: la modificación manual no actualiza el modelo. Para cambios que deban persistir en el modelo use tannia_3d_modificar.' };
+  }
+
+  /** Compara CADA sólido del DWG activo con los esperados del modelo 3D (volumen, centroide, caja envolvente, capa) y las capas/conteos. */
+  async verificarSolidos(project, { dwgRel, primitivas, tam_lote = 100 }) {
+    const { st } = await this.#copiaActiva(project, dwgRel);
+    const resumen = await this.#exec('resumen', {}, { timeoutMs: 60000 });
+    const lista = (await this.enumerarHandles()).entidades.filter((e) => e.tipo === 'AcDb3dSolid');
+    const lect = await this.leerLote(lista.map((e) => e.handle), { tam: tam_lote });
+    const cmp = compararSolidos(primitivas.map((p) => ({ id: p.id, capa: p.capa, ...p.esperado, centro: p.esperado.centroide, min: p.esperado.bbox_min, max: p.esperado.bbox_max })), lect.entidades);
+    const esperado = {}; for (const p of primitivas) esperado[p.capa] = (esperado[p.capa] || 0) + 1; esperado.TW3D_NOTAS = 1;
+    const estructura = verificarEstructura(esperado, resumen);
+    const estado = cmp.estado === 'con_diferencias' || !estructura.ok ? 'con_diferencias' : cmp.estado;
+    return { estado, documento: st.documento, solidos: { esperados: cmp.esperados, leidos: cmp.leidos, coinciden: cmp.coinciden, faltan: cmp.faltan.slice(0, 20), distintos: cmp.distintos.slice(0, 20), sobran: cmp.sobran.slice(0, 20), caja_envolvente: cmp.caja_envolvente }, estructura, lotes: lect.lotes,
+      independencia: 'Cada sólido leído de AutoCAD (volumen, centroide y caja envolvente) se compara con el valor calculado analíticamente desde el modelo estructurado.' };
   }
 
   agregarLinea(project, { x1, y1, x2, y2, capa }) { return this.agregarLineas(project, { lineas: [{ x1, y1, x2, y2 }], capa }); }

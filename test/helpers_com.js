@@ -32,6 +32,7 @@ export function tipado(e, h) {
     case 'AcDbArc': Object.assign(o, { centro: arr(p.Center), radio: p.Radius ?? null, angulo_inicio: p.StartAngle ?? null, angulo_fin: p.EndAngle ?? null, longitud_arco: p.ArcLength ?? null, inicio: arr(p.StartPoint), fin: arr(p.EndPoint) }); break;
     case 'AcDb2dPolyline': case 'AcDbPolyline': Object.assign(o, { coordenadas: arr(p.Coordinates), cerrada: p.Closed ?? null, longitud: p.Length ?? null, area: p.Area ?? null }); break;
     case 'AcDbText': Object.assign(o, { texto: p.TextString, posicion: arr(p.InsertionPoint), alineacion: p.Alignment ?? null, punto_alineacion: arr(p.TextAlignmentPoint), altura: p.Height ?? null, rotacion: p.Rotation ?? null }); break;
+    case 'AcDb3dSolid': Object.assign(o, { volumen: p.Volume ?? null, centroide: arr(p.Centroid) }); if (p.BBoxMin) { o.bbox_min = arr(p.BBoxMin); o.bbox_max = arr(p.BBoxMax); } break;
     default: o.sin_propiedades_conocidas = true;
   }
   return o;
@@ -41,7 +42,7 @@ export function tipado(e, h) {
  * Runner que simula AutoCAD: estado/enumerar/leer_lote/resumen/cerrar_reabrir/dxf_a_dwg.
  * opciones: { activePath, maxHandles (simula timeout si una llamada trae más), alReabrir(entidades)→entidades, capasVacias, calls }
  */
-export function servidorSimulado(entidades, { activePath, maxHandles = Infinity, alReabrir, capasVacias = false, calls = [], arcoLongitud0 = false, escribeDwg } = {}) {
+export function servidorSimulado(entidades, { activePath, maxHandles = Infinity, alReabrir, capasVacias = false, calls = [], arcoLongitud0 = false, escribeDwg, sinBbox = false, defectoSolido, falloConstruir } = {}) {
   let ents = entidades.map((e, i) => ({ ...e, handle: (0x100 + i).toString(16).toUpperCase() }));
   const leer = (e) => { const t = tipado(e, e.handle); if (arcoLongitud0 && t.tipo === 'AcDbArc') t.longitud_arco = 0; return t; };
   const capas = () => (capasVacias ? [] : ['0', ...new Set(ents.map((e) => e.capa))]);
@@ -59,6 +60,19 @@ export function servidorSimulado(entidades, { activePath, maxHandles = Infinity,
     } else if (n === 'resumen') data = { documento: 'x.dwg', ruta: activePath, guardado: true, entidades: ents.length, capas: capas(), entidades_por_capa: porCapa(), entidades_por_tipo: {}, unidades_insunits: 4 };
     else if (n === 'cerrar_reabrir') { if (alReabrir) ents = alReabrir(ents); data = { documento: 'x.dwg', guardado: true, entidades: ents.length, unidades_insunits: 4 }; }
     else if (n === 'dxf_a_dwg') { if (escribeDwg) escribeDwg(input.dwg); data = { documento: 'v001.dwg', ruta: input.dwg, entidades: ents.length, capas: capas(), entidades_por_capa: porCapa(), textos_normalizados: 0, unidades_insunits: 4 }; }
+    else if (n === 'construir_3d') {
+      if (falloConstruir) throw Object.assign(new Error('fallo'), { clase: 'powershell_fallo' });
+      ents = input.primitivas.map((q, i) => { const e = q.esperado; let props = { Volume: e.volumen, Centroid: [...e.centroide], ...(sinBbox ? {} : { BBoxMin: [...e.bbox_min], BBoxMax: [...e.bbox_max] }) }; let capa = q.capa; if (defectoSolido) ({ props, capa } = defectoSolido(q, i, props, capa)); return { tipo: 'AcDb3dSolid', capa, props, handle: (0x200 + i).toString(16).toUpperCase() }; });
+      ents.push({ tipo: 'AcDbText', capa: 'TW3D_NOTAS', props: { TextString: input.nota, InsertionPoint: input.nota_pos, Height: 200 }, handle: 'FFF' });
+      if (escribeDwg) escribeDwg(input.dwg);
+      data = { documento: String(input.dwg).split(/[\\/]/).pop(), ruta: input.dwg, entidades: ents.length, capas: capas(), entidades_por_capa: porCapa(), mapa: ents.filter((x) => x.tipo === 'AcDb3dSolid').map((x, i) => ({ id: input.primitivas[i].id, handle: x.handle })), centroide_informado: true, vista: { aplicada: true, direccion: input.vista_dir }, estilo: input.estilo_cmd ? 'solicitado' : 'no_solicitado', unidades_insunits: 4 };
+    } else if (n === 'vista_3d') data = { documento: 'x.dwg', direccion_vista: input.dir, estilo: input.estilo_cmd ? 'solicitado' : 'no_solicitado', capas_visibles: Object.fromEntries(capas().map((c) => [c, !(input.ocultar || []).includes(c)])) };
+    else if (n === 'transformar_solido') {
+      const e = ents.find((x) => x.handle === input.handle); if (!e || e.tipo !== 'AcDb3dSolid') { const err = new Error('no sólido'); throw err; }
+      const antes = tipado(e, e.handle);
+      if (input.operacion === 'mover') { e.props.Centroid = e.props.Centroid.map((v, i) => v + [input.dx, input.dy, input.dz][i]); if (e.props.BBoxMin) { e.props.BBoxMin = e.props.BBoxMin.map((v, i) => v + [input.dx, input.dy, input.dz][i]); e.props.BBoxMax = e.props.BBoxMax.map((v, i) => v + [input.dx, input.dy, input.dz][i]); } }
+      data = { antes, despues: tipado(e, e.handle), guardado: !!input.guardar, guardado_en_disco: !!input.guardar };
+    }
     else throw new Error('script no reconocido en el servidor simulado');
     return JSON.stringify({ ok: true, data });
   };

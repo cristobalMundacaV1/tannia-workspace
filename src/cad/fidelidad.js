@@ -15,7 +15,10 @@ export const PROPIEDADES_POR_TIPO = {
   AcDb2dPolyline: ['coordenadas', 'cerrada'],
   AcDbText: ['texto', 'altura', 'posicion_efectiva'],
   AcDbMText: ['texto', 'altura', 'posicion'],
+  AcDb3dSolid: ['volumen', 'centroide'],
 };
+/** Propiedades que se comparan SOLO si AutoCAD las informó en ambas lecturas (no bloquean si faltan). */
+const OPCIONALES_POR_TIPO = { AcDb3dSolid: ['bbox_min', 'bbox_max'] };
 
 /** Posición efectiva de un texto: con justificación, AutoCAD usa el punto de alineación; si no, el punto de inserción. */
 export function posicionEfectiva(e) {
@@ -52,6 +55,11 @@ export function compararLecturas(antes, despues, { tol = 1e-6 } = {}) {
     for (const k of props) {
       if (a[k] == null) { noVerificables.push({ handle: a.handle, tipo: a.tipo, propiedad: k, motivo: 'AutoCAD no informó la propiedad antes de cerrar' }); completa = false; continue; }
       if (d[k] == null) { diferencias.push({ handle: a.handle, tipo: a.tipo, problema: 'propiedad_perdida', propiedad: k, antes: a[k] }); completa = false; continue; }
+      c.propiedades_comparadas++;
+      if (!iguales(a[k], d[k], tol)) { diferencias.push({ handle: a.handle, tipo: a.tipo, problema: `${k}_distinto`, antes: a[k], despues: d[k] }); completa = false; }
+    }
+    for (const k of OPCIONALES_POR_TIPO[a.tipo] || []) {
+      if (a[k] == null || d[k] == null) continue;
       c.propiedades_comparadas++;
       if (!iguales(a[k], d[k], tol)) { diferencias.push({ handle: a.handle, tipo: a.tipo, problema: `${k}_distinto`, antes: a[k], despues: d[k] }); completa = false; }
     }
@@ -138,4 +146,33 @@ export function clasificarTextos(esperados, informados) {
   res.con_acentos_correctos = conAcento.length;
   res.ok = !res.escape_sin_decodificar.length && !res.corruptos.length && !res.faltantes.length && !res.sobrantes.length;
   return res;
+}
+
+// ---------- Sólidos 3D (modelo 3D preliminar) ----------
+/**
+ * Compara los sólidos ESPERADOS (cajas calculadas desde el anteproyecto) con los 3DSOLID leídos de AutoCAD.
+ * Un sólido coincide si su centroide, volumen y capa son los esperados; si AutoCAD informó la caja envolvente también se
+ * compara. Sin caja envolvente la verificación de dimensiones queda `no_concluyente` (volumen+centroide no fijan las 3 medidas).
+ * @param esperados [{id,capa,volumen,centro,min,max}] @param leidos lecturas tipadas (AcDb3dSolid)
+ */
+export function compararSolidos(esperados, leidos, { tolCentro = 0.01, tolVol = 1e-6, tolBox = 0.01 } = {}) {
+  const sol = leidos.filter((e) => e.tipo === 'AcDb3dSolid' && !e.error);
+  const usados = new Set(); const faltan = []; const distintos = []; let conBbox = 0; let sinBbox = 0; let coinciden = 0;
+  for (const x of esperados) {
+    let mejor = -1; let mejorD = Infinity;
+    sol.forEach((s, i) => { if (usados.has(i) || !Array.isArray(s.centroide)) return; const d = dist(s.centroide, x.centro); if (d < mejorD) { mejorD = d; mejor = i; } });
+    if (mejor < 0 || mejorD > tolCentro) { faltan.push({ id: x.id, capa: x.capa, centro_esperado: x.centro, volumen_esperado: x.volumen, mas_cercano_mm: mejor < 0 ? null : Math.round(mejorD * 1000) / 1000 }); continue; }
+    usados.add(mejor); const s = sol[mejor]; const problemas = [];
+    if (s.capa !== x.capa) problemas.push({ problema: 'capa_distinta', esperada: x.capa, leida: s.capa });
+    if (!(typeof s.volumen === 'number') || Math.abs(s.volumen - x.volumen) > tolVol * x.volumen) problemas.push({ problema: 'volumen_distinto', esperado: x.volumen, leido: s.volumen ?? null });
+    if (Array.isArray(s.bbox_min) && Array.isArray(s.bbox_max)) {
+      conBbox++;
+      if (dist(s.bbox_min, x.min) > tolBox || dist(s.bbox_max, x.max) > tolBox) problemas.push({ problema: 'caja_envolvente_distinta', esperada: { min: x.min, max: x.max }, leida: { min: s.bbox_min, max: s.bbox_max } });
+    } else sinBbox++;
+    if (problemas.length) distintos.push({ id: x.id, handle: s.handle, problemas }); else coinciden++;
+  }
+  const sobran = sol.filter((_, i) => !usados.has(i)).map((s) => ({ handle: s.handle, capa: s.capa, centroide: s.centroide, volumen: s.volumen }));
+  const fiel = !faltan.length && !distintos.length && !sobran.length;
+  const estado = !fiel ? 'con_diferencias' : sinBbox > 0 ? 'no_concluyente' : 'fiel';
+  return { estado, esperados: esperados.length, leidos: sol.length, coinciden, faltan, distintos, sobran, caja_envolvente: { informada: conBbox, no_informada: sinBbox } };
 }

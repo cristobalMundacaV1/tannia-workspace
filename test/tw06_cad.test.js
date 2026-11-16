@@ -77,18 +77,29 @@ test('normalizarRuta: prefijo \\\\?\\ y NFC sin alterar el contenido Unicode', (
 test('contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/Close/Open solo donde corresponde; sin enumeración COM frágil ni conversiones a 0', () => {
   for (const n of Object.keys(SCRIPTS)) {
     const s = buildScript(n);
-    assert.ok(!/\b(Erase|Purge|Quit|SendCommand|Remove-Item|Invoke-Expression|iex|Start-Process|Kill)\b/i.test(s), `script ${n} contiene comando prohibido`);
-    if (n !== 'dxf_a_dwg') assert.ok(!/SaveAs/i.test(s), `${n}: SaveAs no permitido`);
+    assert.ok(!/\b(Erase|Purge|Quit|Remove-Item|Invoke-Expression|iex|Start-Process|Kill)\b/i.test(s), `script ${n} contiene comando prohibido`);
+    // SendCommand: SOLO para pedir el estilo visual en los scripts 3D (comando fijo, nunca construido con datos del usuario)
+    if (!['construir_3d', 'vista_3d'].includes(n)) assert.ok(!/SendCommand/i.test(s), `${n}: SendCommand no permitido`);
+    if (!['dxf_a_dwg', 'construir_3d'].includes(n)) assert.ok(!/SaveAs/i.test(s), `${n}: SaveAs no permitido`);
     assert.ok(!/"[^"]*\$in\.[^"]*"/.test(SCRIPTS[n]), `script ${n} interpola datos del usuario dentro de una cadena`);
-    if (n !== 'agregar_lineas') { assert.ok(!/\.Delete\(/.test(s), `${n}: Delete no permitido`); assert.ok(!/\.Save\(/.test(s), `${n}: Save no permitido`); }
-    if (n !== 'cerrar_reabrir') assert.ok(!/\.Close\(/.test(s), `${n}: Close no permitido`);
+    if (!['agregar_lineas', 'construir_3d'].includes(n)) assert.ok(!/\.Delete\(/.test(s), `${n}: Delete no permitido`);
+    if (!['agregar_lineas', 'transformar_solido'].includes(n)) assert.ok(!/\.Save\(/.test(s), `${n}: Save no permitido`);
+    if (!['cerrar_reabrir', 'construir_3d'].includes(n)) assert.ok(!/\.Close\(/.test(s), `${n}: Close no permitido`);
     if (!['cerrar_reabrir', 'abrir_copia', 'dxf_a_dwg'].includes(n)) assert.ok(!/Documents\.Open\(/.test(s), `${n}: Open no permitido`);
+    if (n !== 'construir_3d') assert.ok(!/Documents\.Add\(/.test(s), `${n}: Documents.Add solo en construir_3d`);
     // Causa raíz de "capas: []": `foreach` sobre colecciones COM de AutoCAD no enumera de forma fiable → se recorre por índice
     assert.ok(!/foreach \(\$\w+ in \$\w*\.?(ModelSpace|Layers|Documents)\b/.test(s), `${n}: enumeración COM con foreach (usar índices)`);
     assert.ok(!/foreach \(\$\w+ in \$(doc|d|acad|objetivo|nuevo)\.(ModelSpace|Layers|Documents)\)/.test(s), `${n}: foreach sobre colección COM`);
     // Causa raíz de "longitud 0": [double]$null es 0. Las propiedades COM solo se leen con DNum/DArr/DBool (null si no existen)
     assert.ok(!/\[double\]\$e\.\w+/.test(s) && !/\[double\[\]\]\$e\.\w+/.test(s.replace(/function DArr[^\n]*\n/, '')), `${n}: conversión directa de una propiedad COM (usar DNum/DArr)`);
   }
+  // 3D: el único Close es sobre el documento NUEVO que el propio script creó (nunca sobre dibujos del usuario); el estilo es un comando fijo
+  const c3 = SCRIPTS.construir_3d;
+  assert.deepEqual([...c3.matchAll(/(\$\w+)\.Close\(([^)]*)\)/g)].map((m) => `${m[1]}.Close(${m[2]})`), ['$d.Close($false)']);
+  assert.ok(c3.indexOf('Documents.Add') < c3.indexOf('$d.Close') && /\$d = \$acad\.Documents\.Add\(\)/.test(c3));
+  assert.ok(!/\$doc\./.test(c3.replace(/\$doc = /g, '')), 'construir_3d no toca el documento activo previo ($doc)');
+  assert.ok(SCRIPTS.vista_3d.indexOf('ruta_esperada') < SCRIPTS.vista_3d.indexOf('Layers') && SCRIPTS.transformar_solido.indexOf('ruta_esperada') < SCRIPTS.transformar_solido.indexOf('HandleToObject'), 'las escrituras sobre el dibujo activo verifican ruta_esperada primero');
+  assert.ok(!/\.Delete\(/.test(SCRIPTS.transformar_solido) && !/SaveAs/.test(SCRIPTS.transformar_solido));
   const a = SCRIPTS.agregar_lineas;
   assert.deepEqual([...new Set([...a.matchAll(/\$(\w+)\.Delete\(/g)].map((m) => m[1]))].sort(), ['capaObj', 'e']);
   assert.equal([...a.matchAll(/\.Save\(/g)].length, 1);
