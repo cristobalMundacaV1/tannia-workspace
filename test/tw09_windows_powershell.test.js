@@ -4,6 +4,9 @@
 // Lo simulado es SOLO el servidor COM; los scripts, la codificación, el transporte y las guardas son los de producción.
 // Se omiten donde no hay powershell.exe (Linux/macOS). NO sustituyen la prueba con AutoCAD real.
 import test from 'node:test';
+import { generarModelo } from '../src/design/generador.js';
+import { derivar } from '../src/design/derivar.js';
+import { escribirDxf } from '../src/design/salidas.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,6 +27,8 @@ $global:TW_SAVEFAIL = ($env:TANNIA_TEST_SAVEFAIL -eq '1')
 $global:TW_N = 0
 $global:TW_LAYERS = @{ '0' = 1 }
 $global:TW_MS = New-Object System.Collections.ArrayList
+function global:TW-ClearAdds { $k = @(Get-Content -LiteralPath $global:TW_LOG -Encoding UTF8 | Where-Object { $_ -and ($_ -notlike 'ADD *') }); if ($k.Count) { Set-Content -LiteralPath $global:TW_LOG -Value $k -Encoding UTF8 } else { Set-Content -LiteralPath $global:TW_LOG -Value '' } }
+$global:TW_LOST = (Test-Path -LiteralPath ($env:TANNIA_TEST_LOG + '.lost'))
 function global:TW-L($m) { Add-Content -LiteralPath $global:TW_LOG -Value $m -Encoding UTF8 }
 function global:TW-Layer($n) {
   $o = New-Object PSObject -Property @{ Name = $n }
@@ -59,11 +64,11 @@ $global:TW_DOCS = New-Object System.Collections.ArrayList
 Add-Member -InputObject $acad -MemberType NoteProperty -Name Documents -Value $global:TW_DOCS
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name SaveAs -Value { param($p, $t) if ($t -ne 64 -and $null -ne $t) { throw 'tipo inválido' }; [IO.File]::WriteAllBytes($p, ([Text.Encoding]::ASCII.GetBytes('AC1032') + (New-Object byte[] 3000))); TW-L ('SAVEAS ' + $t) }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name SetVariable -Value { param($n, $v) TW-L ('SETVAR ' + $n + ' ' + $v) }
-Add-Member -InputObject $global:TW_DOCS -MemberType ScriptMethod -Name Open -Value { param($p, $ro) if ($env:TANNIA_TEST_REOPENFAIL -eq '1') { throw 'no se pudo reabrir' }; TW-L 'OPEN'; if ($env:TANNIA_TEST_LOSE -eq '1') { $global:TW_MS.Clear() }; [void]$global:TW_DOCS.Add($global:TW_DOC); $global:TW_DOC.Saved = $true; return $global:TW_DOC }
+Add-Member -InputObject $global:TW_DOCS -MemberType ScriptMethod -Name Open -Value { param($p, $ro) if ($env:TANNIA_TEST_REOPENFAIL -eq '1') { throw 'no se pudo reabrir' }; TW-L 'OPEN'; if ($env:TANNIA_TEST_LOSE -eq '1') { $global:TW_MS.Clear(); Set-Content -LiteralPath ($env:TANNIA_TEST_LOG + '.lost') -Value '1' }; [void]$global:TW_DOCS.Add($global:TW_DOC); $global:TW_DOC.Saved = $true; return $global:TW_DOC }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name Close -Value { param($guardar) TW-L ('CLOSE ' + $guardar); $global:TW_DOCS.Remove($this) }
-if ($env:TANNIA_TEST_RECT) { $rp = $env:TANNIA_TEST_RECT -split ','; $w = [double]$rp[0]; $h = [double]$rp[1]; $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @($w, 0.0, 0.0)); $null = $global:TW_MS.AddLine(@($w, 0.0, 0.0), @($w, $h, 0.0)); $null = $global:TW_MS.AddLine(@($w, $h, 0.0), @(0.0, $h, 0.0)); $null = $global:TW_MS.AddLine(@(0.0, $h, 0.0), @(0.0, 0.0, 0.0)); $global:TW_N = 0; Set-Content -LiteralPath $global:TW_LOG -Value '' }
-if ($env:TANNIA_TEST_ARCS) { foreach ($k in 1..[int]$env:TANNIA_TEST_ARCS) { $global:TW_N++; $r = 800.0 * $k; $arc = New-Object PSObject -Property @{ Handle = ('{0:X}' -f (26 + $global:TW_N)); ObjectName = 'AcDbArc'; Layer = 'TW_PUERTA'; Center = @(0.0, 0.0, 0.0); Radius = $r; StartAngle = 0.0; EndAngle = [math]::PI / 2; ArcLength = $r * [math]::PI / 2; StartPoint = @($r, 0.0, 0.0); EndPoint = @(0.0, $r, 0.0) }; [void]$global:TW_MS.Add($arc) }; $txt = New-Object PSObject -Property @{ Handle = ('{0:X}' -f (27 + [int]$env:TANNIA_TEST_ARCS)); ObjectName = 'AcDbText'; Layer = 'TW_TEXTO'; TextString = 'BA' + [char]0xD1 + 'O'; InsertionPoint = @(1.0, 2.0, 0.0); Height = 170.0; Alignment = 0; TextAlignmentPoint = @(0.0, 0.0, 0.0); Rotation = 0.0 }; [void]$global:TW_MS.Add($txt); $global:TW_N = 0; Set-Content -LiteralPath $global:TW_LOG -Value '' }
-if ($env:TANNIA_TEST_PREPOP) { foreach ($len in ($env:TANNIA_TEST_PREPOP -split ',')) { $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @([double]$len, 0.0, 0.0)) }; $global:TW_N = 0; Set-Content -LiteralPath $global:TW_LOG -Value '' }
+if ($env:TANNIA_TEST_RECT -and -not $global:TW_LOST) { $rp = $env:TANNIA_TEST_RECT -split ','; $w = [double]$rp[0]; $h = [double]$rp[1]; $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @($w, 0.0, 0.0)); $null = $global:TW_MS.AddLine(@($w, 0.0, 0.0), @($w, $h, 0.0)); $null = $global:TW_MS.AddLine(@($w, $h, 0.0), @(0.0, $h, 0.0)); $null = $global:TW_MS.AddLine(@(0.0, $h, 0.0), @(0.0, 0.0, 0.0)); $global:TW_N = 0; TW-ClearAdds }
+if ($env:TANNIA_TEST_ARCS -and -not $global:TW_LOST) { foreach ($k in 1..[int]$env:TANNIA_TEST_ARCS) { $global:TW_N++; $r = 800.0 * $k; $arc = New-Object PSObject -Property @{ Handle = ('{0:X}' -f (26 + $global:TW_N)); ObjectName = 'AcDbArc'; Layer = 'TW_PUERTA'; Center = @(0.0, 0.0, 0.0); Radius = $r; StartAngle = 0.0; EndAngle = [math]::PI / 2; ArcLength = $r * [math]::PI / 2; StartPoint = @($r, 0.0, 0.0); EndPoint = @(0.0, $r, 0.0) }; [void]$global:TW_MS.Add($arc) }; $txt = New-Object PSObject -Property @{ Handle = ('{0:X}' -f (27 + [int]$env:TANNIA_TEST_ARCS)); ObjectName = 'AcDbText'; Layer = 'TW_TEXTO'; TextString = 'BA' + [char]0xD1 + 'O'; InsertionPoint = @(1.0, 2.0, 0.0); Height = 170.0; Alignment = 0; TextAlignmentPoint = @(0.0, 0.0, 0.0); Rotation = 0.0 }; [void]$global:TW_MS.Add($txt); $global:TW_N = 0; TW-ClearAdds }
+if ($env:TANNIA_TEST_PREPOP -and -not $global:TW_LOST) { foreach ($len in ($env:TANNIA_TEST_PREPOP -split ',')) { $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @([double]$len, 0.0, 0.0)) }; $global:TW_N = 0; TW-ClearAdds }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name Save -Value { if ($env:TANNIA_TEST_SAVEFAIL -eq '1') { throw 'no se pudo guardar' }; TW-L 'SAVE' }
 `;
 
@@ -219,7 +224,7 @@ test('PowerShell real: persistencia por cierre y reapertura (Close($false) + Ope
     // las entidades se pierden al reabrir => FALLIDA con las 4 diferencias
     fs.writeFileSync(e.log, '');
     const perdida = await adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000', TANNIA_TEST_LOSE: '1' }).verificarPersistencia(e.P, f);
-    assert.equal(perdida.persistencia, 'fallida'); assert.equal(perdida.diferencias_total, 4);
+    assert.equal(perdida.persistencia, 'fallida'); assert.equal(perdida.diferencias_total, 4); fs.rmSync(`${e.log}.lost`, { force: true });
     // cambios sin guardar => no se cierra
     fs.writeFileSync(e.log, '');
     await assert.rejects(() => adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000', TANNIA_TEST_DIRTY: '1' }).verificarPersistencia(e.P, f), (x) => x.code === 'CAMBIOS_SIN_GUARDAR');
@@ -253,7 +258,7 @@ test('PowerShell real: DXF→DWG en ruta con ó ñ y apóstrofo: INSUNITS=4, Sav
   const e = entorno();
   try {
     const dir = path.join(e.root, '03 Trabajo', 'Anteproyectos', "Casa ñ'"); fs.mkdirSync(dir, { recursive: true });
-    const dxf = path.join(dir, 'v001.dxf'); fs.writeFileSync(dxf, '0\nEOF\n');
+    const dxf = path.join(dir, 'v001.dxf'); fs.writeFileSync(dxf, escribirDxf(generarModelo({}), derivar(generarModelo({})), { titulo: 'Casa', version: 'v001', fecha: '2026-11-16' }));
     const com = adaptador(e, e.work);
     const r = await com.dxfADwg(e.P, `03 Trabajo/Anteproyectos/Casa ñ'/v001.dxf`);
     assert.equal(r.archivo_dwg.cabecera_dwg_valida, true); assert.equal(r.archivo_dwg.cabecera, 'AC1032'); assert.ok(fs.existsSync(path.join(dir, 'v001.dwg')));
