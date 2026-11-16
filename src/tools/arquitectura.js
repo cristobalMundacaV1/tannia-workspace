@@ -69,12 +69,12 @@ export function registerArquitectura(reg, { sandbox, cad }) {
   }, async ({ proyecto: p, estudio: n, archivo_epw }) => { const r = E.clima(p, n, archivo_epw); return ok(`Clima cargado (${r.version}): ${r.clima.station_or_grid}. Representatividad: regional. ${r.salvedades[0]}`, r); });
 
   reg('tannia_arq_generar_alternativas', {
-    title: 'Generar alternativas de partido arquitectónico genuinamente distintas (compacta, L con patio, dos alas)',
-    description: 'Genera hasta 3 partidos con huellas y conexiones distintas (un espejo o giro no cuenta), orientados según acceso/predio/norte si se conocen, y los evalúa: requisitos duros (bloquean), objetivos con evidencia o "no evaluado", alertas, frontera de Pareto y sensibilidad. Sin terreno entrega ideas conceptuales y lo dice. Es determinista por semilla. Guarda croquis SVG y una hoja comparativa. Nueva versión; no sobrescribe nada. ' + AV,
-    inputSchema: { proyecto, estudio, semilla: z.number().int().min(0).max(1000).optional(), conceptos: z.array(z.enum(CONCEPTOS)).max(3).optional().describe('Por defecto compacta, L_con_patio y dos_alas') }, annotations: RW,
+    title: 'Generar alternativas de partido arquitectónico genuinamente distintas (compacta, L con patio, dos alas, lineal)',
+    description: 'Genera partidos con huellas y conexiones distintas (compacta, L con patio, dos alas, lineal; un espejo o giro no cuenta) y DICE cuántos son ELEGIBLES (cumplen superficie, dormitorios, baños y encaje): nunca presenta como viable una alternativa bloqueada ni rebaja requisitos duros, orientados según acceso/predio/norte si se conocen, y los evalúa: requisitos duros (bloquean), objetivos con evidencia o "no evaluado", alertas, frontera de Pareto y sensibilidad. Sin terreno entrega ideas conceptuales y lo dice. Es determinista por semilla. Guarda croquis SVG y una hoja comparativa. Nueva versión; no sobrescribe nada. ' + AV,
+    inputSchema: { proyecto, estudio, semilla: z.number().int().min(0).max(1000).optional(), conceptos: z.array(z.enum(CONCEPTOS)).max(4).optional().describe('Por defecto compacta, L_con_patio, dos_alas y lineal') }, annotations: RW,
   }, async ({ proyecto: p, estudio: n, semilla, conceptos }) => {
     const r = E.generar(p, n, { semilla, conceptos });
-    return ok(`${r.alternativas.length} alternativa(s) en ${r.version}. ${r.minimo_cumplido ? '' : (r.nota ?? '')}\n\n${tablaAlts(r.alternativas)}\n\nFrontera de Pareto: ${r.comparacion?.frontera_pareto?.join(', ') || 'no concluyente'}. ${r.comparacion?.aviso ?? ''}\nArchivos: ${r.archivos.join(' · ')}`, r);
+    return ok(`${r.veredicto} (${r.version})\n\n${tablaAlts(r.alternativas)}\n\nFrontera de Pareto: ${r.comparacion?.frontera_pareto?.join(', ') || 'no concluyente'}. ${r.comparacion?.aviso ?? ''}\nArchivos: ${r.archivos.join(' · ')}`, r);
   });
 
   reg('tannia_arq_evaluar', {

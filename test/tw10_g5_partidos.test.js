@@ -16,7 +16,7 @@ import { derivar } from '../src/design/derivar.js';
 const prog = { superficie_m2: 90, dormitorios: 3, banos: 2, cocina: 'americana', piscina: true };
 
 test('tres partidos para 90 m²: factibles, dentro de ±3 % de superficie, esquema válido Zod y sin errores geométricos', () => {
-  for (const c of ['compacta', 'L_con_patio', 'dos_alas']) {
+  for (const c of ['compacta', 'L_con_patio', 'dos_alas', 'lineal']) {
     const r = generarPartido(c, prog); assert.ok(r.factible, `${c}: ${r.motivo}`);
     assert.ok(Math.abs(r.desviacion_pct) <= 3.5 || r.supuestos.some((x) => /más de lo pedido/.test(x)), `${c} ${r.area_m2}: fuera de tolerancia sin aviso`);
     assert.deepEqual(r.geo.errores, []);
@@ -25,16 +25,16 @@ test('tres partidos para 90 m²: factibles, dentro de ±3 % de superficie, esque
   }
 });
 
-test('diversidad real: huellas rectangular / L / C y topologías distintas; ninguna repetida', () => {
+test('diversidad real: huellas rectangular / L / C / lineal y topologías distintas; ninguna repetida', () => {
   const a = generarAlternativas({ programa: prog, semilla: 0 });
-  assert.equal(a.alternativas.length, 3);
-  assert.equal(a.diversidad.clases_de_huella, 3); assert.equal(a.diversidad.topologias_distintas, 3); assert.ok(a.diversidad.todos_distintos); assert.ok(a.minimo_cumplido);
-  assert.deepEqual(a.alternativas.map((x) => x.firmaClase ?? x.concepto).sort(), ['L_con_patio', 'compacta', 'dos_alas']);
-  const clases = a.diversidad.firmas.map((f) => f.huella.clase).sort(); assert.deepEqual(clases, ['C', 'L', 'rectangular']);
+  assert.equal(a.alternativas.length, 4);
+  assert.equal(a.diversidad.clases_de_huella, 4); assert.equal(a.diversidad.topologias_distintas, 4); assert.ok(a.diversidad.todos_distintos); assert.ok(a.minimo_cumplido);
+  assert.deepEqual(a.alternativas.map((x) => x.concepto).sort(), ['L_con_patio', 'compacta', 'dos_alas', 'lineal']);
+  const clases = a.diversidad.firmas.map((f) => f.huella.clase).sort(); assert.deepEqual(clases, ['C', 'L', 'lineal', 'rectangular']);
 });
 
 test('espejo y rotación NO son alternativas distintas (mismo concepto, 8 simetrías ⇒ misma firma)', () => {
-  for (const c of ['compacta', 'L_con_patio', 'dos_alas']) {
+  for (const c of ['compacta', 'L_con_patio', 'dos_alas', 'lineal']) {
     const claves = new Set();
     for (let k = 0; k < 8; k++) { const r = generarPartido(c, prog, { simetria: k }); assert.ok(r.factible, `${c} k=${k}`); claves.add(firmaTopologica(r.esquema, r.geo).clave); }
     assert.equal(claves.size, 1, `${c}: ${[...claves]}`);
@@ -53,11 +53,11 @@ test('determinismo: misma entrada y semilla ⇒ mismas opciones; la semilla solo
 });
 
 test('cada partido se compila a 3D con losa/cubierta sobre la huella real y coherencia 2D↔3D', () => {
-  for (const c of ['compacta', 'L_con_patio', 'dos_alas']) {
+  for (const c of ['compacta', 'L_con_patio', 'dos_alas', 'lineal']) {
     const r = generarPartido(c, prog); const m = esquemaA3d(r.esquema, r.geo); const p = construirPrimitivas(m);
     assert.ok(Math.abs(p.resumen.volumen_losas_m3 - r.geo.huella.area_m2 * 0.15) < 0.03, `${c} losa`);
     assert.equal(coherenciaConGeo(m, r.geo, { altura_piso_cielo_mm: 2500 }).estado, 'coherente_en_alcance', c);
-    if (c !== 'compacta') assert.ok(r.geo.huella.area_caja_envolvente_m2 > r.geo.huella.area_m2 + 10, `${c}: la caja envolvente debe ser mayor que la huella`);
+    if (c === 'L_con_patio' || c === 'dos_alas') assert.ok(r.geo.huella.area_caja_envolvente_m2 > r.geo.huella.area_m2 + 10, `${c}: la caja envolvente debe ser mayor que la huella`);
   }
 });
 

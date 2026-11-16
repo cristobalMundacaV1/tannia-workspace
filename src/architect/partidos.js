@@ -127,6 +127,30 @@ const LAYOUTS = {
     void conPasillo;
     return { spaces, plan, abiertas: [...abiertas, ['R-PAS', 'R-PAS-E'], ['R-LIV', 'R-PAS-E']], ext: [{ id: 'patio', use: 'family', ring: patio }], patio, medida: { liv: [Ws - W_COC, ds] } };
   },
+  lineal(prog, { s, d }) {
+    // Casa lineal: una sola fila. Living en el extremo oeste (entrada por el testero), pasillo-galería al sur y una hilera de recintos al norte que
+    // abren a un jardín posterior continuo. Una sola crujía de recintos (≈ 4,3 m de fondo): proporción alargada, circulación en espina.
+    const dn = 3000 + d; const D = PAS + dn; const wL = 5000 + s;
+    const fila = [{ id: 'R-COC', nombre: prog.cocina === 'americana' ? 'COCINA AMERICANA' : 'COCINA', tipo: 'cocina', zona: 'servicio', w: W_COC }, { id: 'R-BC', nombre: prog.banos >= 2 ? 'BAÑO 1' : 'BAÑO', tipo: 'bano', zona: 'servicio', w: W_BANO }];
+    const noct = nocturnos(prog); noct.forEach((r) => fila.push({ ...r, zona: 'privada' })); if (prog.banos >= 2) fila.splice(3, 0, { id: 'R-BP', nombre: 'BAÑO PRINCIPAL', tipo: 'bano', zona: 'servicio', w: W_BANO });
+    const W = wL + fila.reduce((a, r) => a + r.w, 0);
+    const spaces = [sp('R-LIV', 'LIVING-COMEDOR', 'living_comedor', 'social', 0, 0, wL, D), sp('R-PAS', 'PASILLO', 'pasillo', 'circulacion', wL, 0, W, PAS)];
+    let x = wL; for (const r of fila) { spaces.push(sp(r.id, r.nombre, r.tipo, r.zona, x, PAS, x + r.w, D)); x += r.w; }
+    const patio = anilloDeRect({ x0: 0, y0: D, x1: W, y1: D + 5000 });
+    const plan = [
+      { id: 'P-ACC', tipo: 'puerta', funcion: 'acceso', entre: ['R-LIV'], lado: 'O', w: ABERTURAS.puerta_acceso.ancho_mm, h: 2100, en: 0.5 },
+      { id: 'V-LIV-S', tipo: 'ventana', entre: ['R-LIV'], lado: 'S', w: 2400, h: 1300, ant: 800, en: 0.5 },
+      { id: 'P-LIV-PATIO', tipo: 'puerta', entre: ['R-LIV'], lado: 'N', w: 1800, h: 2100, en: 0.5, ajustar: true, patio: true },
+      { id: 'V-COC', tipo: 'ventana', entre: ['R-COC'], lado: 'N', w: 1500, h: 1200, ant: 1000, en: 0.5, patio: true },
+      { id: 'V-PAS-S', tipo: 'ventana', entre: ['R-PAS'], lado: 'S', w: 1200, h: 1200, ant: 900, en: 0.5 },
+      { id: 'V-PAS-E', tipo: 'ventana', entre: ['R-PAS'], lado: 'E', w: 600, h: 1200, ant: 900, en: 0.5, ajustar: true },
+      ...fila.filter((r) => r.id !== 'R-COC' && r.id !== 'R-BP').flatMap((r) => [{ id: `P-${r.id}`, tipo: 'puerta', entre: [r.id, 'R-PAS'], w: r.tipo === 'bano' ? 700 : 800, h: 2100, en: 0.5, abre: r.id }, { id: `V-${r.id}`, tipo: 'ventana', entre: [r.id], lado: 'N', w: r.tipo === 'bano' ? 600 : 1500, h: r.tipo === 'bano' ? 600 : 1200, ant: r.tipo === 'bano' ? 1500 : 900, en: 0.5 }]),
+      { id: 'P-R-COC', tipo: 'puerta', entre: ['R-COC', 'R-PAS'], w: 800, h: 2100, en: 0.5, abre: 'R-COC' },
+      ...(prog.banos >= 2 ? [{ id: 'P-BP', tipo: 'puerta', entre: ['R-DP', 'R-BP'], w: 700, h: 2100, en: 0.5, abre: 'R-BP' }, { id: 'V-BP', tipo: 'ventana', entre: ['R-BP'], lado: 'N', w: 600, h: 600, ant: 1500, en: 0.5 }] : []),
+      ...(prog.cocina === 'cerrada' ? [{ id: 'P-COC', tipo: 'puerta', entre: ['R-LIV', 'R-COC'], w: 800, h: 2100, en: 0.5, abre: 'R-COC' }] : []),
+    ];
+    return { spaces, plan, abiertas: [['R-LIV', 'R-PAS'], ...(prog.cocina === 'americana' ? [['R-LIV', 'R-COC']] : [])], ext: [{ id: 'patio', use: 'family', ring: patio }], patio, medida: { liv: [wL, D] }, acceso: 'O' };
+  },
 };
 
 // ---------- colocación de aberturas a partir de los muros derivados ----------
@@ -233,6 +257,9 @@ export function generarPartido(concepto, programaEntrada, ctx = {}) {
 export const MOTIVOS = {
   compacta: 'Volumen rectangular compacto: franja de día al frente, pasillo y franja de noche al fondo. Menor perímetro y cubierta simple (más económico de envolver), pero sin patio propio y con zonas de día y noche separadas solo por un pasillo.',
   L_con_patio: 'Dos alas en L que abrazan un patio de uso diario: el living y la cocina se abren al patio y los dormitorios quedan en el ala larga, apartados del frente. Gana relación interior–exterior y separación de zonas; pierde en perímetro exterior, encuentros de cubierta y complejidad constructiva.',
+  lineal: 'Casa lineal de una sola crujía: el living en el testero (entrada por el extremo), una galería-pasillo al sur y una hilera de recintos al norte que abren a un jardín posterior continuo. Todos los dormitorios comparten la misma orientación y la planta es larga y angosta (≈ 4,3 m de fondo): el menor número de muros interiores y de cubierta compleja entre las ideas con jardín, a costa de recorridos largos y de necesitar un terreno largo.',
   dos_alas: 'Dos alas paralelas (día al sur, noche al norte) unidas por un conector, con un patio entre ellas abierto a un costado: mayor separación día/noche y patio protegido por tres lados, a costa de más perímetro, más pasillos y más superficie de circulación.',
 };
 export const CONCEPTOS_GENERABLES = Object.keys(LAYOUTS);
+/** Lado por el que entra la vivienda en el marco canónico de cada partido (para orientar según el acceso del predio). */
+export const ACCESO_CANONICO = { compacta: 'S', L_con_patio: 'S', dos_alas: 'S', lineal: 'O' };

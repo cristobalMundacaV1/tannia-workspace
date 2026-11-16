@@ -94,7 +94,7 @@ test('Brief→evaluación: ninguna alternativa afirma cumplimiento normativo ni 
 
 test('Compatibilidad: con el brief de campo (variante) la generación sigue dando 3 alternativas y la visual se conecta con el ray casting', () => {
   const { brief } = interpretarEncargo(fs.readFileSync(new URL('./fixtures_tw10/encargo_los_robles_variante_campo.txt', import.meta.url), 'utf8'), { projectId: 'p' });
-  const g = generarAlternativas({ programa: programaDeBrief(brief), vistas: brief.objectives.filter((o) => o.kind === 'sightline').map((o) => ({ from: o.from, to: o.to })) }); assert.equal(g.alternativas.length, 3);
+  const g = generarAlternativas({ programa: programaDeBrief(brief), vistas: brief.objectives.filter((o) => o.kind === 'sightline').map((o) => ({ from: o.from, to: o.to })) }); assert.equal(g.alternativas.length, 4);
   const l = g.alternativas.find((a) => a.esquema.id === 'alt-L_con_patio'); const e = evaluarEsquema({ esq: l.esquema, geo: l.geo, brief }); assert.ok(e.detalle.visuales.length === 1 && e.detalle.visuales[0].estado !== 'no_evaluado');
 });
 

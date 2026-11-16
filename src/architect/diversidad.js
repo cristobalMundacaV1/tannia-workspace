@@ -9,7 +9,8 @@ export function firmaHuella(geo) {
   const verts = ext.reduce((a, r) => a + r.ring.length, 0);
   let concavos = 0;
   for (const { ring, hueco } of geo.huella.anillos) { if (hueco) continue; const sg = Math.sign(areaFirmada(ring)); for (let i = 0; i < ring.length; i++) { const a = ring[(i + ring.length - 1) % ring.length]; const b = ring[i]; const c = ring[(i + 1) % ring.length]; const cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]); if (Math.sign(cr) === -sg) concavos++; } }
-  const clase = huecos ? 'patio_interior' : ext.length > 1 ? 'pabellones' : concavos === 0 ? 'rectangular' : concavos === 1 ? 'L' : concavos === 2 ? 'C' : 'compleja';
+  const bb = ext.length ? { x: Math.max(...ext[0].ring.map((p) => p[0])) - Math.min(...ext[0].ring.map((p) => p[0])), y: Math.max(...ext[0].ring.map((p) => p[1])) - Math.min(...ext[0].ring.map((p) => p[1])) } : { x: 1, y: 1 }; const prop = Math.max(bb.x, bb.y) / Math.max(1, Math.min(bb.x, bb.y));
+  const clase = huecos ? 'patio_interior' : ext.length > 1 ? 'pabellones' : concavos === 0 ? (prop >= 3.2 ? 'lineal' : 'rectangular') : concavos === 1 ? 'L' : concavos === 2 ? 'C' : 'compleja';
   return { clase, anillos_exteriores: ext.length, huecos, vertices: verts, concavos };
 }
 

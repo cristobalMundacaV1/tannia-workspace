@@ -235,6 +235,9 @@ export function interpretarEncargo(texto, { projectId = 'proyecto', previo = nul
     brief.household.needs = [...new Set([...brief.household.needs, ...d.needs])]; brief.prohibitions = [...new Set([...(brief.prohibitions ?? []), ...d.prohibiciones])].slice(0, 20); if (d.budget) brief.budget = d.budget;
     brief.assistant_notes = notasUnicas([...brief.assistant_notes, ...d.notas]);
     brief.excluded_objectives = [...new Set([...brief.excluded_objectives, ...d.excluidos])].filter((k) => !d.objetivos.some((o) => o.kind === k));
+    const estable = (v) => (Array.isArray(v) ? `[${v.map(estable).join(',')}]` : v && typeof v === 'object' ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${estable(v[k])}`).join(',')}}` : JSON.stringify(v));
+    const sinMeta = (b) => estable({ ...b, version: 0, request_updates: [], unknowns: [], review_required: [] }); recalcularMeta(brief);
+    if (sinMeta(brief) === sinMeta(previo) && !d.ambiguedades.length) return { sin_cambios: true, modo: 'actualizar', brief: previo, hechos: [], preguntas: [], ambiguedades: [], pregunta_esencial: null, puede_generar_conceptos: previo.hard_constraints.some((h) => h.kind === 'area_target'), nota: 'Ese mensaje repite lo que ya estaba registrado: el encargo quedó igual (no se creó una versión nueva ni se duplicó nada).' };
   }
   recalcularMeta(brief);
   const r = validar('brief', brief); if (!r.ok) throw new UserError('BRIEF_INVALIDO', `El brief generado no es válido: ${r.errores.join(' | ')}`);

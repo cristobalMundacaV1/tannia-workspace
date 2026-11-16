@@ -31,7 +31,7 @@ test('flujo: encargo → ideas sin terreno → terreno con norte → alternativa
     assert.equal(d.puede_generar, true); assert.ok(d.brief.unknowns.includes('site_true_north')); assert.ok(d.preguntas.length <= 3);
     // 2) alternativas conceptuales sin terreno: honestas
     r = await call(c, 'tannia_arq_generar_alternativas', { proyecto: P, estudio: E }); assert.ok(!r.isError, JSON.stringify(r.content).slice(0, 400)); d = data(r);
-    assert.equal(d.alternativas.length, 3); assert.equal(d.diversidad.topologias_distintas, 3); assert.deepEqual([...d.diversidad.firmas].sort(), ['C', 'L', 'rectangular']);
+    assert.equal(d.alternativas.length, 4); assert.equal(d.n_elegibles, 3); assert.equal(d.diversidad.topologias_distintas, 3); assert.deepEqual([...d.diversidad.firmas].sort(), ['L', 'lineal', 'rectangular'], 'diversidad medida entre las ELEGIBLES'); assert.match(d.veredicto, /3 alternativas ELEGIBLES .* de 4 generadas/);
     assert.ok(d.alternativas.every((a) => a.estado_global !== 'sin_alertas_detectadas')); assert.ok(d.archivos.some((a) => /comparacion\.svg$/.test(a)));
     const v2 = d.version; const dir = path.join(home, 'Proyectos', P, '03 Trabajo', 'Arquitectura', E);
     assert.ok(fs.existsSync(path.join(dir, `${v2}-comparacion.svg`))); assert.match(fs.readFileSync(path.join(dir, `${v2}-comparacion.svg`), 'utf8'), /no apto para construcción/);
