@@ -42,5 +42,7 @@ Leyenda: **HECHO** = implementado + pruebas automatizadas verdes (CI Windows/Ubu
 | P1 Identidad documental COM | HECHO (automatizado) · HW pendiente | `tw25`, `tw09` (mock 2 documentos); `docs/qa/TW09_AUDITORIA_PR11_RESPUESTA.md` |
 | P1 Concurrencia de transacciones | HECHO (automatizado, procesos reales) · HW pendiente (OneDrive/antivirus) | `tw26` |
 | P2 Seguridad del destino de importación | HECHO (automatizado) · HW pendiente (ACL/junctions reales) | `tw27` |
+| H4 Escrituras anteriores a la validación canónica (`.tannia` enlazada, migración, manifiesto final, sustitución durante la operación) | HECHO (automatizado) · HW pendiente (junctions/OneDrive reales) | `tw28` |
+| H5 Bloqueo con dueño vivo y latido vencido | HECHO (automatizado, procesos reales) · HW pendiente (PowerShell/OneDrive) | `tw29` |
 
 **Gates:** G0 parcial · G1 automatizado cumplido, real HW pendiente · G2 cumplido · G3 cumplido (importación real HW) · G4 automatizado parcial · G5 parcial · G6 parcial (sin transcripciones reales) · G7 parcial · G8 **no alcanzado** (sin piloto ni validación real).

@@ -28,4 +28,7 @@ Estados: `AUTOMATIZADO` (pruebas en CI Windows+Ubuntu sobre el SHA indicado) · 
 | T9-22 | Exclusión entre procesos sobre carpetas sincronizadas (OneDrive), antivirus, carpetas de red | **NO VERIFICADO (HW)** — el bloqueo asume FS local | pendiente |
 | T9-23 | Destino de importación canónico: enlaces/junctions, TOCTOU, enlaces colgantes, colisiones de Windows, MAX_PATH | AUTOMATIZADO (symlinks en Linux; junctions en CI Windows) | `tw27` |
 | T9-24 | ACL reales de Windows y junctions con permisos restringidos | **NO VERIFICADO (HW)** | pendiente |
+| T9-25 | Ninguna escritura (id, respaldo, manifiestos, auditoría, JSON de proyecto, historiales) sale del proyecto con `.tannia`/carpetas enlazadas ni con sustitución durante la operación; el manifiesto final se valida justo antes y se deshace lo copiado si falla | AUTOMATIZADO (symlinks en Linux; junctions en CI Windows) | `tw28` |
+| T9-26 | Un dueño de bloqueo VIVO con latido vencido nunca se interviene; caída real y pid reutilizado se recuperan sin pérdida | AUTOMATIZADO (procesos reales) | `tw29` |
+| T9-27 | Identidad de proceso en Windows real (`Get-Process … StartTime`) y bloqueo con OneDrive/antivirus | **NO VERIFICADO (HW)** | pendiente |
 
