@@ -1,0 +1,11 @@
+Vamos a ejecutar una prueba de verificación con AutoCAD 2027 abierto. Reglas: ejecuta cada paso con la herramienta indicada, uno por uno; NO resumas ni interpretes resultados: pega de cada herramienta los campos clave y, ante cualquier error o resultado "no_concluyente", "con_diferencias" o "fallida", copia el mensaje y el JSON EXACTO sin corregirlo ni reintentar con otros parámetros. No declares aprobado nada que no hayas visto en el resultado. No modifiques ni borres nada fuera de 03 Trabajo.
+
+1. Haz un diagnóstico de Tannia Workspace y usa tannia_cad_estado (anota versión de AutoCAD y documento activo).
+2. Crea un proyecto llamado "Prueba Confianza DWG".
+3. Diseña una propuesta de casa de un piso de aproximadamente 80 m², tres dormitorios, dos baños, living-comedor y cocina americana. Llámala "Casa 80 m2 verif".
+4. Guarda el anteproyecto "Casa 80 m2 verif" como DWG en AutoCAD (tannia_diseno_a_autocad). Muéstrame: archivo_dwg.cabecera_dwg_valida, entidades, capas (¿lista vacía?) y verificacion_estructura.
+5. Ejecuta tannia_diseno_verificar_dwg sobre ese anteproyecto. Muéstrame: fidelidad, entidades (en_dxf / leidas_en_dwg), estructura.ok, textos (ok, con_acentos_correctos, escape_sin_decodificar, corruptos), inconsistencias_total, no_verificables_total y comparacion_geometrica.
+6. Ejecuta tannia_cad_verificar_persistencia sobre 03 Trabajo/Anteproyectos/Casa 80 m2 verif/v001.dwg SIN especificar handles ni capa. Muéstrame: persistencia, entidades_leidas, lotes, cobertura por tipo (AcDbLine, AcDbArc, AcDb2dPolyline, AcDbText), no_verificables_total, inconsistencias_total, diferencias_total y archivo_en_disco.sin_cambios_por_el_cierre_y_reapertura.
+7. Con tannia_cad_listar_entidades (capa TW_PUERTA, con medidas) muéstrame los arcos: longitud_arco y radio de cada uno (deben ser > 0).
+8. Verifica la integridad de los originales del proyecto.
+9. Cierra con una tabla: paso | resultado (OK / NO CONCLUYENTE / DIFERENCIAS / ERROR) | dato clave. En una sección aparte pega, sin editar, todos los JSON de error o no concluyentes. Después pídeme que confirme a ojo en AutoCAD: 8 capas TW_*, arcos con longitud > 0, "BAÑO" con Ñ sin "\U+", y AUDIT sin errores. No marques esos puntos como verificados hasta que yo los confirme.
