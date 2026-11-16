@@ -9,3 +9,4 @@ Base `16a7bd7` (`feat/tw-modelo-3d`) → rama `feat/tw09-autonomia`.
 - Límite: el CI no ejecuta AutoCAD ni Claude Desktop.
 
 - Cambios de contrato por la auditoría (intencionales): las lecturas confirman la ruta del documento; la reapertura de otro documento falla con `DOCUMENTO_REABIERTO_DISTINTO`; con ruta esperada ausente, el error es `DOCUMENTO_NO_ABIERTO` (antes `DOCUMENTO_CAMBIO` en el caso de `agregarLineas`); un journal sin ids de historial exige reconciliar (`VERSION_PENDIENTE_RECONCILIAR`).
+- CI Windows+Ubuntu verde sobre `c59dcd5` (código de la auditoría del PR #11; los commits posteriores son solo documentación).

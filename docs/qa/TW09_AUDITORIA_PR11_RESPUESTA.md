@@ -22,5 +22,11 @@ Método: para cada riesgo se escribió primero una prueba que **falla sobre el b
 - **Pruebas:** `tw27` (rojas sobre el baseline: 3 de 6 — enlace en la carpeta destino, enlace colgante y colisiones; la de TOCTOU pasaba vacuamente sin el punto de control y se reforzó para exigirlo). En Windows usa **junctions**.
 - **Exige hardware:** ACL reales de Windows, junctions con permisos restringidos y OneDrive/«archivos a petición» en las carpetas del proyecto.
 
+## Lo que reveló el CI de Windows durante la corrección (resuelto en `c59dcd5`)
+- Mock de PowerShell con handles en hexadecimal (`65`) en vez de los decimales de la prueba: defecto **del mock**, no del producto.
+- Windows no tiene señales POSIX: un corte con `process.kill` termina el proceso sin `signal`; las pruebas de corte real aceptan «sin salida y código ≠ 0» en Windows.
+- Un nombre de origen `archivo:flujo` en Windows es un **flujo de datos alterno**, no un archivo: ahora se rechaza (`ORIGEN_INVALIDO`).
+- Una caída a nivel de archivo (`tw21`) sin mensaje en el log. **Causa NO establecida**; hipótesis más plausible (no demostrada): `fs.cpSync` recursivo con el que reconciliaba el contenido en preparación. Se reemplazó por renombrado a `.huerfanos` (más simple y sin copiar) y se agregaron reintentos de borrado; el CI pasó, pero no se aisló la causa exacta.
+
 ## Estado
 Suite local: ver `TW09_REGRESSION_REPORT.md`. Gates de confiabilidad: **G1 y G4 automatizados cumplidos; su validación real sigue pendiente (hardware)**. El PR permanece en borrador.
