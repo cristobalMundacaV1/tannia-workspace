@@ -10,6 +10,7 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import { UserError } from '../mcp/util.js';
 import { FOLDERS, isInside } from '../security/sandbox.js';
 import { sanitizar } from './sanitize.js';
@@ -53,7 +54,9 @@ function LeerEnt($e, $h) {
   }
   return $o
 }
-$in = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($env:TANNIA_IN)) | ConvertFrom-Json
+$raw = $env:TANNIA_IN
+if ($env:TANNIA_IN_STDIN -eq '1') { $ms = New-Object IO.MemoryStream; [Console]::OpenStandardInput().CopyTo($ms); $raw = [Text.Encoding]::ASCII.GetString($ms.ToArray()).Trim() }
+$in = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($raw)) | ConvertFrom-Json
 `;
 
 // Conexión: prueba el ProgID sin versión y luego los versionados (AutoCAD.Application.<release>), porque el sin versión
@@ -272,15 +275,29 @@ export function buildScript(name, { connect = PS_CONNECT } = {}) {
 const MARCA = /TANNIA_OUT:([A-Za-z0-9+/=]+)/g;
 
 /** Ejecuta PowerShell y devuelve el JSON (texto) emitido por el script. Errores con `clase` segura y diagnóstico saneado. */
+// Límites de Windows: la línea de comandos admite ~32 767 caracteres y cada variable de entorno también. Los scripts 3D y las entradas
+// grandes (cientos de sólidos) los superan: el script va comprimido (gzip+base64) en una variable y se ejecuta con un arranque fijo;
+// una entrada grande viaja por la entrada estándar (base64 ASCII). Los scripts pequeños siguen yendo como -EncodedCommand directo.
+export const LIMITE_COMANDO = 12000; export const LIMITE_ENTRADA_ENV = 12000;
+const ARRANQUE = "$b=[Convert]::FromBase64String($env:TANNIA_SCRIPT_GZ);$m=New-Object IO.MemoryStream(,$b);$g=New-Object IO.Compression.GZipStream($m,[IO.Compression.CompressionMode]::Decompress);$r=New-Object IO.StreamReader($g,[Text.Encoding]::UTF8);$s=$r.ReadToEnd();. ([scriptblock]::Create($s))";
+export function prepararLlamada(script, input) {
+  const entradaB64 = Buffer.from(JSON.stringify(input), 'utf8').toString('base64');
+  let comando = Buffer.from(script, 'utf16le').toString('base64'); const env = {};
+  if (comando.length > LIMITE_COMANDO) { env.TANNIA_SCRIPT_GZ = gzipSync(Buffer.from(script, 'utf8'), { level: 9 }).toString('base64'); comando = Buffer.from(ARRANQUE, 'utf16le').toString('base64'); }
+  let stdin = null;
+  if (entradaB64.length > LIMITE_ENTRADA_ENV) { env.TANNIA_IN_STDIN = '1'; stdin = entradaB64; } else env.TANNIA_IN = entradaB64;
+  return { comando, env, stdin };
+}
 export function runPowerShell(script, input, { exe = 'powershell.exe', env = {}, timeoutMs = 30000 } = {}) {
   return new Promise((resolve, reject) => {
-    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    const llamada = prepararLlamada(script, input);
     let child;
     try {
-      child = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], {
-        env: { ...process.env, ...env, TANNIA_IN: Buffer.from(JSON.stringify(input), 'utf8').toString('base64') },
-        windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
+      child = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', llamada.comando], {
+        env: { ...process.env, ...env, ...llamada.env },
+        windowsHide: true, stdio: [llamada.stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
       });
+      if (llamada.stdin) { child.stdin.on('error', () => { /* el proceso pudo terminar antes de leer */ }); child.stdin.end(llamada.stdin); }
     } catch (e) { reject(Object.assign(new Error('spawn'), { clase: 'powershell_no_encontrado' })); return; }
     const out = []; const err = []; let done = false; let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; try { child.kill(); } catch { /* */ } }, timeoutMs);

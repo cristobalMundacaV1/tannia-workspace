@@ -11,7 +11,8 @@ import { Modelos3d } from '../src/arq3d/servicio.js';
 import { Anteproyectos } from '../src/design/servicio.js';
 import { generarModelo } from '../src/design/generador.js';
 import { derivar } from '../src/design/derivar.js';
-import { AutoCadCom } from '../src/cad/autocad_com.js';
+import { AutoCadCom, prepararLlamada, buildScript, LIMITE_COMANDO } from '../src/cad/autocad_com.js';
+import { gunzipSync } from 'node:zlib';
 import { compararSolidos, compararLecturas } from '../src/cad/fidelidad.js';
 import { Sandbox } from '../src/security/sandbox.js';
 import { createProject } from '../src/project/projects.js';
@@ -277,8 +278,19 @@ test('MCP: flujo completo de herramientas 3D sin AutoCAD (crear, ver, modificar,
     // diseño 2D → 3D por MCP
     await call(c, 'tannia_diseno_crear', { proyecto: 'Taller', nombre: 'Casa', programa: { dormitorios: 3 } });
     r = await call(c, 'tannia_3d_crear', { proyecto: 'Taller', nombre: 'Casa 3D', desde_anteproyecto: { nombre: 'Casa' } }); d = data(r); assert.equal(d.coherencia_2d.estado, 'coherente'); assert.ok(d.supuestos_a_confirmar[0].includes('2400'));
-    r = await call(c, 'tannia_3d_a_autocad', { proyecto: 'Taller', nombre: 'Casa 3D' }); assert.equal(r.isError, true); assert.match(JSON.stringify(r.content), /AUTOCAD_NO_DISPONIBLE|Windows/);
+    r = await call(c, 'tannia_3d_a_autocad', { proyecto: 'Taller', nombre: 'Casa 3D' }); assert.equal(r.isError, true); assert.match(JSON.stringify(r.content), /AUTOCAD_NO_DISPONIBLE|AUTOCAD_NO_ABIERTO|Windows/);
     assert.ok(fs.existsSync(path.join(home, 'Proyectos', 'Taller', '03 Trabajo', 'Modelos3D', 'Casa 3D', 'v001.json')));
     assert.ok(!fs.existsSync(path.join(home, 'Proyectos', 'Taller', '03 Trabajo', 'Modelos3D', 'Casa 3D', 'v001_3D.dwg')), 'sin AutoCAD no se inventa un DWG');
   } finally { await cli.close(); fs.rmSync(home, { recursive: true, force: true }); }
+});
+
+test('límites de Windows: scripts 3D largos van comprimidos y entradas grandes por la entrada estándar (sin superar 32 767 caracteres)', () => {
+  const script = buildScript('construir_3d'); const r = prepararLlamada(script, { primitivas: [], dwg: 'x' });
+  assert.ok(r.comando.length < 4000 && r.env.TANNIA_SCRIPT_GZ, 'script largo: arranque fijo + script comprimido');
+  assert.equal(gunzipSync(Buffer.from(r.env.TANNIA_SCRIPT_GZ, 'base64')).toString('utf8'), script, 'el script se recupera idéntico');
+  const corto = prepararLlamada(buildScript('estado'), {}); assert.ok(corto.comando.length <= 32000);
+  const grande = { primitivas: Array.from({ length: 2000 }, (_, i) => ({ id: `S${i}`, centro: [i, i, i], esperado: { volumen: 1e9, centroide: [1, 2, 3], bbox_min: [0, 0, 0], bbox_max: [1, 1, 1] } })) };
+  const g = prepararLlamada(script, grande); assert.equal(g.env.TANNIA_IN_STDIN, '1'); assert.equal(g.env.TANNIA_IN, undefined); assert.deepEqual(JSON.parse(Buffer.from(g.stdin, 'base64').toString('utf8')), grande);
+  for (const n of ['construir_3d', 'vista_3d', 'transformar_solido', 'enumerar', 'leer_lote', 'dxf_a_dwg', 'agregar_lineas']) { const l = prepararLlamada(buildScript(n), { handles: [], x: 1 }); assert.ok(l.comando.length < 32000 && Object.values(l.env).every((v) => v.length < 32000), n); }
+  assert.ok(LIMITE_COMANDO < 32000);
 });
