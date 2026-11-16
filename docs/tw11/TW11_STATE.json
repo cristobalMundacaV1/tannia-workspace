@@ -115,8 +115,8 @@
   ],
   "siguiente_gate_habilitado": "G11 (revisión independiente: externo)",
   "pruebas_locales": {
-    "total": 389,
-    "pasan": 372,
+    "total": 394,
+    "pasan": 377,
     "fallan": 0,
     "omitidas": 17
   },
@@ -136,13 +136,17 @@
     {
       "clase": "BLOCKED_EXTERNAL",
       "item": "protocolo de comunicación C1–C15 en Claude Desktop real"
+    },
+    {
+      "clase": "BLOCKED_EXTERNAL",
+      "item": "dialogo del SO y eliciacion en Claude Desktop real; protocolo AutoCAD real (K1–K12)"
     }
   ],
   "paquetes_candidatos": [
     {
-      "zip": "TW11-entrega-aed57ae.zip",
-      "cicoff_sha256": "774d4b454da8339f699f8701a9628bfceeb8389a0950fce1c965a2bbb0a0b762",
-      "cicon_sha256": "88219fa7c3c4849e4bbe2f06407622442e10c01e6cdcc46daee6136c8b9e75f5",
+      "zip": "TW11-entrega-329c8dd.zip",
+      "cicoff_sha256": "268293f27cb3bbbdd7d6ed92516f4d74d9593f67ac47e3a5641ea1ede82d0dfe",
+      "cicon_sha256": "b5e2760ca99a3d0c766f2c7b2a8193edbe852be98fff2c8ac76bd201792503d3",
       "herramientas": {
         "cicoff": 72,
         "cicon": 84
@@ -150,9 +154,10 @@
     }
   ],
   "hardening": {
-    "sha_codigo": "aed57ae52fef3cf68eb3131a37e33b0d48a9b54c",
+    "sha_codigo": "329c8ddd103f9e537dfb9f5f1411849f1eb14e0d",
     "h1_h5": "corregidos_y_probados",
     "comunicacion": "servidor_verificado_conducta_del_modelo_pendiente_en_campo",
-    "ci": "success 43957962608 (aed57ae); success 43958068584 y 43958101455 (2597296)"
+    "ci": "pendiente (329c8dd)",
+    "p1_consentimiento": "corregido_y_probado_adversarialmente"
   }
 }
