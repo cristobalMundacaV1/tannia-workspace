@@ -651,6 +651,7 @@ export class AutoCadCom {
     if (!/\.dwg$/i.test(dwgAbs)) throw new UserError('TIPO_NO_PERMITIDO', 'El modelo 3D se guarda como .dwg.');
     if (!isInside(path.join(root, FOLDERS.trabajo), dwgAbs)) throw new UserError('DESTINO_FUERA_DE_TRABAJO', 'El DWG 3D solo se guarda en "03 Trabajo".');
     if (fs.existsSync(dwgAbs)) throw new UserError('DWG_YA_EXISTE', 'Ya existe un DWG 3D de esa versión; no se sobrescribe.', 'Modifique el modelo (nueva versión) o use otro nombre.');
+    fs.mkdirSync(path.dirname(dwgAbs), { recursive: true }); // AutoCAD no crea carpetas: SaveAs falla si no existe (destino ya validado dentro de 03 Trabajo)
     const esperado = {}; for (const p of primitivas) esperado[p.capa] = (esperado[p.capa] || 0) + 1; esperado.TW3D_NOTAS = 1;
     const r = await this.#exec('construir_3d', { dwg: dwgAbs, primitivas, capas, nota, nota_pos, vista_dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null }, { timeoutMs: 90000 + primitivas.length * 600 });
     let cabecera = null; let bytes = 0;

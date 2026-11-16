@@ -218,7 +218,7 @@ test('AutoCAD (servidor COM simulado): construir DWG 3D nuevo, verificar cada sÃ
   try {
     const M = new Modelos3d(e.sb, e.A); const modelo = { ...recinto(7000, 5000, 200, 2600, { S: [{ id: 'P', tipo: 'puerta', posicion_mm: 1500, ancho_mm: 900, alto_mm: 2100 }], N: [{ id: 'V', tipo: 'ventana', posicion_mm: 3500, ancho_mm: 1800, alto_mm: 1200, antepecho_mm: 900 }] }), cubiertas: [{ id: 'C', nivel: 'N1', tipo: 'dos_aguas', pendiente_pct: 30, eje_cumbrera: 'x' }], losas: [{ id: 'L', nivel: 'N1', espesor_mm: 150, contorno: [[-100, -100], [7100, -100], [7100, 5100], [-100, 5100]] }] };
     const r = M.crear('Obra', { nombre: 'Prueba', modelo }); const rt = M.rutas('Obra', 'Prueba'); const dwgAbs = rt.abs_dwg;
-    const escribe = (f) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, Buffer.concat([Buffer.from('AC1032'), Buffer.alloc(4000, 1)])); };
+    const escribe = (f) => { assert.ok(fs.existsSync(path.dirname(f)), 'la carpeta de destino existe antes de SaveAs (AutoCAD no la crea)'); fs.writeFileSync(f, Buffer.concat([Buffer.from('AC1032'), Buffer.alloc(4000, 1)])); };
     const calls = []; const mk = (o = {}) => new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado([], { activePath: dwgAbs, escribeDwg: escribe, calls, ...o }) });
     const env = r.reg.resumen_geometria.envolvente_mm;
     const args = { dwgRel: rt.dwg, primitivas: r.reg.primitivas, capas: r.reg.capas, nota: r.reg.nota, nota_pos: [env.min[0], env.min[1] - 1500, 0] };
