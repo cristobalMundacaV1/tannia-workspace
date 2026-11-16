@@ -80,6 +80,8 @@ Anota cualquier objeto que se comporte como bloque/proxy, texto con caracteres e
 3. «Lista las entidades con máximo 5000»: la cantidad debe seguir siendo **232**.
 4. Cierra AutoCAD y ábrelo de nuevo, abre `v001.dwg` a mano: mismo contenido.
 
+**6b. Confianza del DWG (nuevo):** **«Verifica el DWG de Casa 80 m2 contra su DXF»** (`tannia_diseno_verificar_dwg`) → `fidelidad: fiel`, 232 entidades, `textos.ok: true`, capas no vacías. Y `tannia_cad_verificar_persistencia` sin handles → `verificada` con `no_verificables_total: 0`. Si sale `no_concluyente`/`con_diferencias`, envía el JSON completo. Detalle en `DWG_CONFIANZA_FIX.md`.
+
 ## 7. Prueba de refinamiento (conservar el resto, verificar, deshacer)
 1. **«Agranda el dormitorio 2 a 3 metros de ancho.»** → **v002**.
    Esperado: Dormitorio 2 **3,00 × 2,68 = 8,04 m²**; Dormitorio 3 pasa a **2,49 × 2,68 = 6,67 m²** (compensa); **«Recintos sin cambios: 6»**; superficie construida sigue en 79,75 m².

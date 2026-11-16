@@ -90,7 +90,8 @@ export function buildEntity(raw, following = []) {
       return { ...base, pts };
     }
     case 'TEXT': case 'MTEXT':
-      return { ...base, text: raw.pairs.filter((p) => p.c === 1 || p.c === 3).map((p) => p.v).join('') };
+      return { ...base, text: raw.pairs.filter((p) => p.c === 1 || p.c === 3).map((p) => p.v).join(''),
+        p: point(raw), altura: firstNum(raw, 40, 0), rot: firstNum(raw, 50, 0), just: firstNum(raw, 72, 0), alin: point(raw, 11, 21, 31) };
     case 'MESH': {
       // Datos SubD: 92 = nº vértices, luego 10/20/30; 93 = tamaño lista de caras, luego 90 (n, idx...)
       const pairs = raw.pairs;

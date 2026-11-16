@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analizarContornoDeLineas, compararLecturas } from '../src/cad/geometry_check.js';
+import { analizarContornoDeLineas } from '../src/cad/geometry_check.js';
+import { compararLecturas } from '../src/cad/fidelidad.js';
 
 const L = (h, a, b) => ({ handle: h, inicio: a, fin: b });
 const rect = (w, h, z = 0) => [L('A', [0, 0, z], [w, 0, z]), L('B', [w, 0, z], [w, h, z]), L('C', [w, h, z], [0, h, z]), L('D', [0, h, z], [0, 0, z])];
@@ -39,9 +40,9 @@ test('cierra pero no es rectángulo (paralelogramo, triángulo) y dimensiones qu
 });
 
 test('comparar lecturas antes/después de reabrir', () => {
-  const a = rect(6000, 4000).map((l) => ({ ...l, tipo: 'AcDbLine', capa: 'TW_PRUEBA', longitud: 1 }));
-  assert.deepEqual(compararLecturas(a, structuredClone(a)), []);
+  const a = rect(6000, 4000).map((l) => ({ ...l, tipo: 'AcDbLine', capa: 'TW_PRUEBA' }));
+  assert.equal(compararLecturas(a, structuredClone(a)).estado, 'verificada');
   const d = structuredClone(a); d[0].capa = 'OTRA'; d[1].fin = [6000, 4001, 0]; d.pop();
-  assert.deepEqual(compararLecturas(a, d).map((x) => x.problema).sort(), ['capa_distinta', 'desaparecio_tras_reabrir', 'fin_distinto']);
-  assert.deepEqual(compararLecturas([{ handle: 'A', error: 'no_encontrada' }], []).map((x) => x.problema), ['no_existia_antes_de_cerrar']);
+  assert.deepEqual(compararLecturas(a, d).diferencias.map((x) => x.problema).sort(), ['capa_distinta', 'desaparecio_tras_reabrir', 'fin_distinto']);
+  assert.deepEqual(compararLecturas([{ handle: 'A', error: 'no_encontrada' }], []).diferencias.map((x) => x.problema), ['no_existia_antes_de_cerrar']);
 });

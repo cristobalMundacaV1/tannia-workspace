@@ -110,6 +110,17 @@ export function registerDiseno(reg, { sandbox, cad }) {
     return ok(r.archivo_dwg.cabecera_dwg_valida ? `DWG de trabajo guardado: ${r.dwg}` : r.verificacion, { version: rutas.version, ...r });
   });
 
+  reg('tannia_diseno_verificar_dwg', {
+    title: 'Verificar que el DWG es fiel al anteproyecto (DXF de origen) y que los textos con ñ/tildes se conservan',
+    description: 'Con el DWG de la versión abierto y activo en AutoCAD (copia en "03 Trabajo", guardado con tannia_diseno_a_autocad): lee TODAS las entidades por lotes y las compara con el DXF de origen (líneas, arcos, polilíneas, textos), clasifica los textos (exactos / secuencia \\U+ sin decodificar / corruptos), comprueba capas y conteos por capa y detecta lecturas incoherentes (p. ej. arcos con longitud 0). Solo lectura.',
+    inputSchema: { proyecto, nombre, version: z.string().optional(), tam_lote: z.number().int().min(10).max(400).optional() }, annotations: RO,
+  }, async ({ proyecto: p, nombre: n, version, tam_lote }) => {
+    const rutas = A.rutas(p, n, version);
+    const r = await cad.verificarDwg(p, { dxfRel: rutas.dxf, dwgRel: rutas.dxf.replace(/\.dxf$/i, '.dwg'), tam_lote });
+    const msg = { fiel: `DWG fiel al anteproyecto ${rutas.version}: geometría, textos y capas coinciden.`, con_diferencias: 'El DWG tiene DIFERENCIAS con el anteproyecto (ver comparacion_geometrica, textos y estructura).', no_concluyente: 'Verificación NO CONCLUYENTE: hay lecturas ilegibles o incoherentes (ver inconsistencias_internas e ilegibles).' }[r.fidelidad];
+    return ok(msg, { version: rutas.version, ...r });
+  });
+
   reg('tannia_diseno_cubicar', {
     title: 'Cantidades derivadas del anteproyecto (geometría construida)', description: 'Calcula pisos, muros (longitud, área, volumen), vanos y conteo de aberturas desde la geometría realmente construida y las guarda como partidas "AP-*" trazables a la versión. La altura de muros la entrega Tannia (no se asume).',
     inputSchema: { proyecto, nombre, version: z.string().optional(), altura_muros_m: z.number().min(2).max(6).describe('Altura de muros confirmada por la usuaria (m)') }, annotations: RW,

@@ -71,10 +71,11 @@ export function registerCad(reg, { cad, detectar = detectarAutoCad }) {
 
   reg('tannia_cad_verificar_persistencia', {
     title: 'Verificar que el DWG guardado conserva las entidades (cierra y reabre la copia)',
-    description: 'Con la COPIA de trabajo activa y ya guardada: lee las entidades, cierra el documento (sin guardar; se exige que no haya cambios pendientes), lo reabre desde disco y vuelve a leer; compara y registra huella/fecha del archivo antes y después. Solo copias de "03 Trabajo"; nunca originales.',
-    inputSchema: { proyecto, archivo: z.string().describe('Ruta relativa de la copia, ej. "03 Trabajo/plano - copia de trabajo.dwg"'), handles: handlesSchema, creado_en: z.string().optional().describe('Marca de tiempo devuelta por tannia_cad_agregar_lineas, para comprobar que el archivo se guardó después'), tolerancia: z.number().positive().optional() }, annotations: RW,
+    description: 'Con la COPIA de trabajo activa y ya guardada: lee las entidades por lotes (cada tipo según sus propiedades reales: LINE, ARC, círculos, polilíneas, textos), cierra el documento sin guardar (se exige que no haya cambios pendientes), lo reabre desde disco, vuelve a leer y compara; registra huella/fecha del archivo antes y después. Sin "handles" verifica todo el espacio modelo (o la capa indicada). Lo que AutoCAD no informa queda "no verificable": no se compara null contra null. Solo copias de "03 Trabajo"; nunca originales.',
+    inputSchema: { proyecto, archivo: z.string().describe('Ruta relativa de la copia, ej. "03 Trabajo/plano - copia de trabajo.dwg"'), handles: handlesSchema.optional().describe('Opcional: solo estas entidades'), capa: capaSchema.optional().describe('Opcional: solo esta capa'), creado_en: z.string().optional().describe('Marca de tiempo devuelta por tannia_cad_agregar_lineas, para comprobar que el archivo se guardó después'), tolerancia: z.number().positive().optional(), tam_lote: z.number().int().min(10).max(400).optional() }, annotations: RW,
   }, async ({ proyecto: p, ...rest }) => {
     const r = await cad.verificarPersistencia(p, rest);
-    return ok(r.persistencia === 'verificada' ? 'Persistencia verificada: las entidades siguen en el DWG tras cerrar y reabrir.' : 'PERSISTENCIA FALLIDA: hay diferencias tras reabrir (ver diferencias).', r);
+    const msg = { verificada: 'Persistencia verificada: las entidades siguen en el DWG tras cerrar y reabrir.', fallida: 'PERSISTENCIA FALLIDA: hay diferencias tras reabrir (ver diferencias).', no_concluyente: 'Persistencia NO CONCLUYENTE: hay propiedades que AutoCAD no informó o lecturas incoherentes (ver no_verificables e inconsistencias_internas).' }[r.persistencia];
+    return ok(msg, r);
   });
 }

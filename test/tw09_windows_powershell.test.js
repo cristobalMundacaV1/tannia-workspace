@@ -34,7 +34,8 @@ $global:TW_ACTIVE = TW-Layer '0'
 $acad = New-Object PSObject -Property @{ Version = '26.0s (simulado)'; Name = 'AutoCAD' }
 $usado = 'AutoCAD.Application.26'
 $layersObj = New-Object PSObject
-Add-Member -InputObject $layersObj -MemberType ScriptMethod -Name Item -Value { param($n) if (-not $global:TW_LAYERS.ContainsKey($n)) { throw 'capa inexistente' }; return (TW-Layer $n) }
+Add-Member -InputObject $layersObj -MemberType ScriptMethod -Name Item -Value { param($n) if ($n -is [int]) { $k = @($global:TW_LAYERS.Keys)[$n]; if ($null -eq $k) { throw 'indice fuera de rango' }; return (TW-Layer $k) }; if (-not $global:TW_LAYERS.ContainsKey($n)) { throw 'capa inexistente' }; return (TW-Layer $n) }
+Add-Member -InputObject $layersObj -MemberType ScriptProperty -Name Count -Value { $global:TW_LAYERS.Count }
 Add-Member -InputObject $layersObj -MemberType ScriptMethod -Name Add -Value { param($n) if ($global:TW_LAYERFAIL) { throw 'sin permiso para crear capa' }; $global:TW_LAYERS[$n] = 1; TW-L ('ADDLAYER ' + $n); return (TW-Layer $n) }
 Add-Member -InputObject $global:TW_MS -MemberType ScriptMethod -Name AddLine -Value {
   param($a, $b)
@@ -61,6 +62,7 @@ Add-Member -InputObject $doc -MemberType ScriptMethod -Name SetVariable -Value {
 Add-Member -InputObject $global:TW_DOCS -MemberType ScriptMethod -Name Open -Value { param($p, $ro) if ($env:TANNIA_TEST_REOPENFAIL -eq '1') { throw 'no se pudo reabrir' }; TW-L 'OPEN'; if ($env:TANNIA_TEST_LOSE -eq '1') { $global:TW_MS.Clear() }; [void]$global:TW_DOCS.Add($global:TW_DOC); $global:TW_DOC.Saved = $true; return $global:TW_DOC }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name Close -Value { param($guardar) TW-L ('CLOSE ' + $guardar); $global:TW_DOCS.Remove($this) }
 if ($env:TANNIA_TEST_RECT) { $rp = $env:TANNIA_TEST_RECT -split ','; $w = [double]$rp[0]; $h = [double]$rp[1]; $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @($w, 0.0, 0.0)); $null = $global:TW_MS.AddLine(@($w, 0.0, 0.0), @($w, $h, 0.0)); $null = $global:TW_MS.AddLine(@($w, $h, 0.0), @(0.0, $h, 0.0)); $null = $global:TW_MS.AddLine(@(0.0, $h, 0.0), @(0.0, 0.0, 0.0)); $global:TW_N = 0; Set-Content -LiteralPath $global:TW_LOG -Value '' }
+if ($env:TANNIA_TEST_ARCS) { foreach ($k in 1..[int]$env:TANNIA_TEST_ARCS) { $global:TW_N++; $r = 800.0 * $k; $arc = New-Object PSObject -Property @{ Handle = ('{0:X}' -f (26 + $global:TW_N)); ObjectName = 'AcDbArc'; Layer = 'TW_PUERTA'; Center = @(0.0, 0.0, 0.0); Radius = $r; StartAngle = 0.0; EndAngle = [math]::PI / 2; ArcLength = $r * [math]::PI / 2; StartPoint = @($r, 0.0, 0.0); EndPoint = @(0.0, $r, 0.0) }; [void]$global:TW_MS.Add($arc) }; $txt = New-Object PSObject -Property @{ Handle = ('{0:X}' -f (27 + [int]$env:TANNIA_TEST_ARCS)); ObjectName = 'AcDbText'; Layer = 'TW_TEXTO'; TextString = 'BA' + [char]0xD1 + 'O'; InsertionPoint = @(1.0, 2.0, 0.0); Height = 170.0; Alignment = 0; TextAlignmentPoint = @(0.0, 0.0, 0.0); Rotation = 0.0 }; [void]$global:TW_MS.Add($txt); $global:TW_N = 0; Set-Content -LiteralPath $global:TW_LOG -Value '' }
 if ($env:TANNIA_TEST_PREPOP) { foreach ($len in ($env:TANNIA_TEST_PREPOP -split ',')) { $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @([double]$len, 0.0, 0.0)) }; $global:TW_N = 0; Set-Content -LiteralPath $global:TW_LOG -Value '' }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name Save -Value { if ($env:TANNIA_TEST_SAVEFAIL -eq '1') { throw 'no se pudo guardar' }; TW-L 'SAVE' }
 `;
@@ -211,13 +213,13 @@ test('PowerShell real: persistencia por cierre y reapertura (Close($false) + Ope
     const f = { archivo: `03 Trabajo/${path.basename(e.work)}`, handles: H(4), creado_en: new Date(Date.now() - 5000).toISOString() };
     const hash0 = fs.readFileSync(e.work).toString('hex');
     const r = await adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000' }).verificarPersistencia(e.P, f);
-    assert.equal(r.persistencia, 'verificada'); assert.equal(r.entidades_verificadas, 4); assert.deepEqual(r.diferencias, []);
+    assert.equal(r.persistencia, 'verificada'); assert.equal(r.entidades_leidas, 4); assert.deepEqual(r.diferencias, []); assert.equal(r.no_verificables_total, 0);
     assert.equal(r.archivo_en_disco.sin_cambios_por_el_cierre_y_reapertura, true); assert.equal(r.guardado_posterior_a_la_creacion, true);
     assert.deepEqual(leer(e.log).filter((x) => /^(CLOSE|OPEN)/.test(x)), ['CLOSE False', 'OPEN'], 'se cierra SIN guardar y se reabre');
     // las entidades se pierden al reabrir => FALLIDA con las 4 diferencias
     fs.writeFileSync(e.log, '');
     const perdida = await adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000', TANNIA_TEST_LOSE: '1' }).verificarPersistencia(e.P, f);
-    assert.equal(perdida.persistencia, 'fallida'); assert.equal(perdida.diferencias.length, 4);
+    assert.equal(perdida.persistencia, 'fallida'); assert.equal(perdida.diferencias_total, 4);
     // cambios sin guardar => no se cierra
     fs.writeFileSync(e.log, '');
     await assert.rejects(() => adaptador(e, e.work, { TANNIA_TEST_RECT: '6000,4000', TANNIA_TEST_DIRTY: '1' }).verificarPersistencia(e.P, f), (x) => x.code === 'CAMBIOS_SIN_GUARDAR');
@@ -233,6 +235,19 @@ test('PowerShell real: persistencia por cierre y reapertura (Close($false) + Ope
   } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
 });
 
+
+test('PowerShell real: causa raíz — arcos SIN Length leen ArcLength (no 0), el texto conserva Ñ y las capas se recorren por índice', opts, async () => {
+  const e = entorno();
+  try {
+    const com = adaptador(e, e.work, { TANNIA_TEST_ARCS: '3' });
+    const l = await com.leerLote(['1B', '1C', '1D', '1E']);
+    const a = l.entidades[0]; assert.equal(a.tipo, 'AcDbArc'); assert.equal(a.longitud, undefined, 'sin Length no se informa longitud (antes: 0)');
+    assert.ok(Math.abs(a.longitud_arco - 800 * Math.PI / 2) < 1e-6); assert.ok(Math.abs(a.angulo_fin - Math.PI / 2) < 1e-9); assert.deepEqual(a.centro, [0, 0, 0]);
+    assert.equal(l.entidades[3].texto, 'BAÑO', 'la Ñ viaja PowerShell→Node sin corromperse');
+    const r = await com.verificarPersistencia(e.P, { archivo: `03 Trabajo/${path.basename(e.work)}` });
+    assert.equal(r.persistencia, 'verificada'); assert.equal(r.cobertura.AcDbArc.verificadas, 3); assert.equal(r.cobertura.AcDbText.verificadas, 1);
+  } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
+});
 
 test('PowerShell real: DXF→DWG en ruta con ó ñ y apóstrofo: INSUNITS=4, SaveAs al DWG nuevo, cabecera verificada en disco', opts, async () => {
   const e = entorno();

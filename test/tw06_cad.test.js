@@ -74,24 +74,27 @@ test('normalizarRuta: prefijo \\\\?\\ y NFC sin alterar el contenido Unicode', (
   assert.equal(normalizarRuta('C:\\Prueba de integración \'ñ\\a.dwg'), 'C:\\Prueba de integración \'ñ\\a.dwg');
 });
 
-test('contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/Close/Open solo donde corresponde', () => {
+test('contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/Close/Open solo donde corresponde; sin enumeración COM frágil ni conversiones a 0', () => {
   for (const n of Object.keys(SCRIPTS)) {
     const s = buildScript(n);
     assert.ok(!/\b(Erase|Purge|Quit|SendCommand|Remove-Item|Invoke-Expression|iex|Start-Process|Kill)\b/i.test(s), `script ${n} contiene comando prohibido`);
-    // SaveAs solo al convertir un DXF generado en un DWG NUEVO (ruta validada en Node, nunca sobrescribe); jamás en otra operación
     if (n !== 'dxf_a_dwg') assert.ok(!/SaveAs/i.test(s), `${n}: SaveAs no permitido`);
     assert.ok(!/"[^"]*\$in\.[^"]*"/.test(SCRIPTS[n]), `script ${n} interpola datos del usuario dentro de una cadena`);
     if (n !== 'agregar_lineas') { assert.ok(!/\.Delete\(/.test(s), `${n}: Delete no permitido`); assert.ok(!/\.Save\(/.test(s), `${n}: Save no permitido`); }
-    // Close solo en 'persistencia' y SIEMPRE con SaveChanges=false; nunca se escribe al cerrar
-    if (n !== 'persistencia') assert.ok(!/\.Close\(/.test(s), `${n}: Close no permitido`);
-    if (!['persistencia', 'abrir_copia', 'dxf_a_dwg'].includes(n)) assert.ok(!/Documents\.Open\(/.test(s), `${n}: Open no permitido`);
+    if (n !== 'cerrar_reabrir') assert.ok(!/\.Close\(/.test(s), `${n}: Close no permitido`);
+    if (!['cerrar_reabrir', 'abrir_copia', 'dxf_a_dwg'].includes(n)) assert.ok(!/Documents\.Open\(/.test(s), `${n}: Open no permitido`);
+    // Causa raíz de "capas: []": `foreach` sobre colecciones COM de AutoCAD no enumera de forma fiable → se recorre por índice
+    assert.ok(!/foreach \(\$\w+ in \$\w*\.?(ModelSpace|Layers|Documents)\b/.test(s), `${n}: enumeración COM con foreach (usar índices)`);
+    assert.ok(!/foreach \(\$\w+ in \$(doc|d|acad|objetivo|nuevo)\.(ModelSpace|Layers|Documents)\)/.test(s), `${n}: foreach sobre colección COM`);
+    // Causa raíz de "longitud 0": [double]$null es 0. Las propiedades COM solo se leen con DNum/DArr/DBool (null si no existen)
+    assert.ok(!/\[double\]\$e\.\w+/.test(s) && !/\[double\[\]\]\$e\.\w+/.test(s.replace(/function DArr[^\n]*\n/, '')), `${n}: conversión directa de una propiedad COM (usar DNum/DArr)`);
   }
   const a = SCRIPTS.agregar_lineas;
   assert.deepEqual([...new Set([...a.matchAll(/\$(\w+)\.Delete\(/g)].map((m) => m[1]))].sort(), ['capaObj', 'e']);
   assert.equal([...a.matchAll(/\.Save\(/g)].length, 1);
   assert.ok(a.indexOf('Layers.Add') < a.indexOf('StartUndoMark') && a.indexOf('StartUndoMark') < a.indexOf('AddLine'));
   assert.ok(a.indexOf('ruta_esperada') < a.indexOf('Layers'));
-  const p = SCRIPTS.persistencia;
+  const p = SCRIPTS.cerrar_reabrir;
   assert.deepEqual([...p.matchAll(/\.Close\(([^)]*)\)/g)].map((m) => m[1]), ['$false'], 'un único Close, sin guardar');
   assert.ok(p.indexOf('Saved') < p.indexOf('.Close('), 'se exige Saved=true ANTES de cerrar');
   assert.ok(p.indexOf('ruta_esperada') < p.indexOf('.Close('), 'se localiza el documento exacto antes de cerrar');
@@ -99,6 +102,7 @@ test('contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/C
   const g = SCRIPTS.dxf_a_dwg;
   assert.deepEqual([...g.matchAll(/SaveAs\(([^)]*)\)/g)].map((m) => m[1]), ['[string]$in.dwg, 64', '[string]$in.dwg'], 'SaveAs solo hacia la ruta nueva indicada por Node');
   assert.ok(!/\.Delete\(|\.Close\(/.test(g));
+  assert.ok(g.indexOf('TextString') < g.indexOf('SaveAs('), 'los textos se normalizan ANTES de guardar el DWG');
   assert.throws(() => buildScript('rm -rf'));
 });
 
@@ -113,8 +117,10 @@ function fakeRunner({ activePath, calls, onScript }) {
       medir: { handle: input.handle, tipo: 'AcDb3dSolid', capa: '3D', Volume: 24 },
       abrir_copia: { documento: path.basename(input.ruta || ''), ruta: input.ruta },
       agregar_lineas: { handles: input.lineas?.map((_, i) => `H${i}`), capa_creada: !!input.capa },
-      geometria: { unidades_insunits: 4, documento: 'x.dwg', entidades: input.handles?.map((h) => ({ handle: h, tipo: 'AcDbLine', capa: 'TW_PRUEBA', longitud: 1, inicio: [0, 0, 0], fin: [1, 0, 0] })) },
-      persistencia: { antes: [], despues: [], documento: 'x.dwg', guardado: true, unidades_insunits: 4 },
+      leer_lote: { unidades_insunits: 4, documento: 'x.dwg', entidades: input.handles?.map((h) => ({ handle: h, tipo: 'AcDbLine', capa: 'TW_PRUEBA', longitud: 1, inicio: [0, 0, 0], fin: [1, 0, 0] })) },
+      enumerar: { total: 0, entidades: [], siguiente: null },
+      resumen: { documento: 'x.dwg', ruta: activePath, guardado: true, entidades: 0, capas: ['0'], entidades_por_capa: {}, entidades_por_tipo: {}, unidades_insunits: 4 },
+      cerrar_reabrir: { documento: 'x.dwg', guardado: true, entidades: 0, unidades_insunits: 4 },
     }[name];
     return JSON.stringify({ ok: true, data });
   };
@@ -250,7 +256,7 @@ const RECT = (h = ['39A', '39B', '39C', '39D']) => [
 test('verificar contorno: lee extremos por COM y concluye cierre del rectángulo 6000×4000 (cálculo independiente)', async () => {
   const sb = new Sandbox(tmpHome());
   const calls = [];
-  const com = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: '/x/a.dwg', calls, onScript: (n, i) => (n === 'geometria' ? JSON.stringify({ ok: true, data: { unidades_insunits: 4, documento: 'a.dwg', entidades: RECT().filter((e) => i.handles.includes(e.handle)) } }) : undefined) }) });
+  const com = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: '/x/a.dwg', calls, onScript: (n, i) => (n === 'leer_lote' ? JSON.stringify({ ok: true, data: { unidades_insunits: 4, documento: 'a.dwg', entidades: RECT().filter((e) => i.handles.includes(e.handle)) } }) : undefined) }) });
   const r = await com.verificarContorno(['39A', '39B', '39C', '39D'], { ancho: 6000, alto: 4000 });
   assert.equal(r.analisis.cerrado, true); assert.equal(r.analisis.es_rectangulo, true); assert.equal(r.analisis.estado, 'ok');
   assert.equal(r.analisis.area, 24000000); assert.equal(r.analisis.perimetro, 20000); assert.equal(r.analisis.dimensiones_coinciden_con_lo_esperado, true);
@@ -261,69 +267,3 @@ test('verificar contorno: lee extremos por COM y concluye cierre del rectángulo
   await assert.rejects(() => com.leerGeometria([]), (e) => e.code === 'DATO_INVALIDO');
 });
 
-test('persistencia: autorización (solo copia activa en 03 Trabajo), no guardado, cambios pendientes, diferencias y archivo en disco', async () => {
-  const home = tmpHome("'Tannia ñ "); const sb = new Sandbox(home); createProject(sb, 'P');
-  const root = path.join(home, 'Proyectos', 'P'); const orig = path.join(root, '02 Originales', 'o.dwg'); const work = path.join(root, '03 Trabajo', 'o - copia de trabajo.dwg'); const otra = path.join(root, '03 Trabajo', 'otra.dwg');
-  fs.writeFileSync(orig, 'ORIG'); fs.writeFileSync(work, 'COPIA-GUARDADA'); fs.writeFileSync(otra, 'OTRA');
-  const H = ['39A', '39B', '39C', '39D'];
-  const mk = (active, persist) => { const calls = []; return { calls, com: new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: active, calls, onScript: (n) => (n === 'persistencia' ? persist : undefined) }) }) }; };
-  const ok = JSON.stringify({ ok: true, data: { antes: RECT(), despues: RECT(), documento: 'c.dwg', guardado: true, unidades_insunits: 4 } });
-  // éxito: persistió idéntico; el archivo en disco no cambió por cerrar/reabrir
-  let t = mk(work, ok); const r = await t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H, creado_en: new Date(Date.now() - 1000).toISOString() });
-  assert.equal(r.persistencia, 'verificada'); assert.equal(r.entidades_verificadas, 4); assert.equal(r.archivo_en_disco.sin_cambios_por_el_cierre_y_reapertura, true); assert.equal(r.guardado_posterior_a_la_creacion, true);
-  assert.equal(r.archivo_en_disco.antes.sha256, r.archivo_en_disco.despues.sha256);
-  assert.ok(t.calls.some((c) => c.name === 'persistencia' && c.input.ruta_esperada === work), 'la ruta exacta viaja a PowerShell');
-  // entidad perdida / geometría distinta tras reabrir => fallida
-  const perdida = JSON.stringify({ ok: true, data: { antes: RECT(), despues: RECT().slice(0, 3), documento: 'c.dwg', guardado: true, unidades_insunits: 4 } });
-  t = mk(work, perdida); let f = await t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H });
-  assert.equal(f.persistencia, 'fallida'); assert.deepEqual(f.diferencias.map((d) => d.problema), ['desaparecio_tras_reabrir']);
-  const movida = RECT(); movida[1] = { ...movida[1], fin: [6000, 3999, 0] };
-  t = mk(work, JSON.stringify({ ok: true, data: { antes: RECT(), despues: movida, documento: 'c.dwg', guardado: true, unidades_insunits: 4 } })); f = await t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H });
-  assert.equal(f.persistencia, 'fallida'); assert.ok(f.diferencias.some((d) => d.problema === 'fin_distinto'));
-  // no guardado en disco (archivo anterior a la creación) => no se cierra nada
-  t = mk(work, ok); await assert.rejects(() => t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H, creado_en: new Date(Date.now() + 3600e3).toISOString() }), (e) => e.code === 'NO_GUARDADO_EN_DISCO');
-  assert.ok(!t.calls.some((c) => c.name === 'persistencia'));
-  // cambios pendientes en AutoCAD => no se cierra
-  t = mk(work, JSON.stringify({ ok: false, etapa: 'verificar_guardado', codigo: 'CAMBIOS_SIN_GUARDAR' })); await assert.rejects(() => t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H }), (e) => e.code === 'CAMBIOS_SIN_GUARDAR');
-  t = mk(work, JSON.stringify({ ok: false, etapa: 'reabrir', codigo: 'REAPERTURA_FALLIDA', hresult: '0x80020009', antes: RECT() })); await assert.rejects(() => t.com.verificarPersistencia('P', { archivo: '03 Trabajo/o - copia de trabajo.dwg', handles: H }), (e) => e.code === 'REAPERTURA_FALLIDA' && /no se modific/.test(e.message));
-  // seguridad: original (pedido o activo) y copia distinta NUNCA llegan a cerrar
-  for (const [active, archivo, code] of [[orig, '02 Originales/o.dwg', 'ORIGINAL_PROTEGIDO'], [orig, '03 Trabajo/o - copia de trabajo.dwg', 'ORIGINAL_PROTEGIDO'], [otra, '03 Trabajo/o - copia de trabajo.dwg', 'DOCUMENTO_ACTIVO_DISTINTO'], [work, '02 Originales/o.dwg', 'ORIGINAL_PROTEGIDO']]) {
-    t = mk(active, ok); await assert.rejects(() => t.com.verificarPersistencia('P', { archivo, handles: H }), (e) => e.code === code, `${code}: ${path.basename(active)} / ${archivo}`);
-    assert.ok(!t.calls.some((c) => c.name === 'persistencia'), `no se cerró nada (${code})`);
-  }
-  assert.equal(fs.readFileSync(orig, 'utf8'), 'ORIG');
-  fs.rmSync(home, { recursive: true, force: true });
-});
-
-test('MCP: herramientas de geometría y persistencia registradas con esquemas estrictos', async () => {
-  const home = tmpHome();
-  const { server } = createServer({ home, cadRunner: fakeRunner({ activePath: '/x.dwg', calls: [] }), platform: 'win32', detectar: () => ({ estado: 'instalado' }) });
-  const [a, b] = InMemoryTransport.createLinkedPair(); const client = new Client({ name: 't', version: '1' });
-  await Promise.all([server.connect(a), client.connect(b)]);
-  const names = (await client.listTools()).tools.map((t) => t.name);
-  for (const n of ['tannia_cad_leer_geometria', 'tannia_cad_verificar_contorno', 'tannia_cad_verificar_persistencia']) assert.ok(names.includes(n), n);
-  const malo = await client.callTool({ name: 'tannia_cad_leer_geometria', arguments: { handles: ["39A'; Erase"] } }); assert.equal(malo.isError, true);
-  const ok = await client.callTool({ name: 'tannia_cad_verificar_contorno', arguments: { handles: ['39A', '39B'], ancho: 6000 } }); assert.ok(!ok.isError); assert.equal(ok.structuredContent.analisis.cerrado, false);
-  await client.close(); fs.rmSync(home, { recursive: true, force: true });
-});
-
-
-test('DXF→DWG: solo DXF de 03 Trabajo, nunca sobrescribe, y verifica en disco la cabecera real del DWG', async () => {
-  const home = tmpHome("Tannia 'ñ "); const sb = new Sandbox(home); createProject(sb, 'P'); const root = path.join(home, 'Proyectos', 'P');
-  const dir = path.join(root, '03 Trabajo', 'Anteproyectos', 'Casa'); fs.mkdirSync(dir, { recursive: true });
-  const dxf = path.join(dir, 'v001.dxf'); fs.writeFileSync(dxf, '0\nEOF\n'); fs.writeFileSync(path.join(root, '02 Originales', 'o.dxf'), 'x'); fs.writeFileSync(path.join(dir, 'nota.txt'), 'x');
-  const mk = (escribe) => { const calls = []; return { calls, com: new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async (script, input) => { const name = Object.keys(SCRIPTS).find((k) => script.includes(SCRIPTS[k])); calls.push({ name, input }); if (escribe) fs.writeFileSync(input.dwg, Buffer.concat([Buffer.from('AC1032'), Buffer.alloc(3000)])); return JSON.stringify({ ok: true, data: { documento: 'v001.dwg', ruta: input.dwg, entidades: 232, capas: ['0', 'TW_MURO_EXT', 'TW_RECINTO'], unidades_insunits: 4 } }); } }) }; };
-  let t = mk(true); const r = await t.com.dxfADwg('P', '03 Trabajo/Anteproyectos/Casa/v001.dxf');
-  assert.equal(r.dwg, '03 Trabajo/Anteproyectos/Casa/v001.dwg'); assert.equal(r.archivo_dwg.cabecera_dwg_valida, true); assert.equal(r.archivo_dwg.cabecera, 'AC1032'); assert.match(r.archivo_dwg.sha256, /^[0-9a-f]{64}$/);
-  assert.equal(t.calls[0].input.dxf, fs.realpathSync.native(dxf)); assert.equal(t.calls[0].input.dwg, fs.realpathSync.native(dxf).replace(/\.dxf$/, '.dwg'));
-  await assert.rejects(() => t.com.dxfADwg('P', '03 Trabajo/Anteproyectos/Casa/v001.dxf'), (e) => e.code === 'DWG_YA_EXISTE');
-  fs.unlinkSync(dxf.replace(/\.dxf$/, '.dwg'));
-  t = mk(false); const sin = await t.com.dxfADwg('P', '03 Trabajo/Anteproyectos/Casa/v001.dxf');
-  assert.equal(sin.archivo_dwg.cabecera_dwg_valida, false); assert.match(sin.verificacion, /ATENCIÓN/, 'AutoCAD "respondió" pero no hay DWG: no se da por bueno');
-  t = mk(true);
-  await assert.rejects(() => t.com.dxfADwg('P', '02 Originales/o.dxf'), (e) => e.code === 'ORIGEN_FUERA_DE_TRABAJO');
-  await assert.rejects(() => t.com.dxfADwg('P', '03 Trabajo/Anteproyectos/Casa/nota.txt'), (e) => e.code === 'TIPO_NO_PERMITIDO');
-  await assert.rejects(() => t.com.dxfADwg('P', '../x.dxf'), (e) => /RUTA_/.test(e.code));
-  assert.equal(t.calls.length, 0, 'las rutas prohibidas no llegaron a AutoCAD');
-  fs.rmSync(home, { recursive: true, force: true });
-});

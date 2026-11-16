@@ -13,7 +13,10 @@ import fs from 'node:fs';
 import { UserError } from '../mcp/util.js';
 import { FOLDERS, isInside } from '../security/sandbox.js';
 import { sanitizar } from './sanitize.js';
-import { analizarContornoDeLineas, compararLecturas } from './geometry_check.js';
+import { analizarContornoDeLineas } from './geometry_check.js';
+import { compararLecturas, coherenciaInterna, firmasDesdeDxf, firmasDesdeCom, compararFidelidad, clasificarTextos } from './fidelidad.js';
+import { parseDxf } from '../dxf/reader.js';
+import { dxfDecode } from '../design/salidas.js';
 import { sha256File } from '../security/sandbox.js';
 
 const PS_PRELUDE = `$ErrorActionPreference = 'Stop'
@@ -28,6 +31,26 @@ function HR($ex) { try { return ('0x{0:X8}' -f [int]$ex.HResult) } catch { retur
 function Fail($etapa, $err) {
   $ex = Inner $err.Exception
   Emit @{ ok = $false; etapa = $etapa; hresult = (HR $ex); tipo = $ex.GetType().Name; msg = [string]$ex.Message }
+}
+function DNum($v) { if ($null -eq $v) { return $null }; try { return [double]$v } catch { return $null } }
+function DArr($v) { if ($null -eq $v) { return $null }; try { return @([double[]]$v) } catch { return $null } }
+function DBool($v) { if ($null -eq $v) { return $null }; try { return [bool]$v } catch { return $null } }
+# Lectura TIPADA: solo propiedades que EXISTEN para ese tipo de entidad. Una propiedad inexistente queda $null (nunca 0):
+# [double]$null es 0 en PowerShell, y esa conversión daba "longitud 0" en arcos, textos y polilíneas.
+function LeerEnt($e, $h) {
+  $tipo = [string]$e.ObjectName
+  $o = @{ handle = [string]$h; tipo = $tipo; capa = [string]$e.Layer }
+  switch ($tipo) {
+    'AcDbLine' { $o.inicio = DArr $e.StartPoint; $o.fin = DArr $e.EndPoint; $o.longitud = DNum $e.Length }
+    'AcDbArc' { $o.centro = DArr $e.Center; $o.radio = DNum $e.Radius; $o.angulo_inicio = DNum $e.StartAngle; $o.angulo_fin = DNum $e.EndAngle; $o.longitud_arco = DNum $e.ArcLength; $o.inicio = DArr $e.StartPoint; $o.fin = DArr $e.EndPoint }
+    'AcDbCircle' { $o.centro = DArr $e.Center; $o.radio = DNum $e.Radius; $o.area = DNum $e.Area }
+    'AcDbPolyline' { $o.coordenadas = DArr $e.Coordinates; $o.cerrada = DBool $e.Closed; $o.longitud = DNum $e.Length; $o.area = DNum $e.Area }
+    'AcDb2dPolyline' { $o.coordenadas = DArr $e.Coordinates; $o.cerrada = DBool $e.Closed; $o.longitud = DNum $e.Length; $o.area = DNum $e.Area }
+    'AcDbText' { $o.texto = [string]$e.TextString; $o.posicion = DArr $e.InsertionPoint; $o.alineacion = DNum $e.Alignment; $o.punto_alineacion = DArr $e.TextAlignmentPoint; $o.altura = DNum $e.Height; $o.rotacion = DNum $e.Rotation }
+    'AcDbMText' { $o.texto = [string]$e.TextString; $o.posicion = DArr $e.InsertionPoint; $o.altura = DNum $e.Height; $o.rotacion = DNum $e.Rotation }
+    default { $o.sin_propiedades_conocidas = $true }
+  }
+  return $o
 }
 $in = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($env:TANNIA_IN)) | ConvertFrom-Json
 `;
@@ -50,68 +73,77 @@ if ($null -eq $doc) { Emit @{ ok = $false; etapa = 'documento_activo'; codigo = 
 export const SCRIPTS = {
   estado: `$ruta = [string]$doc.FullName
 Emit @{ ok = $true; data = @{ version = [string]$acad.Version; nombre = [string]$acad.Name; progid = $usado; documento = [string]$doc.Name; ruta = $ruta; guardado = [bool]$doc.Saved; unidades_insunits = $doc.GetVariable('INSUNITS') } }`,
-  listar: `$items = @(); $n = 0; $trunc = $false
-foreach ($e in $doc.ModelSpace) {
+  listar: `$total = [int]$doc.ModelSpace.Count; $items = @(); $n = 0; $trunc = $false
+for ($i = 0; $i -lt $total; $i++) {
+  $e = $doc.ModelSpace.Item($i)
+  if ($in.capa -and ([string]$e.Layer -ne [string]$in.capa)) { continue }
   if ($n -ge $in.maximo) { $trunc = $true; break }
-  if ($in.capa -and ($e.Layer -ne $in.capa)) { continue }
   $it = @{ handle = [string]$e.Handle; tipo = [string]$e.ObjectName; capa = [string]$e.Layer }
-  if ($in.medidas) { try { $it.longitud = [double]$e.Length } catch { } }
+  if ($in.medidas) { $r = LeerEnt $e $e.Handle; foreach ($k in 'longitud', 'longitud_arco', 'area', 'radio') { if ($null -ne $r[$k]) { $it[$k] = $r[$k] } } }
   $items += $it; $n++
 }
-Emit @{ ok = $true; data = @{ entidades = $items; truncado = $trunc } }`,
+Emit @{ ok = $true; data = @{ entidades = $items; truncado = $trunc; total_en_dibujo = $total } }`,
   medir: `$e = $doc.HandleToObject([string]$in.handle)
-$o = @{ handle = [string]$in.handle; tipo = [string]$e.ObjectName; capa = [string]$e.Layer }
-foreach ($p in 'Length', 'Area', 'Radius', 'TotalAngle') { try { $o[$p] = $e.$p } catch { } }
-try { $o['StartPoint'] = @([double[]]$e.StartPoint) } catch { }
-try { $o['EndPoint'] = @([double[]]$e.EndPoint) } catch { }
-if ($e.ObjectName -eq 'AcDb3dSolid' -or $e.ObjectName -eq 'AcDbRegion') { try { $o['Volume'] = $e.Volume } catch { }; try { $o['Centroid'] = @($e.Centroid) } catch { } }
+$o = LeerEnt $e $in.handle
+# claves históricas (rc.2 las informó con evidencia real): solo si existen, nunca 0 por ausencia
+if ($null -ne $o['longitud']) { $o['Length'] = $o['longitud'] }
+if ($null -ne $o['inicio']) { $o['StartPoint'] = $o['inicio'] }
+if ($null -ne $o['fin']) { $o['EndPoint'] = $o['fin'] }
+if ($null -ne $o['area']) { $o['Area'] = $o['area'] }
+if ($null -ne $o['radio']) { $o['Radius'] = $o['radio'] }
+$tt = DNum $e.TotalAngle; if ($null -ne $tt) { $o['TotalAngle'] = $tt }
+if ($e.ObjectName -eq 'AcDb3dSolid' -or $e.ObjectName -eq 'AcDbRegion') { $vv = DNum $e.Volume; if ($null -ne $vv) { $o['Volume'] = $vv }; $o['Centroid'] = DArr $e.Centroid; $aa = DNum $e.Area; if ($null -ne $aa) { $o['Area'] = $aa } }
 Emit @{ ok = $true; data = $o }`,
   abrir_copia: `$d = $acad.Documents.Open([string]$in.ruta, $false)
 Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName } }`,
-  geometria: `$leer = {
-  param($d, $handles)
-  foreach ($h in $handles) {
-    try {
-      $e = $d.HandleToObject([string]$h)
-      $o = @{ handle = [string]$h; tipo = [string]$e.ObjectName; capa = [string]$e.Layer }
-      try { $o.longitud = [double]$e.Length } catch { }
-      try { $o.inicio = @([double[]]$e.StartPoint) } catch { }
-      try { $o.fin = @([double[]]$e.EndPoint) } catch { }
-      $o
-    } catch { @{ handle = [string]$h; error = 'no_encontrada' } }
-  }
+  leer_lote: `$res = @()
+foreach ($h in $in.handles) {
+  try { $e = $doc.HandleToObject([string]$h); $res += (LeerEnt $e $h) }
+  catch { $res += @{ handle = [string]$h; error = 'no_encontrada' } }
 }
-$lineas = @(& $leer $doc $in.handles)
-Emit @{ ok = $true; data = @{ entidades = $lineas; unidades_insunits = $doc.GetVariable('INSUNITS'); documento = [string]$doc.Name } }`,
-  persistencia: `$objetivo = $null
-foreach ($d in $acad.Documents) { if ($d.FullName -eq $in.ruta_esperada) { $objetivo = $d; break } }
+Emit @{ ok = $true; data = @{ entidades = $res; unidades_insunits = $doc.GetVariable('INSUNITS'); documento = [string]$doc.Name } }`,
+  enumerar: `$total = [int]$doc.ModelSpace.Count; $ini = [int]$in.offset; $lim = [int]$in.limite; $items = @(); $i = $ini
+while ($i -lt $total -and $items.Count -lt $lim) {
+  $e = $doc.ModelSpace.Item($i); $i++
+  if ($in.capa -and ([string]$e.Layer -ne [string]$in.capa)) { continue }
+  $items += @{ handle = [string]$e.Handle; tipo = [string]$e.ObjectName; capa = [string]$e.Layer }
+}
+$sig = $null; if ($i -lt $total) { $sig = $i }
+Emit @{ ok = $true; data = @{ total = $total; entidades = $items; siguiente = $sig } }`,
+  resumen: `$nCap = [int]$doc.Layers.Count; $capas = @(); for ($i = 0; $i -lt $nCap; $i++) { $capas += [string]$doc.Layers.Item($i).Name }
+$total = [int]$doc.ModelSpace.Count; $porCapa = @{}; $porTipo = @{}
+for ($i = 0; $i -lt $total; $i++) {
+  $e = $doc.ModelSpace.Item($i); $c = [string]$e.Layer; $t = [string]$e.ObjectName
+  if ($porCapa.ContainsKey($c)) { $porCapa[$c] = $porCapa[$c] + 1 } else { $porCapa[$c] = 1 }
+  if ($porTipo.ContainsKey($t)) { $porTipo[$t] = $porTipo[$t] + 1 } else { $porTipo[$t] = 1 }
+}
+Emit @{ ok = $true; data = @{ documento = [string]$doc.Name; ruta = [string]$doc.FullName; guardado = [bool]$doc.Saved; entidades = $total; capas = $capas; entidades_por_capa = $porCapa; entidades_por_tipo = $porTipo; unidades_insunits = $doc.GetVariable('INSUNITS') } }`,
+  cerrar_reabrir: `$objetivo = $null
+$nd = [int]$acad.Documents.Count
+for ($i = 0; $i -lt $nd; $i++) { $d = $acad.Documents.Item($i); if ($d.FullName -eq $in.ruta_esperada) { $objetivo = $d; break } }
 if ($null -eq $objetivo) { Emit @{ ok = $false; etapa = 'localizar'; codigo = 'DOCUMENTO_NO_ABIERTO' }; exit 0 }
 if (-not $objetivo.Saved) { Emit @{ ok = $false; etapa = 'verificar_guardado'; codigo = 'CAMBIOS_SIN_GUARDAR' }; exit 0 }
-$leer = {
-  param($d, $handles)
-  foreach ($h in $handles) {
-    try {
-      $e = $d.HandleToObject([string]$h)
-      $o = @{ handle = [string]$h; tipo = [string]$e.ObjectName; capa = [string]$e.Layer }
-      try { $o.longitud = [double]$e.Length } catch { }
-      try { $o.inicio = @([double[]]$e.StartPoint) } catch { }
-      try { $o.fin = @([double[]]$e.EndPoint) } catch { }
-      $o
-    } catch { @{ handle = [string]$h; error = 'no_encontrada' } }
-  }
-}
-$antes = @(& $leer $objetivo $in.handles)
 $ruta = [string]$objetivo.FullName
 try { $objetivo.Close($false) } catch { Fail 'cerrar' $_; exit 0 }
 Start-Sleep -Milliseconds 400
-try { $nuevo = $acad.Documents.Open($ruta, $false) } catch { $ex = Inner $_.Exception; Emit @{ ok = $false; etapa = 'reabrir'; codigo = 'REAPERTURA_FALLIDA'; hresult = (HR $ex); antes = $antes }; exit 0 }
-$despues = @(& $leer $nuevo $in.handles)
-Emit @{ ok = $true; data = @{ antes = $antes; despues = $despues; documento = [string]$nuevo.Name; guardado = [bool]$nuevo.Saved; unidades_insunits = $nuevo.GetVariable('INSUNITS') } }`,
+try { $nuevo = $acad.Documents.Open($ruta, $false) } catch { $ex = Inner $_.Exception; Emit @{ ok = $false; etapa = 'reabrir'; codigo = 'REAPERTURA_FALLIDA'; hresult = (HR $ex) }; exit 0 }
+Emit @{ ok = $true; data = @{ documento = [string]$nuevo.Name; guardado = [bool]$nuevo.Saved; entidades = [int]$nuevo.ModelSpace.Count; unidades_insunits = $nuevo.GetVariable('INSUNITS') } }`,
   dxf_a_dwg: `$d = $acad.Documents.Open([string]$in.dxf, $false)
 try { $d.SetVariable('INSUNITS', 4) } catch { }
+# Normaliza textos: si AutoCAD dejó secuencias \\U+XXXX sin decodificar, se sustituyen por el carácter real (ñ, Ñ, tildes)
+$norm = 0; $nm = [int]$d.ModelSpace.Count
+for ($i = 0; $i -lt $nm; $i++) {
+  $e = $d.ModelSpace.Item($i); $tt = [string]$e.ObjectName
+  if ($tt -eq 'AcDbText' -or $tt -eq 'AcDbMText') {
+    $s = [string]$e.TextString
+    if ($s -match '\\\\U\\+[0-9A-Fa-f]{4}') { $e.TextString = [regex]::Replace($s, '\\\\U\\+([0-9A-Fa-f]{4})', { param($m) [string][char][Convert]::ToInt32($m.Groups[1].Value, 16) }); $norm++ }
+  }
+}
 try { $d.SaveAs([string]$in.dwg, 64) } catch { $d.SaveAs([string]$in.dwg) }
-$capas = @(); foreach ($l in $d.Layers) { $capas += [string]$l.Name }
-Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; entidades = [int]$d.ModelSpace.Count; capas = $capas; unidades_insunits = $d.GetVariable('INSUNITS') } }`,
+$nCap = [int]$d.Layers.Count; $capas = @(); for ($i = 0; $i -lt $nCap; $i++) { $capas += [string]$d.Layers.Item($i).Name }
+$total = [int]$d.ModelSpace.Count; $porCapa = @{}
+for ($i = 0; $i -lt $total; $i++) { $c = [string]$d.ModelSpace.Item($i).Layer; if ($porCapa.ContainsKey($c)) { $porCapa[$c] = $porCapa[$c] + 1 } else { $porCapa[$c] = 1 } }
+Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; entidades = $total; capas = $capas; entidades_por_capa = $porCapa; textos_normalizados = $norm; unidades_insunits = $d.GetVariable('INSUNITS') } }`,
   agregar_lineas: `if ($doc.FullName -ne $in.ruta_esperada) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
 $capaObj = $null; $creada = $false
 if ($in.capa) {
@@ -189,6 +221,21 @@ const BUSY = new Set(['0x80010001', '0x8001010A']);   // llamada rechazada / rei
 const GONE = new Set(['0x800706BA', '0x800706BE', '0x80010108', '0x800706BF']); // RPC no disponible / falló / servidor muerto
 const ACCESO = '0x80070005';
 
+const MAX_ENTIDADES = 20000;
+
+/** Entidades del DXF por capa (el reader entrega 1 por POLYLINE, igual que ModelSpace.Count en AutoCAD). */
+export function conteoPorCapa(dxf) { const c = {}; for (const e of dxf.entities) c[e.layer] = (c[e.layer] || 0) + 1; return c; }
+
+/** Capas y conteos esperados (DXF) frente a lo informado por AutoCAD. Una lista de capas vacía se considera NO informada. */
+export function verificarEstructura(esperado, r) {
+  const informadas = r.entidades_por_capa || {}; const capas = r.capas || [];
+  const faltantes = Object.keys(esperado).filter((c) => !capas.includes(c));
+  const dif = [];
+  for (const c of new Set([...Object.keys(esperado), ...Object.keys(informadas)])) { if (c === '0') continue; if ((esperado[c] || 0) !== (informadas[c] || 0)) dif.push({ capa: c, esperadas: esperado[c] || 0, informadas: informadas[c] || 0 }); }
+  const totalE = Object.values(esperado).reduce((a, b) => a + b, 0); const totalI = r.entidades ?? Object.values(informadas).reduce((a, b) => a + b, 0);
+  return { ok: capas.length > 0 && !faltantes.length && !dif.length && totalE === totalI, capas_informadas: capas, capas_no_informadas: capas.length === 0, capas_faltantes: faltantes, diferencias_conteo: dif, total_esperado: totalE, total_informado: totalI };
+}
+
 const sleepReal = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Normaliza una ruta de Windows devuelta por AutoCAD (prefijo \\?\, barras) sin cambiar su contenido. */
@@ -202,15 +249,15 @@ export function normalizarRuta(p) {
 export class AutoCadCom {
   constructor({ sandbox, runner, platform = process.platform, connect, sleep = sleepReal } = {}) {
     this.sandbox = sandbox; this.platform = platform; this.connect = connect; this.sleep = sleep;
-    this.runner = runner || ((script, input) => runPowerShell(script, input));
+    this.runner = runner || ((script, input, opts) => runPowerShell(script, input, opts));
   }
 
-  async #exec(name, input = {}) {
+  async #exec(name, input = {}, opts = {}) {
     if (this.platform !== 'win32') throw new UserError('AUTOCAD_NO_DISPONIBLE', 'La conexión con AutoCAD solo existe en Windows con AutoCAD completo.', 'Use la exportación DXF para medir sin AutoCAD.');
     const script = buildScript(name, this.connect ? { connect: this.connect } : undefined);
     for (let intento = 0; ; intento++) {
       let out;
-      try { out = await this.runner(script, input); }
+      try { out = await this.runner(script, input, opts); }
       catch (e) { throw this.#errorProceso(e); }
       let r; try { r = JSON.parse(String(out).trim()); } catch { throw new UserError('AUTOCAD_RESPUESTA_INVALIDA', 'AutoCAD respondió de forma inesperada.', 'Reintente; si persiste, ejecute el diagnóstico.', { etapa: 'interpretar_respuesta' }); }
       if (r.ok) return r.data;
@@ -334,10 +381,39 @@ export class AutoCadCom {
     return { ...r, handles, cantidad: handles.length, creado_en: new Date().toISOString() };
   }
 
-  /** Lee StartPoint/EndPoint/Length/capa de las entidades indicadas (solo lectura). */
+  /**
+   * Lectura TIPADA por lotes (evita timeouts con muchas entidades): cada lote es una llamada COM independiente con su propio
+   * tiempo límite proporcional. Devuelve solo propiedades que existen para cada tipo (nunca 0 por ausencia).
+   */
+  async leerLote(handles, { tam = 150 } = {}) {
+    if (!Array.isArray(handles) || !handles.every((h) => HANDLE.test(String(h)))) throw new UserError('DATO_INVALIDO', 'Handles no válidos (hexadecimales).');
+    if (handles.length > MAX_ENTIDADES) throw new UserError('DEMASIADAS_ENTIDADES', `Máximo ${MAX_ENTIDADES} entidades por verificación.`);
+    const tamano = Math.min(Math.max(10, tam | 0), 400); const entidades = []; let lotes = 0; let unidades = null;
+    for (let i = 0; i < handles.length; i += tamano) {
+      const trozo = handles.slice(i, i + tamano).map(String);
+      const r = await this.#exec('leer_lote', { handles: trozo }, { timeoutMs: 30000 + trozo.length * 80 });
+      entidades.push(...r.entidades); unidades = r.unidades_insunits; lotes++;
+    }
+    return { entidades, lotes, tam_lote: tamano, unidades_insunits: unidades };
+  }
+
+  /** Enumera handles del espacio modelo por páginas (índices, no `foreach` COM). */
+  async enumerarHandles({ capa, pagina = 500 } = {}) {
+    if (capa !== undefined && capa !== null && !LAYER.test(capa)) throw new UserError('DATO_INVALIDO', 'Nombre de capa no válido.');
+    const entidades = []; let offset = 0; let total = 0;
+    for (let n = 0; n < 1000; n++) {
+      const r = await this.#exec('enumerar', { capa: capa || null, offset, limite: pagina }, { timeoutMs: 60000 });
+      total = r.total; entidades.push(...r.entidades);
+      if (entidades.length > MAX_ENTIDADES) throw new UserError('DEMASIADAS_ENTIDADES', `El dibujo tiene más de ${MAX_ENTIDADES} entidades en el alcance pedido; acote por capa.`);
+      if (r.siguiente == null) break; offset = r.siguiente;
+    }
+    return { total_en_dibujo: total, entidades };
+  }
+
+  /** Lee StartPoint/EndPoint/Length/capa (y las propiedades propias de cada tipo) de las entidades indicadas (solo lectura). */
   async leerGeometria(handles) {
     if (!Array.isArray(handles) || handles.length < 1 || handles.length > 200 || !handles.every((h) => HANDLE.test(String(h)))) throw new UserError('DATO_INVALIDO', 'Indique de 1 a 200 handles válidos (hexadecimales).');
-    return this.#exec('geometria', { handles: handles.map(String) });
+    return this.leerLote(handles);
   }
 
   /** Lee los extremos desde AutoCAD y comprueba cierre/rectangularidad/medidas con un cálculo independiente en Node. */
@@ -349,46 +425,62 @@ export class AutoCadCom {
     return { unidades_insunits: lectura.unidades_insunits, lecturas: lectura.entidades, analisis };
   }
 
-  /**
-   * Comprobación INDEPENDIENTE de persistencia: con la copia de trabajo activa y guardada, lee las entidades, CIERRA el
-   * documento sin guardar (Close($false): no hay nada pendiente porque se exige Saved=true), lo REABRE desde disco y
-   * vuelve a leer. Además compara huella/tamaño/fecha del archivo en disco antes y después y, si se indica `creado_en`,
-   * que el archivo se haya escrito después de crear las líneas. Solo sobre copias de "03 Trabajo".
-   */
-  async verificarPersistencia(project, { archivo, handles, creado_en, tolerancia = 1e-6 }) {
-    if (!Array.isArray(handles) || handles.length < 1 || handles.length > 200 || !handles.every((h) => HANDLE.test(String(h)))) throw new UserError('DATO_INVALIDO', 'Indique de 1 a 200 handles válidos (hexadecimales).');
+  /** Autoriza la copia pedida y exige que sea el documento ACTIVO (ambos en 03 Trabajo, nunca originales). */
+  async #copiaActiva(project, archivo) {
     const { abs } = this.sandbox.resolve(project, archivo);
     const objetivo = this.#assertWorkCopy(project, abs);
     const st = await this.estado();
-    const activo = this.#assertWorkCopy(project, st.ruta); // el documento ACTIVO también debe ser una copia de trabajo
+    const activo = this.#assertWorkCopy(project, st.ruta);
     if (activo !== objetivo) throw new UserError('DOCUMENTO_ACTIVO_DISTINTO', 'El dibujo activo en AutoCAD no es la copia indicada; no se cierra nada.', 'Active la copia de trabajo indicada y repita.');
+    return { objetivo, st };
+  }
+
+  /**
+   * Comprobación INDEPENDIENTE de persistencia por LOTES: con la copia de trabajo activa y guardada lee las entidades
+   * (tipadas, en lotes), CIERRA el documento sin guardar (se exige Saved=true), lo REABRE desde disco y vuelve a leer por
+   * lotes. Compara cada tipo según SUS propiedades reales; lo que AutoCAD no informa queda `no_verificable` (no se
+   * compara null contra null). `handles` opcional: sin él se verifica TODO el espacio modelo (o la capa indicada).
+   */
+  async verificarPersistencia(project, { archivo, handles, capa, creado_en, tolerancia = 1e-6, tam_lote = 150 }) {
+    if (handles !== undefined && (!Array.isArray(handles) || handles.length < 1 || !handles.every((h) => HANDLE.test(String(h))))) throw new UserError('DATO_INVALIDO', 'Los handles deben ser hexadecimales.');
+    const { objetivo, st } = await this.#copiaActiva(project, archivo);
     const stat = (f) => { const s0 = fs.statSync(f); return { bytes: s0.size, modificado: new Date(s0.mtimeMs).toISOString(), mtime_ms: s0.mtimeMs, sha256: sha256File(f) }; };
     const disco0 = stat(objetivo);
     if (creado_en && !(disco0.mtime_ms + 2000 >= Date.parse(creado_en))) {
       throw new UserError('NO_GUARDADO_EN_DISCO', 'El archivo en disco es anterior a la creación de las líneas: los cambios NO están guardados en el DWG.', 'Guarde la copia en AutoCAD y repita.', { archivo_modificado: disco0.modificado, creado_en });
     }
-    let r;
-    try { r = await this.#exec('persistencia', { handles: handles.map(String), ruta_esperada: st.ruta }); }
+    const alcance = handles ? 'handles' : capa ? `capa ${capa}` : 'todo el espacio modelo';
+    const lista = handles ? handles.map(String) : (await this.enumerarHandles({ capa })).entidades.map((e) => e.handle);
+    if (!lista.length) throw new UserError('SIN_ENTIDADES', 'No hay entidades que verificar en ese alcance.');
+    const antes = await this.leerLote(lista, { tam: tam_lote });
+    let cierre;
+    try { cierre = await this.#exec('cerrar_reabrir', { ruta_esperada: st.ruta }, { timeoutMs: 90000 }); }
     catch (e) {
       if (e.detalle?.codigo === 'CAMBIOS_SIN_GUARDAR' || e.code === 'CAMBIOS_SIN_GUARDAR') throw new UserError('CAMBIOS_SIN_GUARDAR', 'La copia tiene cambios sin guardar: no se cierra para no perderlos.', 'Guárdela en AutoCAD y repita.');
+      if (e.code === 'REAPERTURA_FALLIDA') e.detalle = { ...(e.detalle || {}), lecturas_previas: antes.entidades.slice(0, 50) };
       throw e;
     }
+    const despues = await this.leerLote(lista, { tam: tam_lote });
     const disco1 = stat(objetivo);
-    const diferencias = compararLecturas(r.antes, r.despues, { tol: tolerancia });
+    const cmp = compararLecturas(antes.entidades, despues.entidades, { tol: tolerancia });
     const archivoIntacto = disco0.sha256 === disco1.sha256;
     return {
-      persistencia: diferencias.length === 0 ? 'verificada' : 'fallida',
-      entidades_verificadas: r.antes.length, diferencias,
+      persistencia: cmp.estado, alcance, entidades_leidas: lista.length, entidades_tras_reabrir: cierre.entidades,
+      cobertura: cmp.cobertura, diferencias: cmp.diferencias.slice(0, 50), diferencias_total: cmp.diferencias.length,
+      no_verificables: cmp.no_verificables.slice(0, 50), no_verificables_total: cmp.no_verificables.length,
+      inconsistencias_internas: cmp.inconsistencias_internas.slice(0, 50), inconsistencias_total: cmp.inconsistencias_internas.length,
+      lotes: { antes: antes.lotes, despues: despues.lotes, tam_lote: antes.tam_lote },
       archivo_en_disco: { antes: { bytes: disco0.bytes, modificado: disco0.modificado, sha256: disco0.sha256 }, despues: { bytes: disco1.bytes, modificado: disco1.modificado, sha256: disco1.sha256 }, sin_cambios_por_el_cierre_y_reapertura: archivoIntacto },
       guardado_posterior_a_la_creacion: creado_en ? disco0.mtime_ms + 2000 >= Date.parse(creado_en) : null,
-      lecturas_tras_reabrir: r.despues, unidades_insunits: r.unidades_insunits,
-      independencia: 'Releído desde el DWG en disco tras cerrar y reabrir en AutoCAD. El contenido del DWG no se interpreta fuera de AutoCAD.',
+      unidades_insunits: cierre.unidades_insunits,
+      independencia: 'Releído desde el DWG en disco tras cerrar y reabrir en AutoCAD, comparando cada tipo por sus propiedades reales. El contenido del DWG no se interpreta fuera de AutoCAD.',
     };
   }
 
   /**
    * Abre un DXF GENERADO (en 03 Trabajo) en AutoCAD y lo guarda como DWG nuevo junto a él. Nunca sobrescribe: el DWG no debe existir.
-   * Verificación independiente: el archivo .dwg debe existir en disco con cabecera "AC10xx" (la escribe solo AutoCAD).
+   * Verificación independiente: el archivo .dwg debe existir en disco con cabecera "AC10xx" (la escribe solo AutoCAD) y las
+   * capas y conteos por capa informados por AutoCAD deben coincidir con los del DXF.
    */
   async dxfADwg(project, dxfRel) {
     const { abs, root } = this.sandbox.resolve(project, dxfRel);
@@ -398,11 +490,43 @@ export class AutoCadCom {
     const dwgRel = path.relative(root, dwgAbs).split(path.sep).join('/');
     this.sandbox.resolveWritable(project, dwgRel); // debe quedar en una carpeta de escritura y nunca en originales
     if (fs.existsSync(dwgAbs)) throw new UserError('DWG_YA_EXISTE', 'Ya existe un DWG de esa versión; no se sobrescribe.', 'Genere una nueva versión del anteproyecto o renombre el DWG existente.');
-    const r = await this.#exec('dxf_a_dwg', { dxf: abs, dwg: dwgAbs });
+    const esperado = conteoPorCapa(parseDxf(fs.readFileSync(abs)));
+    const r = await this.#exec('dxf_a_dwg', { dxf: abs, dwg: dwgAbs }, { timeoutMs: 120000 });
     let cabecera = null; let bytes = 0;
     try { const st = fs.statSync(dwgAbs); bytes = st.size; const fd = fs.openSync(dwgAbs, 'r'); const b = Buffer.alloc(6); fs.readSync(fd, b, 0, 6, 0); fs.closeSync(fd); cabecera = b.toString('latin1'); } catch { /* se informa abajo */ }
     const valido = !!cabecera && /^AC10\d\d$/.test(cabecera) && bytes > 1000;
-    return { ...r, dwg: dwgRel, archivo_dwg: { bytes, cabecera, cabecera_dwg_valida: valido, sha256: valido ? sha256File(dwgAbs) : null }, verificacion: valido ? 'El archivo DWG existe en disco y tiene cabecera de DWG de AutoCAD.' : 'ATENCIÓN: AutoCAD respondió, pero el .dwg no está en disco o no tiene cabecera válida.' };
+    const estructura = verificarEstructura(esperado, r);
+    return { ...r, dwg: dwgRel, archivo_dwg: { bytes, cabecera, cabecera_dwg_valida: valido, sha256: valido ? sha256File(dwgAbs) : null }, verificacion_estructura: estructura, verificacion: valido ? (estructura.ok ? 'El DWG existe en disco con cabecera de AutoCAD y sus capas/conteos coinciden con el DXF.' : 'El DWG existe, pero ATENCIÓN: capas o conteos no coinciden con el DXF (ver verificacion_estructura).') : 'ATENCIÓN: AutoCAD respondió, pero el .dwg no está en disco o no tiene cabecera válida.' };
+  }
+
+  /**
+   * Fidelidad DXF → DWG: con el DWG activo (copia en 03 Trabajo), lee TODAS las entidades por lotes y compara, por multiconjuntos
+   * de firmas tipadas (LINE, ARC, POLYLINE, TEXT), contra el DXF de origen; clasifica los textos (ñ/Ñ/tildes) y detecta lecturas
+   * incoherentes (p. ej. arcos con longitud 0). Solo lectura.
+   */
+  async verificarDwg(project, { dxfRel, dwgRel, tam_lote = 150 }) {
+    const { st } = await this.#copiaActiva(project, dwgRel);
+    const dxfAbs = this.sandbox.resolve(project, dxfRel).abs;
+    const dxf = parseDxf(fs.readFileSync(dxfAbs));
+    const resumen = await this.#exec('resumen', {}, { timeoutMs: 60000 });
+    const lista = (await this.enumerarHandles()).entidades.map((e) => e.handle);
+    const lect = await this.leerLote(lista, { tam: tam_lote });
+    const { firmas, ilegibles } = firmasDesdeCom(lect.entidades);
+    const fid = compararFidelidad(firmasDesdeDxf(dxf), firmas);
+    const textos = clasificarTextos(dxf.entities.filter((e) => e.type === 'TEXT').map((e) => dxfDecode(e.text)), lect.entidades.filter((e) => e.tipo === 'AcDbText').map((e) => e.texto));
+    const inconsistencias = lect.entidades.flatMap((e) => (e.error ? [] : coherenciaInterna(e).map((x) => ({ handle: e.handle, tipo: e.tipo, ...x }))));
+    const estructura = verificarEstructura(conteoPorCapa(dxf), resumen);
+    const diferencias = !fid.fiel || !textos.ok || !estructura.ok;
+    const estado = diferencias ? 'con_diferencias' : (inconsistencias.length || ilegibles.length) ? 'no_concluyente' : 'fiel';
+    return {
+      fidelidad: estado, documento: resumen.documento, unidades_insunits: resumen.unidades_insunits,
+      entidades: { en_dxf: fid.esperadas, leidas_en_dwg: lect.entidades.length, interpretadas: fid.informadas, ilegibles: ilegibles.length },
+      comparacion_geometrica: { fiel: fid.fiel, faltan_en_dwg: fid.faltan_en_dwg.slice(0, 20), sobran_en_dwg: fid.sobran_en_dwg.slice(0, 20), faltan_por_tipo: fid.faltan_por_tipo, sobran_por_tipo: fid.sobran_por_tipo },
+      textos: { ok: textos.ok, exactos: textos.exactos, con_acentos_correctos: textos.con_acentos_correctos, escape_sin_decodificar: textos.escape_sin_decodificar.slice(0, 10), corruptos: textos.corruptos.slice(0, 10), faltantes: textos.faltantes.slice(0, 10), sobrantes: textos.sobrantes.slice(0, 10) },
+      estructura, inconsistencias_internas: inconsistencias.slice(0, 30), inconsistencias_total: inconsistencias.length, ilegibles: ilegibles.slice(0, 20),
+      lotes: lect.lotes, tam_lote: lect.tam_lote,
+      independencia: 'Lectura COM de todas las entidades del DWG comparada con el DXF de origen; el contenido del DWG no se interpreta fuera de AutoCAD.',
+    };
   }
 
   agregarLinea(project, { x1, y1, x2, y2, capa }) { return this.agregarLineas(project, { lineas: [{ x1, y1, x2, y2 }], capa }); }

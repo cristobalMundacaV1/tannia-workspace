@@ -81,21 +81,3 @@ export function analizarContornoDeLineas(lineas, { tol = 1e-6, ancho, alto } = {
     estado: cerrado && coplanar && disc.length === 0 ? 'ok' : 'needs_review',
   };
 }
-
-/** Compara lecturas antes/después de cerrar y reabrir. Devuelve discrepancias por handle (vacío => persistió idéntico). */
-export function compararLecturas(antes, despues, { tol = 1e-6 } = {}) {
-  const dif = [];
-  const mapa = new Map(despues.map((d) => [String(d.handle).toUpperCase(), d]));
-  for (const a of antes) {
-    const h = String(a.handle).toUpperCase(); const d = mapa.get(h);
-    if (a.error) { dif.push({ handle: a.handle, problema: 'no_existia_antes_de_cerrar' }); continue; }
-    if (!d || d.error) { dif.push({ handle: a.handle, problema: 'desaparecio_tras_reabrir' }); continue; }
-    if (a.capa !== d.capa) dif.push({ handle: a.handle, problema: 'capa_distinta', antes: a.capa, despues: d.capa });
-    if (a.tipo !== d.tipo) dif.push({ handle: a.handle, problema: 'tipo_distinto', antes: a.tipo, despues: d.tipo });
-    for (const k of ['inicio', 'fin']) {
-      if (!a[k] || !d[k] || a[k].length !== d[k].length || a[k].some((v, i) => !(Math.abs(v - d[k][i]) <= tol))) dif.push({ handle: a.handle, problema: `${k}_distinto`, antes: a[k] ?? null, despues: d[k] ?? null });
-    }
-    if (a.longitud != null && !(Math.abs(a.longitud - d.longitud) <= tol)) dif.push({ handle: a.handle, problema: 'longitud_distinta', antes: a.longitud, despues: d.longitud });
-  }
-  return dif;
-}
