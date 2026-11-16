@@ -1,5 +1,6 @@
 # Limitaciones conocidas — TW-11
 - **Sin validación real:** AutoCAD real, Claude Desktop real, usuarios reales y profesionales: pendientes. La elicitación de aprobación de fuentes se probó con un cliente MCP simulado; si Claude Desktop no la soporta, queda el archivo fuera de banda.
+- **Aprobación humana:** el diálogo nativo del SO (Windows/macOS) y el soporte real de elicitación en Claude Desktop **no están probados** (solo clientes y ejecutores simulados). El canal de archivo (`.tannia-config/aprobaciones/`) podría falsificarse si el agente tuviera otra herramienta con escritura en la carpeta del usuario; ver ADR-003.
 - **Niveles:** operaciones E2 = verificadas contra oráculos del repositorio (no revisión profesional E3); `edu.*` es E1 (solo académico).
 - **No se calcula:** geotecnia, sostenimiento, estructuras, hidráulica de diseño, normativa, ventilación, seguridad.
 - **Geometría:** alineamientos de rectas y arcos (sin clotoides); barrido horizontal con sección vertical; sin pendiente longitudinal en el barrido; TIN por Delaunay (≤ ~2000 puntos); LandXML parcial con pérdidas declaradas; sin IFC/BIM.

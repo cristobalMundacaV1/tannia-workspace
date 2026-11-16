@@ -39,9 +39,27 @@ export function validarInterpretacion(interp, ctx) {
   if (!aciclico(pasos)) return { outcome: 'rejected', issues: [{ schema: 'tw.cic.issue/1', id: 'iss-0', kind: 'policy', severity: 'blocking', message: 'El plan contiene un ciclo de dependencias.', refs: [] }], gaps, preguntas, plan: null };
   // 2) antecedentes: citas verificadas contra el almacén (nunca por confianza)
   const antecedentes = interp.antecedents.map((a) => {
-    const sid = a.ref.startsWith('psg-') ? null : a.ref; let estado = 'sin_cita';
-    if (a.quote) { if (!ctx.conocimiento || !sid) estado = 'no_verificable'; else { const r = ctx.conocimiento.verificarCita(ctx.proyecto, { source_id: sid, quote: a.quote }); estado = r.estado; if (r.estado !== 'verified_exact') iss('unverified_citation', 'warning', `La cita de ${a.ref} no se pudo verificar (${r.estado}): no sustentará claims.`, [a.ref]); } }
-    else if (sid && ctx.conocimiento) { const f = (ctx.conocimiento.listar(ctx.proyecto) || []).find((x) => x.id === sid); if (!f) iss('unverified_citation', 'warning', `El antecedente ${sid} no existe en el almacén.`, [sid]); else if (f.state !== 'registered') iss('policy', 'warning', `La fuente ${sid} está "${f.state}": no puede sustentar entregables.`, [sid]); }
+    let estado = 'sin_cita'; const K = ctx.conocimiento; const aviso = (m) => iss('unverified_citation', 'warning', m, [a.ref]);
+    if (a.ref.startsWith('psg-')) {
+      // Un id de pasaje solo vale si EXISTE el pasaje real, su fuente está registrada y vigente, la cita (si hay) aparece en su texto y el localizador coincide.
+      const r = K?.pasaje ? K.pasaje(ctx.proyecto, a.ref) : null;
+      if (!K?.pasaje) { estado = 'no_verificable'; aviso(`${a.ref}: no se puede comprobar el pasaje (sin almacén).`); }
+      else if (!r) { estado = 'passage_not_found'; aviso(`El pasaje ${a.ref} no existe en el almacén: no sustentará claims.`); }
+      else if (r.fuente.state !== 'registered') { estado = 'source_not_approved'; aviso(`El pasaje ${a.ref} pertenece a una fuente «${r.fuente.state}»: no sustenta claims.`); }
+      else if (K.vigencia && !K.vigencia(ctx.proyecto, r.fuente.id).vigente) { estado = 'source_not_current'; aviso(`La fuente del pasaje ${a.ref} no está vigente (${K.vigencia(ctx.proyecto, r.fuente.id).motivo}).`); }
+      else if (a.quote) {
+        if (r.pasaje.text === null || r.pasaje.text === undefined) estado = 'content_not_available';
+        else if (!K.normTexto(r.pasaje.text).includes(K.normTexto(a.quote))) estado = K.verificarCita(ctx.proyecto, { source_id: r.fuente.id, quote: a.quote }).estado === 'verified_exact' ? 'quote_in_other_passage' : 'not_found_in_source';
+        else if (a.locator && ((a.locator.page && r.pasaje.locator.page !== a.locator.page) || (a.locator.slide && r.pasaje.locator.slide !== a.locator.slide) || (a.locator.sheet && r.pasaje.locator.sheet !== a.locator.sheet))) estado = 'locator_mismatch';
+        else estado = 'verified_exact';
+        if (estado !== 'verified_exact') aviso(`La cita de ${a.ref} no se pudo verificar (${estado}): no sustentará claims.`);
+      }
+      else { estado = 'passage_verified'; if (a.locator) { const L = r.pasaje.locator; if ((a.locator.page && L.page !== a.locator.page) || (a.locator.slide && L.slide !== a.locator.slide) || (a.locator.sheet && L.sheet !== a.locator.sheet)) { estado = 'locator_mismatch'; aviso(`El localizador declarado para ${a.ref} no coincide con el pasaje real.`); } } }
+    } else {
+      const sid = a.ref;
+      if (a.quote) { if (!K || !sid) estado = 'no_verificable'; else { const r = K.verificarCita(ctx.proyecto, { source_id: sid, quote: a.quote, locator: a.locator || null }); estado = r.estado; if (r.estado !== 'verified_exact') aviso(`La cita de ${a.ref} no se pudo verificar (${r.estado}): no sustentará claims.`); } }
+      else if (sid && K) { const f = (K.listar(ctx.proyecto) || []).find((x) => x.id === sid); if (!f) { estado = 'source_not_registered'; aviso(`El antecedente ${sid} no existe en el almacén.`); } else if (f.state !== 'registered') { estado = 'source_not_approved'; iss('policy', 'warning', `La fuente ${sid} está "${f.state}": no puede sustentar entregables.`, [sid]); } else estado = 'source_registered'; }
+    }
     return { ...a, verificacion: estado };
   });
   // 3) magnitudes: unidades obligatorias para valores; unidad desconocida = pregunta, nunca suposición

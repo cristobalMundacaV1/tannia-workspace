@@ -25,11 +25,11 @@ test('línea base: con el flag apagado el servidor expone EXACTAMENTE las 72 her
   } finally { await close(); }
 });
 
-test('con el flag encendido las 72 previas permanecen idénticas y se AGREGAN solo herramientas tannia_cic_*', async () => {
+test('con el flag encendido las 72 previas permanecen idénticas y se AGREGAN solo tannia_cic_* y tannia_comunicacion', async () => {
   const { client, close } = await startClient(tmpHome(), undefined, { TANNIA_CIC: 'on' });
   try {
     const { tools } = await client.listTools(); const crypto = await import('node:crypto'); const sha = (o) => crypto.createHash('sha256').update(JSON.stringify(o)).digest('hex');
-    const nuevas = tools.filter((t) => t.name.startsWith('tannia_cic_')); assert.ok(nuevas.length >= 4); assert.equal(tools.length, 72 + nuevas.length);
+    const nuevas = tools.filter((t) => t.name.startsWith('tannia_cic_') || t.name === 'tannia_comunicacion'); assert.ok(nuevas.length >= 4); assert.equal(tools.length, 72 + nuevas.length);
     for (const h of base.herramientas) { const t = tools.find((x) => x.name === h.nombre); assert.ok(t, h.nombre); assert.equal(sha(t.inputSchema), h.sha256_esquema, h.nombre); }
     for (const t of nuevas) { assert.equal(t.inputSchema.type, 'object'); const bad = (x) => { if (x && typeof x === 'object') { assert.ok(!Array.isArray(x.items), `${t.name}: items como arreglo`); Object.values(x).forEach(bad); } }; bad(t.inputSchema); }
   } finally { await close(); }

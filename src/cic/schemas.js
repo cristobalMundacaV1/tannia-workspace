@@ -24,7 +24,7 @@ export const FuenteSchema = z.object({
   origin: z.object({ kind: z.enum(['file', 'url', 'user_text']), path_or_url: z.string().nullable(), retrieved_at: z.string().nullable().optional(), retrieved_by: z.enum(['user', 'claude_web', 'import', 'system']) }).strict(),
   sha256: z.string().regex(/^[0-9a-f]{64}$/), state: ESTADO_FUENTE,
   // Distinción P02: registrada ≠ aprobada ≠ contenido disponible ≠ extracto comprobado ≠ cita verificable
-  approval: z.object({ approved: z.boolean(), by: z.enum(['human_elicitation', 'human_out_of_band', 'system_import', 'none']), at: z.string().nullable() }).strict(),
+  approval: z.object({ approved: z.boolean(), by: z.enum(['human_elicitation', 'human_dialog', 'human_out_of_band', 'system_import', 'none']), at: z.string().nullable() }).strict(),
   content: z.object({ available: z.boolean(), storage: z.enum(['none', 'hash_only', 'excerpt', 'full_private']), chars: z.number().int().nonnegative(), verified_by_server: z.boolean() }).strict(),
   license: z.object({ status: z.enum(['public', 'licensed', 'unknown']), quote_limit_chars: z.number().int().positive() }).strict(),
   binding: BINDING, supersedes: z.string().nullable().optional(), valid_from: z.string().nullable().optional(), valid_until: z.string().nullable().optional(),
@@ -40,7 +40,7 @@ export const InterpretacionSchema = z.object({
   research_questions: z.array(z.object({ id: z.string(), text: z.string(), needed_for: z.array(z.string()).optional(), status: z.enum(['open', 'answered', 'unanswerable_with_sources']).default('open') }).strict()).default([]),
   deliverables: z.array(z.object({ id: z.string(), kind: z.string(), status: ESTADO_EPISTEMICO }).strict()).default([]),
   disciplines_proposed: z.array(z.object({ tag: z.string(), registry_id: z.string().nullable().optional(), rationale: z.string().optional() }).strict()).default([]),
-  antecedents: z.array(z.object({ ref: z.string(), quote: z.string().optional(), use: z.string().optional() }).strict()).default([]),
+  antecedents: z.array(z.object({ ref: z.string(), quote: z.string().optional(), use: z.string().optional(), locator: z.object({ page: z.number().int().positive().optional(), slide: z.number().int().positive().optional(), sheet: z.string().optional(), section: z.string().optional() }).strict().optional() }).strict()).default([]),
   magnitudes: z.array(z.object({ name: z.string(), value: z.number().nullable(), unit: z.string().nullable(), origin: z.enum(['user', 'source', 'assumed', 'unknown']), ref: z.string().nullable().optional() }).strict()).default([]),
   methods_proposed: z.array(z.object({ operation_id: z.string().nullable().optional(), free_text: z.string().optional(), source_ref: z.string().nullable().optional(), why: z.string().optional() }).strict()).default([]),
   assumptions: z.array(z.object({ text: z.string(), editable: z.boolean().default(true) }).strict()).default([]),

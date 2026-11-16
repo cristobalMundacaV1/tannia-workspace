@@ -19,7 +19,7 @@ function resolverEntrada(v, ctx) {
 }
 function resolverUno(v, { doc, L, porPaso }) {
   if (!esRef(v)) return v; const [tipo, resto] = [v.ref.split(':')[0], v.ref.slice(v.ref.indexOf(':') + 1)];
-  if (tipo === 'magnitude') { const m = (doc.magnitudes || []).find((x) => x.name === resto); if (!m || m.value === null || m.value === undefined) throw new OpError('ENTRADA_FALTANTE', `Magnitud "${resto}" sin valor.`); return { value: m.value, unit: m.unit }; }
+  if (tipo === 'magnitude') { const m = (doc.magnitudes || []).find((x) => x.name === resto); if (!m || m.value === null || m.value === undefined) throw new OpError('ENTRADA_FALTANTE', `Magnitud "${resto}" sin valor.`); if (m.origin === 'source' && !L.list().some((c) => c.kind === 'data' && c.statement === resto && c.status !== 'stale')) throw new OpError('ENTRADA_SIN_RESPALDO', `El dato "${resto}" declara una fuente pero no hay un claim vigente que lo respalde (fuente inexistente, retirada o dato desactualizado).`); return { value: m.value, unit: m.unit }; }
   if (tipo === 'claim') { const c = L.get(resto); if (!c || c.status === 'stale' || c.value === null) throw new OpError('CLAIM_NO_VIGENTE', `El claim ${resto} no existe o no está vigente.`); return { value: c.value, unit: c.unit }; }
   const [sid, out0] = resto.split('.'); const mi = /^(\w+)\[(\d+)\]$/.exec(out0 || ''); const out = mi ? mi[1] : out0; const c = porPaso.get(sid)?.[out]; if (!c) throw new OpError('ENTRADA_FALTANTE', `El paso ${sid} aún no produjo "${out}".`);
   if (mi) { if (!Array.isArray(c.value) || Number(mi[2]) >= c.value.length) throw new OpError('ENTRADA_FALTANTE', `"${out}" no tiene el elemento ${mi[2]}.`); return { value: c.value[Number(mi[2])], unit: c.unit }; } return { value: c.value, unit: c.unit };
@@ -43,7 +43,7 @@ export function ejecutarPlan(doc, { modo, solo = null, ahora = () => new Date().
       const entradas = {}; for (const [k, v] of Object.entries(s.inputs)) entradas[k] = resolverEntrada(v, { doc, L, porPaso });
       const hash = sha256({ op: s.capability_id, entradas, modo }); if (s.status === 'done' && s.input_hash === hash) { informe.omitidos.push({ id: s.id, estado: 'done', razon: 'idempotente: mismas entradas' }); continue; }
       const rehace = s.status === 'done' || s.status === 'stale'; const res = ejecutarOperacion(s.capability_id.slice(3), entradas, { modo });
-      const claims = claimsDeOperacion(res, { modo, etiqueta: s.goal, depende_de: Object.values(s.inputs).flatMap((v) => refsDe(v)).filter((r) => r.startsWith('claim:')).map((r) => r.slice(6)), ahora });
+      const claims = claimsDeOperacion(res, { modo, etiqueta: s.goal, depende_de: Object.values(s.inputs).flatMap((v) => refsDe(v)).flatMap((r) => (r.startsWith('claim:') ? [r.slice(6)] : r.startsWith('magnitude:') ? L.list().filter((c) => c.kind === 'data' && c.statement === r.slice(10) && c.status !== 'stale').map((c) => c.id) : [])), ahora });
       if (rehace) { const inv = L.invalidar(s.result_claims.filter((c) => !claims.some((n) => n.id === c))); informe.invalidados.push(...inv); informe.recomputados.push(s.id); }
       claims.forEach((c) => L.add(c)); s.result_claims = claims.map((c) => c.id); s.input_hash = hash; s.status = 'done'; s.error = null; s.reason = res.warnings.join(' · ') || null;
       const o = {}; for (const c of claims) o[c.statement.split('→ ').pop().trim()] = c; porPaso.set(s.id, o); informe.ejecutados.push({ id: s.id, claims: s.result_claims, madurez: res.maturity });

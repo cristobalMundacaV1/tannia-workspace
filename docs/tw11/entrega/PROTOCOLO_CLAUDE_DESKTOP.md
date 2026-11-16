@@ -10,6 +10,6 @@ Objetivo: comprobar con la interfaz REAL lo que aquí solo se probó con un clie
 ## C. Departamento
 6. «Departamento de 62 m², 2 dormitorios, piso 5, con terraza.» Esperado: planta con muro de circulación común, medianeros sin ventanas, terraza con borde abierto, sin jardín ni piscina. Pida el mismo programa «como casa» y compare.
 ## D. Fuentes externas
-7. Pida que investigue un tema y proponga la fuente. Esperado: queda CANDIDATA; usted la aprueba en la ventana de confirmación o con el archivo indicado; Claude no puede aprobarla.
+7. Pida que investigue un tema y proponga la fuente. Esperado: queda CANDIDATA; usted la aprueba en la ventana de confirmación del cliente, en el diálogo del sistema o creando el archivo `…/.tannia-config/aprobaciones/<proyecto>__<id>.txt` con la línea `APRUEBO <id>` (carpeta de configuración, fuera de los proyectos). Anote **qué canal apareció** (ventana del cliente / diálogo del SO / solo archivo). Claude no puede aprobarla.
 ## Registro
 Para cada paso: ✔/✘, captura y texto exacto de cualquier error. Pendiente adicional: validación en AutoCAD 2027 real, taller con Tannia, revisión profesional y evaluación retenida independiente.

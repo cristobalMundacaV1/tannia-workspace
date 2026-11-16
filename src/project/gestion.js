@@ -105,6 +105,16 @@ function destinoCanonico(sandbox, pr, carpeta) {
  * Copia archivos reales a 01 Antecedentes (o 02 Originales) con hash, manifiesto y sin sobrescribir. Solo copia lo que el servidor puede
  * leer por una RUTA LOCAL indicada: un adjunto del chat que no llega como archivo NO se importa (se informa el límite, nunca se simula).
  */
+/** SEC-01: ¿el archivo pertenece a la carpeta de configuración? Se compara la ruta DECLARADA y la REAL canónica (symlinks/junctions en cualquier padre, carpeta de configuración enlazada) y los enlaces rígidos por (dispositivo, inodo). */
+function enConfiguracion(sandbox, origenAbs, real, lst) {
+  const cfg = path.resolve(sandbox.home, '.tannia-config'); let cfgReal = cfg; try { cfgReal = fs.realpathSync.native(cfg); } catch { /* aún no existe */ }
+  const dentro = (base, x) => { const rel = path.relative(base, x); return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel)); };
+  if ([cfg, cfgReal].some((b) => dentro(b, origenAbs) || dentro(b, real))) return true;
+  if (lst && lst.nlink > 1 && fs.existsSync(cfgReal)) {
+    try { const id = (f) => { const x = fs.statSync(f, { bigint: true }); return `${x.dev}:${x.ino}`; }; const objetivo = id(real); for (const e of fs.readdirSync(cfgReal, { recursive: true, withFileTypes: true })) if (e.isFile() && id(path.join(e.parentPath ?? e.path, e.name)) === objetivo) return true; } catch { return true; } // ante la duda, se rechaza
+  }
+  return false;
+}
 export function importarArchivos(sandbox, nombre, { archivos, modo = 'antecedente', nota, hook = () => {} }) {
   if (!Array.isArray(archivos) || !archivos.length || archivos.length > MAX_ARCHIVOS_POR_LLAMADA) throw new UserError('DATO_INVALIDO', `Indique de 1 a ${MAX_ARCHIVOS_POR_LLAMADA} rutas de archivo.`);
   if (!['antecedente', 'original'].includes(modo)) throw new UserError('DATO_INVALIDO', 'modo debe ser antecedente u original.');
@@ -118,10 +128,12 @@ export function importarArchivos(sandbox, nombre, { archivos, modo = 'antecedent
     try {
       if (typeof origen !== 'string' || !(path.isAbsolute(origen) || path.win32.isAbsolute(origen))) throw new UserError('RUTA_NO_ABSOLUTA', 'Se necesita la ruta completa del archivo en el computador.', 'Claude Desktop no entrega los adjuntos del chat al servidor: pida a Tannia que guarde el archivo en una carpeta y indique la ruta, o que lo copie ella a 01 Antecedentes.');
       if (process.platform === 'win32' && /:/.test(path.win32.basename(origen))) throw new UserError('ORIGEN_INVALIDO', 'La ruta indica un flujo de datos alterno (archivo:flujo), no un archivo normal.', 'Indique la ruta de un archivo común.');
+      { const cfg = path.resolve(sandbox.home, '.tannia-config'); const abs = path.resolve(origen); const rel = path.relative(cfg, abs); if (rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel))) throw new UserError('ORIGEN_RESERVADO', 'Esa carpeta es la configuración interna de Tannia Workspace (aprobaciones y preferencias): no se importa a ningún proyecto.'); }
       let lst; try { lst = fs.lstatSync(origen); } catch { throw new UserError('ARCHIVO_NO_ENCONTRADO', 'No se encontró ese archivo en el computador.', 'Un archivo adjunto en el chat no es accesible por el servidor: guárdelo en una carpeta y entregue la ruta.'); }
       if (lst.isSymbolicLink()) throw new UserError('ENLACE_NO_PERMITIDO', 'No se importan enlaces simbólicos.');
       if (!lst.isFile()) throw new UserError('NO_ES_ARCHIVO', 'La ruta no es un archivo.');
       const real = fs.realpathSync.native(origen);
+      if (enConfiguracion(sandbox, path.resolve(origen), real, lst)) throw new UserError('ORIGEN_RESERVADO', 'Esa ubicación (o el archivo al que apunta) es la configuración interna de Tannia Workspace (aprobaciones y preferencias): no se importa a ningún proyecto.');
       if (isInside(proyectosReal, real)) throw new UserError('ORIGEN_EN_PROYECTOS', 'El archivo ya está dentro de una carpeta de proyectos de Tannia Workspace: no se importa entre proyectos.', 'Cópielo manualmente si es lo que desea.');
       const ext = path.extname(nombreSeguro(path.basename(origen))).toLowerCase();
       if (!FORMATOS_IMPORTABLES.has(ext)) throw new UserError('FORMATO_NO_PERMITIDO', `Formato ${ext || '(sin extensión)'} no admitido.`, `Admitidos: ${[...FORMATOS_IMPORTABLES].join(' ')}`);

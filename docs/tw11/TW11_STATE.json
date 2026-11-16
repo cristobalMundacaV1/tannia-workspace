@@ -2,7 +2,7 @@
   "macrofase": "TW-11",
   "nombre": "Construction Intelligence Core",
   "estado": "ESPERA_VALIDACION_EXTERNA",
-  "rama_trabajo": "feat/tw11-paquete-evaluacion",
+  "rama_trabajo": "feat/tw11-hardening",
   "rama_base": "docs/tw11-construction-intelligence-plan",
   "sha_doc_base": "e06364e5c3e22862a70e6e7fe3086208e323dff9",
   "implementacion_autorizada": true,
@@ -115,8 +115,8 @@
   ],
   "siguiente_gate_habilitado": "G11 (revisión independiente: externo)",
   "pruebas_locales": {
-    "total": 375,
-    "pasan": 358,
+    "total": 398,
+    "pasan": 381,
     "fallan": 0,
     "omitidas": 17
   },
@@ -132,14 +132,43 @@
     {
       "clase": "BLOCKED_EXTERNAL",
       "item": "decisión del PO sobre presupuesto de herramientas (D7)"
+    },
+    {
+      "clase": "BLOCKED_EXTERNAL",
+      "item": "protocolo de comunicación C1–C15 en Claude Desktop real"
+    },
+    {
+      "clase": "BLOCKED_EXTERNAL",
+      "item": "dialogo del SO y eliciacion en Claude Desktop real; protocolo AutoCAD real (K1–K12)"
     }
   ],
   "paquetes_candidatos": [
     {
-      "zip": "TW11-entrega-cab78cd.zip",
-      "sha256": "0dddfec760f6101d96faf81b85effe81f61b809ea42bd2a40a16415cfc5f5b03",
-      "cicoff_sha256": "a0c73654c38ab05e68c34a372f683c5edc5bfae2195b09725724d49c3d6c1557",
-      "cicon_sha256": "679f9ebfab302e93cbf561367d50d32bd07f0ae08f036375483f74e1c71be9e9"
+      "zip": "TW11-entrega-9858ae1.zip",
+      "cicoff_sha256": "fc506e6fa9a19fb7422496f0f7dce12ad97ba19c34acfa41a426641c6d8ce1cf",
+      "cicon_sha256": "87b8bb0eaee6b238e4dab59830cbb8df590442caebb9639dd4a36b839f80b4fd",
+      "herramientas": {
+        "cicoff": 72,
+        "cicon": 84
+      }
     }
-  ]
+  ],
+  "hardening": {
+    "sha_codigo": "9858ae1406d80f33295c9096b06f4ccfd9522119",
+    "h1_h5": "corregidos_y_probados",
+    "comunicacion": "servidor_verificado_conducta_del_modelo_pendiente_en_campo",
+    "ci": "pendiente (9858ae1)",
+    "p1_consentimiento": "corregido_y_probado_adversarialmente",
+    "sec01_sec02": "corregidos_y_probados"
+  },
+  "piloto_real": {
+    "estado": "PREPARADO_NO_INICIADO",
+    "plan": "docs/tw11/entrega/PILOTO_REAL_TANNIA.md",
+    "requiere": [
+      "revisor independiente",
+      "decision D7",
+      "ejecucion previa S/D/K",
+      "consentimiento de Tannia"
+    ]
+  }
 }
