@@ -34,6 +34,8 @@ export const BriefV1 = z.object({
   unknowns: z.array(id).max(40), review_required: z.array(id).max(40),
   budget: z.object({ order_of_magnitude: texto.nullable(), status: estadoEpistemico }).strict().optional(),
   prohibitions: z.array(texto).max(20).default([]),
+  assistant_notes: z.array(z.object({ kind: z.enum(['no_inventar', 'dato_desconocido', 'pregunta', 'excluido']), topics: z.array(id).max(12), text: z.string().max(240) }).strict()).max(40).default([]),
+  excluded_objectives: z.array(z.string().max(40)).max(20).default([]),
 }).strict();
 
 // ---------------- site/1 ----------------

@@ -69,7 +69,7 @@ test('Visual→ray casting: la relación cocina→zona de piscina del brief prod
   try {
     const v = data(await call(c, 'tannia_arq_evaluar', { proyecto: P, estudio: E, alternativa: 'alt-L_con_patio', seccion: 'visuales' })).visuales[0]; assert.equal(v.desde, 'R-COC'); assert.equal(v.hacia, 'pool_play_zone'); assert.ok(['visible', 'parcial', 'obstruida'].includes(v.estado)); assert.equal(typeof v.fraccion_visible_mejor_punto, 'number');
     const k = data(await call(c, 'tannia_arq_evaluar', { proyecto: P, estudio: E, alternativa: 'alt-compacta', seccion: 'visuales' })).visuales[0]; assert.equal(k.estado, 'no_evaluado'); assert.ok(k.razon);
-    const o = data(await call(c, 'tannia_arq_evaluar', { proyecto: P, estudio: E, alternativa: 'alt-L_con_patio', seccion: 'objetivos' })).objetivos.find((x) => x.objetivo === 'sightline'); assert.equal(typeof o.indice, 'number'); assert.match(o.aviso, /no sustituye barreras/);
+    const o = data(await call(c, 'tannia_arq_evaluar', { proyecto: P, estudio: E, alternativa: 'alt-L_con_patio', seccion: 'objetivos' })).objetivos.find((x) => x.objetivo === 'sightline'); assert.equal(typeof o.indice, 'number'); assert.match(o.aviso, /nunca acredita seguridad de la piscina/); assert.equal(o.estado, 'parcial');
   } finally { await cli.close(); }
 });
 

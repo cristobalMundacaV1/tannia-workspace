@@ -4,6 +4,8 @@ import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 import { VERSION } from '../version.js';
+import { VERSION_MOTOR } from '../architect/version.js';
+import { identidadPaquete } from '../mcp/paquete.js';
 import { FOLDERS, sha256File } from '../security/sandbox.js';
 import { ok, UserError } from '../mcp/util.js';
 import { createProject, listProjects } from '../project/projects.js';
@@ -64,7 +66,9 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     try { const t = path.join(sandbox.home, '.tannia-escritura-prueba'); fs.writeFileSync(t, 'x'); fs.unlinkSync(t); } catch { escritura = false; }
     const { detectarAutoCad } = await import('../cad/detect.js');
     const data = {
-      version: VERSION, sistema: `${os.platform()} ${os.release()} (${os.arch()})`, node: process.version,
+      version: VERSION, // (compatibilidad) = versiones.servidor
+      versiones: { servidor: VERSION, motor_arquitectonico: VERSION_MOTOR, paquete: identidadPaquete(), nota: 'servidor = código base compartido con TW-09 (no cambia entre candidatos); motor_arquitectonico = motor de diseño TW-10; paquete = identidad del .mcpb instalado (manifest.json). Para saber QUÉ candidato corre, use paquete.version.' },
+      sistema: `${os.platform()} ${os.release()} (${os.arch()})`, node: process.version,
       carpeta_tannia: sandbox.home, origen_carpeta: config?.origen || null, advertencias_configuracion: config?.advertencias || [],
       servidor_iniciado: config?.servidor_iniciado || null, pid_servidor: config?.pid || null,
       nota_configuracion: 'La carpeta la fija Claude Desktop al iniciar la extensión: si la cambia, desactive y active la extensión y vuelva a ejecutar este diagnóstico para ver el valor vigente.',

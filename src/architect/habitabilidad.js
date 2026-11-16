@@ -46,17 +46,43 @@ function puntosObjetivo(esq, objetivoId) {
   const nx = 4; const ny = 4; for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) pts.push([b.x0 + ((i + 0.5) * (b.x1 - b.x0)) / nx, b.y0 + ((j + 0.5) * (b.y1 - b.y0)) / ny, UMBRALES.altura_objetivo_visual_mm]);
   return pts;
 }
-export function visual(esq, geo, { desde, hacia, sitio = null } = {}) {
+export const DATOS_FALTANTES_VISUAL = ['Mobiliario, encimera y electrodomésticos (no están modelados: pueden tapar la vista)', 'Posición real de trabajo (dónde se cocina/lava) — salvo que se confirme un punto de observación', 'Altura real de los ojos y de las personas observadas (supuestos editables)', 'Puertas/ventanas practicables, cortinas, vidrios y vegetación', 'Otros obstáculos del terreno no modelados'];
+const NOMBRE_ELEMENTO = { muro_ext: 'muro exterior', muro_int: 'muro interior', dintel: 'dintel sobre un vano', antepecho: 'antepecho bajo una ventana', losa: 'losa', cubierta: 'cubierta', alero: 'alero' };
+const nombreElemento = (o) => NOMBRE_ELEMENTO[o] ?? (String(o).startsWith('contexto:') ? `volumen de contexto (${String(o).slice(9)})` : String(o));
+
+/**
+ * Visual por ray casting desde el recinto hacia una zona exterior. NO es una comprobación de supervisión desde el lugar real de trabajo:
+ * sin un punto de observación CONFIRMADO es una visual geométrica PRELIMINAR (9 muestras repartidas en el recinto).
+ * @param observadores [{etiqueta, x_mm, y_mm}] puntos confirmados por la usuaria dentro del recinto (no se inventan muebles ni posiciones).
+ */
+export function visual(esq, geo, { desde, hacia, sitio = null, observadores = [] } = {}) {
   const pts = puntosObjetivo(esq, hacia);
   if (!geo.recintos[desde]) return { estado: 'no_evaluado', razon: `El recinto ${desde} no existe en este partido.` };
   if (!pts) return { estado: 'no_evaluado', razon: `El partido no define la zona "${hacia}" (p. ej. sin patio/piscina): no se puede evaluar la visual.` };
-  const e = escena(esq, geo, { sitio }); const n = geo.recintos[desde].neto; const ojos = [];
-  for (const fx of [0.2, 0.5, 0.8]) for (const fy of [0.2, 0.5, 0.8]) ojos.push([n.x0 + fx * (n.x1 - n.x0), n.y0 + fy * (n.y1 - n.y0), UMBRALES.altura_ojo_mm]);
-  let mejor = 0; let suma = 0; const bloqueos = new Map();
-  for (const o of ojos) { let v = 0; for (const t of pts) { const d = [t[0] - o[0], t[1] - o[1], t[2] - o[2]]; const L = Math.hypot(...d); const u = d.map((x) => x / L); const hit = rayoGolpea(o, u, e.cajas, { tmax: L - 1 }); if (!hit) v++; else bloqueos.set(hit.origen, (bloqueos.get(hit.origen) || 0) + 1); } mejor = Math.max(mejor, v / pts.length); suma += v / pts.length; }
-  const media = suma / ojos.length;
-  return { estado: mejor >= 0.5 ? 'visible' : mejor > 0 ? 'parcial' : 'obstruida', fraccion_visible_mejor_punto: R2(mejor), fraccion_visible_media_recinto: R2(media), bloqueado_por: [...bloqueos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k),
-    supuestos: ['Puertas interiores abiertas y vanos sin vidrio opaco', `Ojo a ${UMBRALES.altura_ojo_mm} mm y objetivo a ${UMBRALES.altura_objetivo_visual_mm} mm (supuestos editables)`], limites: 'La línea visual NO sustituye barreras independientes ni supervisión adulta activa.' };
+  const e = escena(esq, geo, { sitio }); const n = geo.recintos[desde].neto;
+  const mirar = (x, y) => { let v = 0; const bl = new Map(); for (const t of pts) { const o = [x, y, UMBRALES.altura_ojo_mm]; const d = [t[0] - o[0], t[1] - o[1], t[2] - o[2]]; const L = Math.hypot(...d); const u = d.map((q) => q / L); const hit = rayoGolpea(o, u, e.cajas, { tmax: L - 1 }); if (!hit) v++; else bl.set(hit.origen, (bl.get(hit.origen) || 0) + 1); } return { fraccion: v / pts.length, bloqueos: bl }; };
+  const muestras = []; const obstr = new Map();
+  for (const fx of [0.2, 0.5, 0.8]) for (const fy of [0.2, 0.5, 0.8]) { const x = Math.round(n.x0 + fx * (n.x1 - n.x0)); const y = Math.round(n.y0 + fy * (n.y1 - n.y0)); const r = mirar(x, y); muestras.push({ x_mm: x, y_mm: y, fraccion_visible: R2(r.fraccion) }); for (const [k, c] of r.bloqueos) obstr.set(k, (obstr.get(k) || 0) + c); }
+  const fr = muestras.map((m) => m.fraccion_visible); const mejor = Math.max(...fr); const peor = Math.min(...fr); const media = fr.reduce((a, b) => a + b, 0) / fr.length;
+  const mejorP = muestras[fr.indexOf(mejor)]; const peorP = muestras[fr.indexOf(peor)];
+  const total = muestras.length * pts.length;
+  const confirmados = [];
+  for (const ob of observadores) {
+    if (!(ob.x_mm >= n.x0 && ob.x_mm <= n.x1 && ob.y_mm >= n.y0 && ob.y_mm <= n.y1)) { confirmados.push({ etiqueta: ob.etiqueta, x_mm: ob.x_mm, y_mm: ob.y_mm, estado: 'fuera_del_recinto' }); continue; }
+    const r = mirar(ob.x_mm, ob.y_mm); confirmados.push({ etiqueta: ob.etiqueta, x_mm: ob.x_mm, y_mm: ob.y_mm, fraccion_visible: R2(r.fraccion), estado: r.fraccion >= 0.5 ? 'visible' : r.fraccion > 0 ? 'parcial' : 'obstruida', obstruyen: [...r.bloqueos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, c]) => ({ elemento: nombreElemento(k), rayos_bloqueados: c, de: pts.length })) });
+  }
+  const validos = confirmados.filter((c) => c.fraccion_visible != null); const conclusion = validos.length ? 'visual_en_punto_confirmado' : 'visual_geometrica_preliminar';
+  const peorConfirmado = validos.length ? Math.min(...validos.map((c) => c.fraccion_visible)) : null;
+  return {
+    estado: validos.length ? (peorConfirmado >= 0.5 ? 'visible' : peorConfirmado > 0 ? 'parcial' : 'obstruida') : (mejor >= 0.5 ? 'visible' : mejor > 0 ? 'parcial' : 'obstruida'),
+    conclusion, fraccion_visible_mejor_punto: R2(mejor), fraccion_visible_media_recinto: R2(media), fraccion_visible_peor_punto: R2(peor),
+    punto_observacion_mejor: mejorP, punto_observacion_peor: peorP, puntos_de_observacion_usados: muestras, objetivo_muestras: pts.length,
+    puntos_confirmados: confirmados, indice_usado: validos.length ? { valor: peorConfirmado, regla: 'mínimo entre los puntos de observación CONFIRMADOS (criterio conservador)' } : { valor: R2(media), regla: 'media de 9 muestras del recinto (NO el mejor punto); es una visual geométrica PRELIMINAR' },
+    obstruyen: [...obstr.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, c]) => ({ elemento: nombreElemento(k), rayos_bloqueados: c, de: total })), bloqueado_por: [...obstr.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k),
+    datos_faltantes: validos.length ? DATOS_FALTANTES_VISUAL.filter((d) => !/^Posición real/.test(d)) : DATOS_FALTANTES_VISUAL,
+    supuestos: ['Puertas interiores abiertas y vanos sin vidrio opaco', `Ojo a ${UMBRALES.altura_ojo_mm} mm y objetivo a ${UMBRALES.altura_objetivo_visual_mm} mm (supuestos editables)`],
+    limites: 'Visual geométrica: NO acredita supervisión desde el lugar real donde alguien cocina y NUNCA acredita seguridad de la piscina (requiere barreras independientes, control de acceso y supervisión activa verificadas por profesional).',
+  };
 }
 
 // ---------------- seguridad (piscina y salidas) ----------------

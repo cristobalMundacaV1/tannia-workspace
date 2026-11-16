@@ -37,7 +37,7 @@ test('requisitos duros: dos_alas (≥104 m²) queda BLOQUEADA por superficie; no
 
 test('piscina visible: alerta crítica ⇒ estado global con_alertas_criticas aunque la visual sea 1.0', () => {
   const { evals } = setup({ sitio: sitioReal(0) }); const l = evals.find((e) => e.id === 'alt-L_con_patio');
-  assert.equal(l.analisis.global_state, 'con_alertas_criticas'); const v = l.objetivos.find((o) => o.kind === 'sightline'); assert.ok(v.score > 0); assert.match(v.aviso, /no sustituye barreras/);
+  assert.equal(l.analisis.global_state, 'con_alertas_criticas'); const v = l.objetivos.find((o) => o.kind === 'sightline'); assert.ok(v.score > 0); assert.match(v.aviso, /nunca acredita seguridad de la piscina/); assert.equal(v.estado, 'parcial');
   assert.ok(l.analisis.alerts.some((a) => a.id === 'piscina_barrera'));
 });
 

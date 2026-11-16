@@ -10,7 +10,7 @@ import { Project, readJson } from '../project/store.js';
 import { commitConHistorial, mutarHistorial, reconciliar } from '../project/transaccion.js';
 import { slug } from '../design/servicio.js';
 import { escribirDxf } from '../design/salidas.js';
-import { interpretarEncargo, programaDeBrief, diffBrief, grafoRelaciones } from './briefing.js';
+import { interpretarEncargo, programaDeBrief, diffBrief, grafoRelaciones, deduplicarObjetivos } from './briefing.js';
 import { actualizarSitio, retranqueosParaGenerar, antecedentesFaltantes, verificarContraSitio, agregarRestriccionUrbana } from './sitio.js';
 import { parsearEpw, perfilesClima } from './clima.js';
 import { generarAlternativas } from './alternativas.js';
@@ -63,7 +63,7 @@ export class Estudios {
 
   // ---------- cálculo determinista de evaluaciones ----------
   calcular(estado) {
-    const evals = Object.values(estado.alternativas).map((a) => { const esq = a.esquema; const geo = derivarEsquema(esq); const aleros = estado.aleros?.[esq.id] ?? []; const e = evaluarEsquema({ esq, geo, brief: estado.brief, sitio: estado.sitio, perfil: estado.clima?.perfiles ?? null, aleros }); return { id: esq.id, ...e, esq, geo, gatesFallidos: e.analisis.hard_gates.filter((g) => !g.passed && g.id !== 'clase_de_huella').map((g) => g.id) }; });
+    const evals = Object.values(estado.alternativas).map((a) => { const esq = a.esquema; const geo = derivarEsquema(esq); const aleros = estado.aleros?.[esq.id] ?? []; const e = evaluarEsquema({ esq, geo, brief: estado.brief, sitio: estado.sitio, perfil: estado.clima?.perfiles ?? null, aleros, observadores: estado.observadores?.[esq.id] ?? [] }); return { id: esq.id, ...e, esq, geo, gatesFallidos: e.analisis.hard_gates.filter((g) => !g.passed && g.id !== 'clase_de_huella').map((g) => g.id) }; });
     const comparacion = evals.length ? compararMultiobjetivo(evals) : null; return { evals, comparacion };
   }
   #resumenAlt(e) { return { id: e.id, concepto: e.esq.concept, huella_m2: e.geo.huella.area_m2, util_m2: e.geo.areas.util_neta_m2, clase_huella: e.detalle.constructibilidad.clase_huella, bloqueada: e.bloqueada, requisitos_fallidos: e.gatesFallidos, clase_de_huella_pedida_cumplida: e.analisis.hard_gates.find((g) => g.id === 'clase_de_huella')?.passed ?? null, estado_global: e.analisis.global_state, alertas_criticas: e.analisis.alerts.filter((a) => a.severidad === 'critica').length, objetivos: e.objetivos.map((o) => `${o.kind}: ${o.estado}${o.score != null ? ` ${o.score}` : ''}`), motivo: e.esq.rationale, detalle_objetivos: 'tannia_arq_evaluar (seccion "objetivos")' }; }
@@ -110,7 +110,7 @@ export class Estudios {
     const acceso = sitio.street_access[0]?.side ?? null; const n = sitio.true_north_deg_from_local_plus_y_clockwise;
     const hem = sitio.coordinates ? (sitio.coordinates.lat < 0 ? 'S' : 'N') : null;
     const dur = brief.hard_constraints.find((h) => h.kind === 'footprint_class'); const cs = conceptos?.length ? conceptos : undefined; void dur;
-    const g = generarAlternativas({ programa: prog, predio: sitio.parcel_polygon_mm ? { ring: sitio.parcel_polygon_mm.ring } : null, acceso, norte_deg: n && n.estado === 'confirmed' ? n.valor : null, hemisferio: hem, retranqueos: retranqueosParaGenerar(sitio, acceso), conceptos: cs, semilla, briefRef: shaDe(brief).slice(0, 16), siteRef: sitio.parcel_polygon_mm ? shaDe(sitio).slice(0, 16) : null, vistas: brief.objectives.filter((o) => o.kind === 'sightline').map((o) => ({ from: o.from, to: o.to })) });
+    const g = generarAlternativas({ programa: prog, predio: sitio.parcel_polygon_mm ? { ring: sitio.parcel_polygon_mm.ring } : null, acceso, norte_deg: n && n.estado === 'confirmed' ? n.valor : null, hemisferio: hem, retranqueos: retranqueosParaGenerar(sitio, acceso), conceptos: cs, semilla, briefRef: shaDe(brief).slice(0, 16), siteRef: sitio.parcel_polygon_mm ? shaDe(sitio).slice(0, 16) : null, vistas: deduplicarObjetivos(brief.objectives).filter((o) => o.kind === 'sightline').map((o) => ({ from: o.from, to: o.to })) });
     const alternativas = {}; for (const a of g.alternativas) { const z = validar('scheme', a.esquema); if (!z.ok) throw new UserError('ESQUEMA_INVALIDO', z.errores.join(' | ')); alternativas[a.esquema.id] = { esquema: z.valor, supuestos: a.supuestos, area_m2: a.area_m2, encaje: a.encaje }; }
     const estadoNuevo = { ...cur.estado, alternativas, aleros: {}, seleccion: null, semilla, supuestos: [...new Set(g.alternativas.flatMap((a) => a.supuestos))] };
     const { evals, comparacion } = this.calcular(estadoNuevo);
@@ -155,11 +155,26 @@ export class Estudios {
       if (!(op.profundidad_mm >= 0 && op.profundidad_mm <= 2000)) throw new UserError('ALERO_INVALIDO', 'Profundidad de alero entre 0 y 2000 mm.');
       estado.aleros[op.alternativa] = [...(estado.aleros[op.alternativa] ?? []).filter((a) => !(a.fachada.recinto === op.recinto && a.fachada.lado === op.lado)), ...(op.profundidad_mm > 0 ? [{ fachada: { recinto: op.recinto, lado: op.lado }, profundidad_mm: op.profundidad_mm }] : [])];
       desc = `Alero ${op.profundidad_mm} mm en ${op.recinto}/${op.lado} de ${op.alternativa} (geometría sin cambios; solo se recalcula el sol)`;
+    } else if (op.tipo === 'punto_observacion') {
+      const alt = estado.alternativas[op.alternativa]; if (!alt) throw new UserError('ALTERNATIVA_NO_EXISTE', 'Alternativa inexistente.');
+      const geo = derivarEsquema(alt.esquema); const rec = geo.recintos[op.recinto]; if (!rec) throw new UserError('RECINTO_NO_EXISTE', `El recinto ${op.recinto} no existe en ${op.alternativa}.`);
+      const etiqueta = String(op.etiqueta ?? '').trim().slice(0, 40); if (!etiqueta) throw new UserError('FALTA_ETIQUETA', 'Indique una etiqueta para el punto (p. ej. "junto a la encimera").');
+      estado.observadores ??= {}; const lista = (estado.observadores[op.alternativa] ?? []).filter((x) => !(x.recinto === op.recinto && x.etiqueta === etiqueta));
+      if (op.quitar) desc = `Punto de observación «${etiqueta}» quitado de ${op.recinto} (${op.alternativa})`;
+      else {
+        const n = rec.neto; let fx; let fy;
+        if (op.fx != null && op.fy != null) { fx = op.fx; fy = op.fy; } else if (op.junto_a) { const m = { N: [0.5, 0.85], S: [0.5, 0.15], E: [0.85, 0.5], O: [0.15, 0.5], centro: [0.5, 0.5] }[op.junto_a]; if (!m) throw new UserError('JUNTO_A_INVALIDO', 'junto_a debe ser N, S, E, O o centro.'); [fx, fy] = m; }
+        else throw new UserError('FALTA_POSICION', 'Indique la posición confirmada: junto_a (N/S/E/O/centro) o fx y fy (0–1 desde la esquina suroeste del recinto). No se inventa dónde se trabaja.');
+        if (!(fx >= 0 && fx <= 1 && fy >= 0 && fy <= 1)) throw new UserError('POSICION_FUERA', 'fx y fy deben estar entre 0 y 1.');
+        lista.push({ recinto: op.recinto, etiqueta, x_mm: Math.round(n.x0 + fx * (n.x1 - n.x0)), y_mm: Math.round(n.y0 + fy * (n.y1 - n.y0)), declarado_por: 'usuaria', referencia: op.junto_a ?? `fx=${fx}, fy=${fy}` });
+        desc = `Punto de observación confirmado «${etiqueta}» en ${op.recinto} (${op.alternativa}); geometría sin cambios`;
+      }
+      estado.observadores[op.alternativa] = lista;
     } else if (op.tipo === 'prioridad') {
       const o = estado.brief.objectives.find((x) => x.id === op.objetivo || x.kind === op.objetivo); if (!o) throw new UserError('OBJETIVO_NO_EXISTE', 'Objetivo inexistente en el brief.');
       o.priority = op.prioridad; estado.brief.version += 1; desc = `Prioridad de "${o.kind}" → ${op.prioridad}`;
     } else if (op.tipo === 'seleccionar') { if (!estado.alternativas[op.alternativa]) throw new UserError('ALTERNATIVA_NO_EXISTE', 'Alternativa inexistente.'); estado.seleccion = op.alternativa; desc = `Alternativa elegida: ${op.alternativa}`; }
-    else throw new UserError('OPERACION_NO_SOPORTADA', 'Operaciones: aleros, prioridad, seleccionar. Para norte/sitio use tannia_arq_sitio; para cambios de programa, tannia_arq_encargo y regenerar.');
+    else throw new UserError('OPERACION_NO_SOPORTADA', 'Operaciones: aleros, prioridad, seleccionar, punto_observacion. Para norte/sitio use tannia_arq_sitio; para cambios de programa, tannia_arq_encargo y regenerar.');
     const antes = this.calcular(cur.estado); const despues = this.calcular(estado);
     const cambios = despues.evals.map((e) => { const a = antes.evals.find((x) => x.id === e.id); const ma = Object.fromEntries(a.analisis.metrics.map((m) => [m.id, m.valor])); const mb = Object.fromEntries(e.analisis.metrics.map((m) => [m.id, m.valor])); return { alternativa: e.id, geometria_cambio: shaDe(a.esq) !== shaDe(e.esq), metricas_cambiadas: Object.keys(mb).filter((k) => ma[k] !== mb[k]).map((k) => ({ metrica: k, antes: ma[k], despues: mb[k] })) }; });
     const c = this.#commit(project, nombre, { estado, descripcion: desc });

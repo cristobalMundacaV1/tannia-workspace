@@ -25,14 +25,14 @@ export const INTERPRETACION = {
   superficie_util_m2: { unidad: 'm²', formula: 'suma de superficies netas de recintos', lectura: 'Superficie interior neta.', limites: 'No es superficie útil legal.' },
 };
 export const INDICE_OBJETIVO = 'Índice 0–1 de cumplimiento geométrico/heurístico del objetivo con el partido actual. No es un porcentaje de satisfacción de la usuaria ni una nota de calidad; null = no evaluado.';
-export const AVISO_VISUAL = 'La visual hacia la piscina NO significa seguridad infantil: requiere barreras independientes, control de acceso y supervisión activa verificadas por profesional.';
+export const AVISO_VISUAL = 'La visual hacia la piscina NO significa seguridad infantil: requiere barreras independientes, control de acceso y supervisión activa verificadas por profesional. Sin un punto de observación confirmado, la visual es solo geométrica PRELIMINAR (no refleja el lugar real de trabajo ni el mobiliario).';
 
 export const SECCIONES = ['resumen', 'objetivos', 'alertas', 'circulacion', 'sol', 'viento', 'visuales', 'privacidad', 'seguridad', 'constructibilidad', 'requisitos', 'metricas', 'critica', 'completo'];
 
 const corto = (s, n = 110) => { const t = String(s ?? ''); return t.length > n ? `${t.slice(0, n - 1)}…` : t; };
 const num = (v) => (v == null ? '—' : String(v).replace('.', ','));
 
-function objetivoCompacto(o) { return { id: o.id, objetivo: o.kind, prioridad: o.prioridad, estado: o.estado, indice: o.score, resumen: corto(o.evidencia?.[0] ?? o.razon ?? o.aviso ?? '', 100) }; }
+function objetivoCompacto(o) { return { id: o.id, objetivo: o.kind, prioridad: o.prioridad, estado: o.estado, indice: o.score, resumen: corto(o.evidencia?.[0] ?? o.razon ?? o.aviso ?? '', o.kind === 'sightline' ? 230 : 100) }; }
 function alertaCompleta(a) { return { codigo: a.id, severidad: a.severidad, texto: a.texto, accion_recomendada: a.accion ?? accionDe(a.id) }; }
 
 /** Resumen por defecto: lo imprescindible, siempre completo (alertas críticas exactas, circulación m²/%, índice de envolvente, objetivos). */

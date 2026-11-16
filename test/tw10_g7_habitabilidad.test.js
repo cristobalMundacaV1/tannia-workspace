@@ -17,7 +17,7 @@ test('recorridos: todos los recintos alcanzables desde el acceso; distancias fin
 
 test('visual cocina→piscina: en el L con patio la cocina ve la zona; con un muro interpuesto queda obstruida; siempre trae el límite de seguridad', () => {
   const r = L(); const v = visual(r.esquema, r.geo, { desde: 'R-COC', hacia: 'pool_play_zone' });
-  assert.ok(['visible', 'parcial'].includes(v.estado), JSON.stringify(v)); assert.match(v.limites, /NO sustituye barreras/);
+  assert.ok(['visible', 'parcial'].includes(v.estado), JSON.stringify(v)); assert.match(v.limites, /NUNCA acredita seguridad de la piscina/); assert.equal(v.conclusion, 'visual_geometrica_preliminar');
   // sin ventana de cocina al patio ni paso: la visual desaparece → obstruida
   const sin = JSON.parse(JSON.stringify(r.esquema)); sin.openings = sin.openings.filter((o) => !(o.entre[0] === 'R-COC' && o.tipo === 'ventana')); const g = derivarEsquema(sin);
   const vo = visual(sin, g, { desde: 'R-COC', hacia: 'pool_play_zone' }); assert.equal(vo.estado, 'obstruida'); assert.ok(vo.bloqueado_por.length >= 1);
