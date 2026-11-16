@@ -45,7 +45,7 @@ test('E14/E11: un proyecto con anteproyecto v1 y 3D previos conserva sus archivo
     for (const [f, h] of Object.entries(antes)) assert.equal(despues[f], h, `modificado: ${f}`);
     assert.equal(walk(path.join(home, 'Proyectos', 'Ajena')).length, ajenaAntes);
     const hist = data(await call(c, 'tannia_arq_ver', { proyecto: P, estudio: 'E', historial: 'listar' })); assert.ok(hist.versiones.length >= 4);
-    const v1 = data(await call(c, 'tannia_arq_ver', { proyecto: P, estudio: 'E', version: 'v002' })); assert.equal(v1.brief.hard_constraints.find((h) => h.kind === 'area_target').value, 90, 'la versión 2 conserva el encargo de 90 m²');
+    const v1 = data(await call(c, 'tannia_arq_ver', { proyecto: P, estudio: 'E', version: 'v002' })); assert.ok(v1.brief.requisitos.includes('area_target=90'), 'la versión 2 conserva el encargo de 90 m²'); const v1c = data(await call(c, 'tannia_arq_ver', { proyecto: P, estudio: 'E', version: 'v002', brief_completo: true })); assert.equal(v1c.brief.hard_constraints.find((h) => h.kind === 'area_target').value, 90);
   } finally { await close(); }
 });
 
