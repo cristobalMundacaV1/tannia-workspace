@@ -17,3 +17,9 @@
 
 ## Qué NO se ha verificado nunca (hasta que se ejecute G10)
 AutoCAD 2027 real (ningún DWG ha sido abierto por AutoCAD real con este código TW-10), instalación gráfica en Claude Desktop, uso por Tannia, revisión arquitectónica independiente. El CI ejecuta simuladores COM y, en Windows, pruebas de PowerShell sin AutoCAD.
+
+## Cambios y límites tras la auditoría de campo (rc2)
+- La interpretación del encargo sigue siendo léxica: frases fuera de sus reglas quedan «desconocidas»; las referencias visuales ambiguas generan una **pregunta**. «Ver a mis hijos desde la cocina» sin decir dónde juegan **no** crea la visual.
+- «Actualizar» solo elimina un requisito con un retiro explícito reconocido («ya no quiero…», «quita…», «olvida…»); cambios relativos («un dormitorio más») se preguntan.
+- Cambios de contrato: `tannia_arq_evaluar` (resumen por defecto; `seccion:'completo'` = contrato anterior), `tannia_arq_ver` (brief compacto; `brief_completo`), `tannia_arq_encargo` (`modo`).
+- El índice 0–1 de cada objetivo es geométrico/heurístico; **no** es satisfacción ni calidad.

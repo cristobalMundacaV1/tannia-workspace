@@ -3,13 +3,13 @@
   "contract_version": "autonomia-e2e-v2",
   "overall_status": "ESPERA_EXTERNA",
   "branch": "feat/tw10-architectural-reasoning",
-  "head_sha": "ee8a0e6aecb180fdc1fccd6723de960202bbd809",
+  "head_sha": "62113971801420c25ec5eff94311e3d729c2c14c",
   "base_sha_verified": "eb767891fe2dacbb4d3070653b1353ebde245243",
   "pr_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/12",
   "updated_utc": "2026-11-16T15:54:28.241Z",
   "current_gate": "G10",
-  "current_story": "TW10-10-02",
-  "next_action": "Esperar externos: el PO instala el candidato (docs/tw10/entrega/INSTALAR_EN_WINDOWS.md), ejecuta PROTOCOLO_PRUEBA_REAL.md y entrega evidencias al Director de Revisión Independiente; taller con Tannia pendiente; decisión del PO. Sin merge/release por el agente.",
+  "current_story": "TW10-10-02 (repetición G10 rc2)",
+  "next_action": "Esperar externos: el PO repite G10 con el rc2 (docs/tw10/entrega/PROTOCOLO_PRUEBA_REAL.md, pasos 1, 4 y 4b) y entrega evidencias al Director de Revisión Independiente; AutoCAD 2027 real; taller con Tannia; decisión del PO. Sin merge/release por el agente.",
   "gates": {
     "G0": {
       "status": "SUPERADA_TECNICA_AUTOMATIZABLE",
@@ -118,13 +118,13 @@
   },
   "ci_windows": {
     "status": "VERDE",
-    "sha": "ee8a0e6aecb180fdc1fccd6723de960202bbd809",
-    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43901501563"
+    "sha": "62113971801420c25ec5eff94311e3d729c2c14c",
+    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43931959889"
   },
   "ci_ubuntu": {
     "status": "VERDE",
-    "sha": "ee8a0e6aecb180fdc1fccd6723de960202bbd809",
-    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43901501563"
+    "sha": "62113971801420c25ec5eff94311e3d729c2c14c",
+    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43931959889"
   },
   "external_required": [
     "AutoCAD 2027 real",
@@ -132,5 +132,5 @@
     "aprobación del PO"
   ],
   "unresolved_p0_p1": [],
-  "last_session_result": "Local: 278 pruebas, 261 pasan, 0 fallan, 17 omitidas (PowerShell real, solo CI Windows). CI verde (Windows+Ubuntu) comprobado en 56aef38 (run 43900583395). Candidato .mcpb/ZIP construible; ver TW10_CANDIDATE.md. CI (Windows+Ubuntu, matriz) verde sobre el SHA de código ee8a0e6 (run 43901501563) y sobre dc5b58d (run 43901639327, solo docs). Entrega: ZIP TW10-entrega-151c0a1-rc1 con MCPB (sha256 13e37b45…9f31), protocolo real, informe de transferencia (TW10_AUDIT_TRANSFER.md). Artefactos del CI no son el candidato."
+  "last_session_result": "Auditoría de campo G10 F01–F05 corregida (docs/tw10/TW10_FIELD_FINDINGS_F01_F05.md). Local: 294 pruebas, 277 pasan, 0 fallan, 17 omitidas. Código final 6211397; paquete rc2 sha256 de7a502a…2f6d (supera al rc1). CI Windows+Ubuntu verde sobre 6211397 (run 43931959889); 505444d falló por una prueba desactualizada ya corregida. G10 NO aprobado."
 }

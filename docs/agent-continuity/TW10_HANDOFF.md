@@ -17,6 +17,9 @@
 Oráculos de desarrollo (no se empaquetan): pvlib `spa_python` → `fixtures/tw10/solar_oracle.json`.
 Convención de signos: `true_north_deg_from_local_plus_y_clockwise` = n ⇒ rumbo local = n + rumbo geográfico (corregido en G3; ver historial de commits).
 
+## Auditoría de campo G10 (F01–F05)
+Corregida en el código (`6211397`); matriz en `docs/tw10/TW10_FIELD_FINDINGS_F01_F05.md`. Fixtures: `test/fixtures_tw10/`. Pruebas: `test/tw10_f_campo_brief.test.js`, `test/tw10_f_campo_respuestas.test.js`. Candidato rc2 (supera al rc1): `TW10_CANDIDATE.md`. El estudio v002 de «Prueba TW10 Los Robles» es evidencia histórica: no tocar.
+
 ## Entrega para el PO y la revisión independiente
 `docs/tw10/entrega/` (fuentes del ZIP), `TW10_CANDIDATE.md` (hashes), `TW10_AUDIT_TRANSFER.md`. Reconstruir el ZIP: `npm run build`, `node scripts/paquete-prueba.mjs --fase tw10 …`, copiar el `.mcpb` junto a los documentos de `docs/tw10/entrega/` y recalcular `SHA256SUMS.txt`. Si el hash del `.mcpb` difiere del registrado, **no** presentarlo como idéntico: documentar la diferencia.
 

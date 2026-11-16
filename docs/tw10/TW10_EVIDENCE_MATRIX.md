@@ -71,3 +71,6 @@ Las pruebas viven en `test/tw10_*.test.js`. Ninguna fila `EXTERNO` está aprobad
 
 ## Expediente de revisión independiente
 `docs/tw10/TW10_AUDIT_TRANSFER.md` (informe de transferencia), `docs/tw10/entrega/` (documentos del ZIP de entrega) y `TW10_CANDIDATE.md` (hashes). Ninguna fila `EXTERNO` está aprobada.
+
+## Auditoría de campo G10 (F01–F05)
+`TW10_FIELD_FINDINGS_F01_F05.md`: F01 respuestas compactas, F02 necesidades del lenguaje natural, F03 continuidad del brief, F04 métricas interpretadas, F05 alertas recuperables — `PASA_CI` (ver CANDIDATE). Repetición en Claude Desktop real: **EXTERNO / PENDIENTE**.

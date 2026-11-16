@@ -1,4 +1,5 @@
-# Protocolo de prueba real G10 — Claude Desktop (Windows) + AutoCAD 2027
+# Protocolo de prueba real G10 (repetición rc2) — Claude Desktop (Windows) + AutoCAD 2027
+> **Repetición tras la auditoría de campo F01–F05.** Use un proyecto **nuevo** («Prueba TW10 rc2»); **no** modifique «Prueba TW10 Los Robles» (su estudio v002 es evidencia histórica). Hallazgos y correcciones: `HALLAZGOS_CAMPO_F01_F05.md`.
 **Quién:** Product Owner. **Qué NO es:** aprobación; es la recolección de evidencias para el Director de Revisión Independiente. Use un **proyecto nuevo** y no abra DWG reales de clientes.
 Reglas: pegue los mensajes tal cual (en conversación nueva de Claude Desktop). **No escriba nombres de herramientas.** En cada paso, si algo falla: copie el **mensaje de error completo** (texto, no resumen) y una captura. No reintente más de una vez sin anotarlo.
 
@@ -9,8 +10,8 @@ Reglas: pegue los mensajes tal cual (en conversación nueva de Claude Desktop). 
 - Anote: versión de Claude Desktop (Ayuda → Acerca de), versión de AutoCAD (`ACADVER`), fecha/hora.
 
 ## 1. Encargo familiar (sin terreno)
-Pegar `MENSAJE_PRUEBA_CLAUDE.txt`.
-**Esperado:** crea el proyecto; entiende superficie/dormitorios/baños/piscina/vista cocina→piscina/luz/verano/ahorro; hace ≤3 preguntas (ninguna sobre un dato que ya dio); ofrece **3 ideas distintas** (rectangular compacta, en L con patio, dos alas en C) con compromisos; dice que sin terreno/norte no calcula sol; advierte que **la vista a la piscina no es seguridad** (barreras y supervisión).
+Pegar `MENSAJE_PRUEBA_CLAUDE.txt` (cambie el nombre del proyecto a «Prueba TW10 rc2»).
+**Esperado:** crea el proyecto; entiende superficie/dormitorios/baños/piscina/vista cocina→piscina/luz/verano/ahorro (**F02: debe registrar los 6 objetivos — visual cocina→piscina, iluminación natural, frescura en verano, pocos pasillos, patio y ahorro/presupuesto**; si pide algo ambiguo, debe **preguntar**, no suponer; compruébelo con «muéstrame el brief completo»); hace ≤3 preguntas (ninguna sobre un dato que ya dio); ofrece **3 ideas distintas** (rectangular compacta, en L con patio, dos alas en C) con compromisos; dice que sin terreno/norte no calcula sol; advierte que **la vista a la piscina no es seguridad** (barreras y supervisión).
 **Capturar:** la respuesta completa; el archivo `…\03 Trabajo\Arquitectura\<estudio>\v00X-comparacion.svg` (abrir en el navegador).
 **Falla si:** inventa horas de sol o normas; da 3 plantas que son espejos; dice «piscina segura»; pide JSON/ids.
 
@@ -28,6 +29,15 @@ Pegar: «Muéstrame la alternativa en L: ¿el patio queda realmente descubierto 
 Pegar: «Estudia el sol de invierno y de verano en las ventanas del living de la L y dime qué profundidad de alero recomiendas hacia el norte. ¿Se ve la piscina desde la cocina? ¿Qué riesgos o alertas hay?»
 **Esperado:** horas de sol por ventana (cifras provienen de la herramienta), tabla verano/invierno de aleros con límites («sol directo, no confort térmico»), visual cocina→piscina con **alerta crítica de barreras** y `seguridad no demostrada`.
 **Falla si:** dice que el alero «garantiza confort»/«ahorra energía»; da cifras sin herramienta; declara segura la piscina.
+
+## 4b. Continuidad del encargo (F03) y respuestas compactas (F01/F04/F05)
+1. Pegar: «Evalúa la alternativa en L». **Esperado (F01/F04/F05):** respuesta breve y **completa**, sin cortes: estado global; **alertas críticas con código, texto exacto y acción recomendada**; circulación en **m² y %** con su fórmula; índice de envolvente con su lectura («**no** es % de costo»); **todos** los objetivos con su estado; aviso de que la visual no es seguridad infantil.
+2. Pegar: «Dame el detalle de los objetivos» y luego «de la circulación», «de las alertas», «la evaluación crítica» (secciones). **Esperado:** cada una responde completa, con unidades, evidencia y límites.
+3. Pegar: «Cambia a 4 dormitorios». **Esperado:** crea versión nueva y **conserva** superficie, baños, L, y todos los objetivos (dice qué se conservó). Luego: «Vuelve a 3 dormitorios» → vuelve al estado original (A→B→A).
+4. Pegar: «Agrega un dormitorio más». **Esperado:** **pregunta el total**, no cambia nada. Pegar: «Gracias, se ve bien» → no crea versión.
+5. (Opcional) «Ya no quiero la piscina» → quita piscina/visual; el resto se conserva. «Mejor empecemos de cero: casa de 60 m², 2 dormitorios» → debe **avisar que reemplaza** el encargo (modo reemplazar).
+6. Verificar en `03 Trabajo\Arquitectura\<estudio>`: las versiones nuevas **no** alteran las anteriores (compare hashes) y que **leer** (evaluar/ver) no crea archivos nuevos.
+**Falla si:** el texto sale cortado, falta algún objetivo/alerta, «cambia a 4 dormitorios» borra otros datos, interpreta «un dormitorio más» como «1 dormitorio», o presenta 1,35 como «35 % más caro».
 
 ## 5. Clima (archivo de datos)
 Copie `clima_sintetico_PRUEBA.epw` (incluido; **sintético, no es clima real**) a `…\Proyectos\Prueba TW10 Los Robles\01 Antecedentes\`. (Si tiene un EPW real de Santiago, úselo y anótelo.) Pegar: «Carga el clima del archivo 01 Antecedentes/clima_sintetico_PRUEBA.epw y dime qué viento domina en invierno y si el patio queda abrigado.»

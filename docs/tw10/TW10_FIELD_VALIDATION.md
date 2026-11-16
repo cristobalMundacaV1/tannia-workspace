@@ -1,5 +1,5 @@
 # TW-10 — Protocolo de validación de campo (G10) — NO EJECUTADO
-> La versión detallada, con formulario de registro y captura de errores, es `docs/tw10/entrega/PROTOCOLO_PRUEBA_REAL.md` (va en el ZIP de entrega). Este documento queda como resumen.
+> **Repetición rc2 tras F01–F05:** use el protocolo actualizado (pasos 1, 4 y 4b). La versión detallada, con formulario de registro y captura de errores, es `docs/tw10/entrega/PROTOCOLO_PRUEBA_REAL.md` (va en el ZIP de entrega). Este documento queda como resumen.
 
 Estado: **PENDIENTE DE EXTERNOS**. Ninguna línea de este protocolo se declara aprobada. El implementador no puede completar §A–§C.
 Paquete a usar: el `.mcpb` del candidato (hash en `TW10_CANDIDATE.md`). Trabajar en un proyecto descartable; no usar proyectos ni DWG reales.
