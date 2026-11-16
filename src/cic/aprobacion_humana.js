@@ -35,15 +35,31 @@ export class AprobacionHumana {
     if (!fs.existsSync(f)) fs.writeFileSync(f, JSON.stringify({ project, id, descripcion, creado_ms: Date.now() }, null, 2));
     return { archivo_aprobacion: this.archivoAprobacion(project, id), formato: `una línea:  APRUEBO ${id}`, nota: 'Carpeta de configuración de Tannia Workspace, fuera de los proyectos: Claude no puede leerla ni escribirla con sus herramientas.' };
   }
+  /** Base temporal: la fecha del propio registro de la solicitud, medida con el MISMO reloj del sistema de archivos (el reloj de pared puede adelantarse unos ms). */
+  #baseTiempo(pf) { try { return fs.statSync(pf).mtimeMs; } catch { return Infinity; } }
+  /** Contrato del archivo: archivo REGULAR (no enlace, no directorio, un solo nombre), creado después de la solicitud, con EXACTAMENTE `APRUEBO <id>` y, como mucho, un terminador LF o CRLF. Cualquier otro byte lo invalida. */
+  #aprobacionValida(f, id, creadoMs) {
+    let l; try { l = fs.lstatSync(f); } catch { return false; }
+    if (l.isSymbolicLink() || !l.isFile() || l.nlink !== 1 || l.size > 256 || l.mtimeMs < creadoMs) return false;
+    let buf; try { buf = fs.readFileSync(f); } catch { return false; }
+    const linea = Buffer.from(`APRUEBO ${id}`, 'utf8');
+    return buf.equals(linea) || buf.equals(Buffer.concat([linea, Buffer.from('\n')])) || buf.equals(Buffer.concat([linea, Buffer.from('\r\n')]));
+  }
   /** @returns {por:'human_elicitation'|'human_dialog'|'human_out_of_band'|null, rechazado?} */
   async decidir(project, id, { descripcion = '', elicitar = null, usarDialogo = true } = {}) {
     if (elicitar) { let r = null; try { r = await elicitar(); } catch { r = null; } if (r && r.action === 'accept' && r.content?.aprobar === true) return { por: 'human_elicitation' }; if (r && (r.action === 'decline' || r.action === 'cancel' || (r.action === 'accept' && r.content?.aprobar === false))) return { por: null, rechazado: true }; }
     if (usarDialogo) { let r = null; try { r = await this.dialogo(`¿Autoriza esto?\n\n${descripcion}\n\nSolo usted puede aprobarlo; Claude no puede hacerlo por usted.`); } catch { r = null; } if (r === 'si') return { por: 'human_dialog' }; if (r === 'no') return { por: null, rechazado: true }; }
     const pf = this.#pend(project, id); const af = this.archivoAprobacion(project, id);
-    if (fs.existsSync(pf) && fs.existsSync(af)) {
+    if (fs.existsSync(pf)) {
       let pend = null; try { pend = JSON.parse(fs.readFileSync(pf, 'utf8')); } catch { pend = null; }
-      const ok = pend && fs.statSync(af).mtimeMs >= pend.creado_ms - 1 && new RegExp(`^APRUEBO ${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'm').test(fs.readFileSync(af, 'utf8'));
-      if (ok) { try { fs.rmSync(af); fs.rmSync(pf); } catch { /* uso único */ } return { por: 'human_out_of_band' }; }
+      if (pend && this.#aprobacionValida(af, id, this.#baseTiempo(pf))) {
+        // Consumo ATÓMICO y a prueba de carreras: se «toma» el archivo renombrándolo; si no se puede (otra decisión lo tomó, permisos…) NO se aprueba.
+        const tomado = `${af}.usado-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        try { fs.renameSync(af, tomado); } catch { return { por: null }; }
+        const ok = this.#aprobacionValida(tomado, id, this.#baseTiempo(pf)); // se revalida lo realmente tomado (TOCTOU)
+        try { fs.rmSync(tomado, { force: true }); } catch { /* ya consumido */ }
+        if (ok) { try { fs.rmSync(pf, { force: true }); } catch { /* uso único */ } return { por: 'human_out_of_band' }; }
+      }
     }
     return { por: null };
   }
