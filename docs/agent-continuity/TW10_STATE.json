@@ -118,13 +118,13 @@
   },
   "ci_windows": {
     "status": "VERDE",
-    "sha": "62113971801420c25ec5eff94311e3d729c2c14c",
-    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43931959889"
+    "sha": "f0141fac621a770fd391e946ba080c250f12b6e1",
+    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43937501683"
   },
   "ci_ubuntu": {
     "status": "VERDE",
-    "sha": "62113971801420c25ec5eff94311e3d729c2c14c",
-    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43931959889"
+    "sha": "f0141fac621a770fd391e946ba080c250f12b6e1",
+    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43937501683"
   },
   "external_required": [
     "AutoCAD 2027 real",
@@ -132,5 +132,5 @@
     "aprobación del PO"
   ],
   "unresolved_p0_p1": [],
-  "last_session_result": "Prueba real rc2: F01–F05 mejoraron; F06–F10 corregidos (docs/tw10/TW10_FIELD_FINDINGS_F06_F10.md). Local: 320 pruebas, 303 pasan, 0 fallan, 17 omitidas. Código final f0141fa; paquete rc3 sha256 a50c5683…7cc9 (supera a rc1/rc2). CI: CI_RC3_RES. G10 NO aprobado."
+  "last_session_result": "Prueba real rc2: F01–F05 mejoraron; F06–F10 corregidos (docs/tw10/TW10_FIELD_FINDINGS_F06_F10.md). Local: 320 pruebas, 303 pasan, 0 fallan, 17 omitidas. Código final f0141fa; paquete rc3 sha256 a50c5683…7cc9 (supera a rc1/rc2). CI: success (Windows+Ubuntu). G10 NO aprobado."
 }
