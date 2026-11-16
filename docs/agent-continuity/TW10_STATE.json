@@ -117,14 +117,14 @@
     }
   },
   "ci_windows": {
-    "status": "PENDIENTE_EN_ESTE_SHA",
+    "status": "VERDE",
     "sha": "ee8a0e6aecb180fdc1fccd6723de960202bbd809",
-    "url": null
+    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43901501563"
   },
   "ci_ubuntu": {
-    "status": "PENDIENTE_EN_ESTE_SHA",
+    "status": "VERDE",
     "sha": "ee8a0e6aecb180fdc1fccd6723de960202bbd809",
-    "url": null
+    "url": "https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/43901501563"
   },
   "external_required": [
     "AutoCAD 2027 real",
@@ -132,5 +132,5 @@
     "aprobación del PO"
   ],
   "unresolved_p0_p1": [],
-  "last_session_result": "Local: 278 pruebas, 261 pasan, 0 fallan, 17 omitidas (PowerShell real, solo CI Windows). CI verde (Windows+Ubuntu) comprobado en 56aef38 (run 43900583395). Candidato .mcpb/ZIP construible; ver TW10_CANDIDATE.md."
+  "last_session_result": "Local: 278 pruebas, 261 pasan, 0 fallan, 17 omitidas (PowerShell real, solo CI Windows). CI verde (Windows+Ubuntu) comprobado en 56aef38 (run 43900583395). Candidato .mcpb/ZIP construible; ver TW10_CANDIDATE.md. CI (Windows+Ubuntu, matriz) verde sobre el SHA de código ee8a0e6 (run 43901501563) y sobre dc5b58d (run 43901639327, solo docs)."
 }
