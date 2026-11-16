@@ -69,7 +69,9 @@ test('colisiones de Windows: mismo nombre con otra capitalización, nombres rese
     assert.match(d[0], /^plano \(2\)\.pdf$/, 'misma palabra con distinta capitalización = colisión (Windows no distingue)'); assert.equal(fs.readFileSync(e.pr.p('01 Antecedentes', 'PLANO.PDF'), 'utf8'), '%PDF existente');
     assert.match(d[1], /^_CON\.pdf$/); assert.match(d[2], /^_nul\.txt$/); assert.match(d[3], /^_Aux\.csv$/); assert.ok(!/[. ]$/.test(d[4]), d[4]);
     // ADS / caracteres inválidos
-    const ads = (() => { try { return origen('x:evil.pdf', '%PDF ads2'); } catch { return null; } })(); if (ads) { const r2 = importarArchivos(e.sb, 'Obra', { archivos: [ads] }); assert.ok(!/[:*?"<>|]/.test(path.basename(r2.resultados[0].destino))); }
+    // ADS: en Windows `archivo:flujo` NO es un archivo normal → se rechaza; en otros sistemas el nombre con ':' se sanea
+    if (process.platform === 'win32') { const r2 = importarArchivos(e.sb, 'Obra', { archivos: [path.join(e.ext, 'base.pdf:evil.pdf')] }); assert.equal(r2.resultados[0].estado, 'rechazado'); assert.ok(['ORIGEN_INVALIDO', 'ARCHIVO_NO_ENCONTRADO'].includes(r2.resultados[0].codigo)); }
+    else { const ads = origen('x:evil.pdf', '%PDF ads2'); const r2 = importarArchivos(e.sb, 'Obra', { archivos: [ads] }); assert.ok(!/[:*?"<>|]/.test(path.basename(r2.resultados[0].destino))); }
     // ruta destino demasiado larga para Windows (MAX_PATH)
     const largo = origen(`${'n'.repeat(200)}.pdf`, '%PDF largo'); const r3 = importarArchivos(e.sb, 'Obra', { archivos: [largo] }); const rutaDest = r3.resultados[0].destino ? e.pr.p(...r3.resultados[0].destino.split('/')) : ''; assert.ok(r3.resultados[0].estado === 'rechazado' || rutaDest.length <= 259, 'la ruta final no excede el límite de Windows');
   } finally { e.done(); }

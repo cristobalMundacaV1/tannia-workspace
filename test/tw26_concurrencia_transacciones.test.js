@@ -18,6 +18,8 @@ function hijo(args) {
   const fin = new Promise((res) => p.on('close', (code, signal) => { let r = null; try { r = JSON.parse(out.trim().split('\n').pop()); } catch { /* sin salida (kill) */ } res({ code, signal, r, err }); }));
   return { p, fin };
 }
+// En Windows no hay señales POSIX: un corte con process.kill termina el proceso sin salida y con código distinto de 0
+const cortado = (fin) => fin.signal === 'SIGKILL' || (process.platform === 'win32' && fin.r === null && fin.code !== 0);
 const hist = (dir) => (fs.existsSync(path.join(dir, 'historial.json')) ? JSON.parse(fs.readFileSync(path.join(dir, 'historial.json'), 'utf8')).versiones.map((v) => v.id) : []);
 const base = (dir) => { commitVersion({ dir, id: 'v001', archivos: [{ nombre: 'v001.json', contenido: 'primera' }], actualizarHistorial: () => fs.writeFileSync(path.join(dir, 'historial.json'), JSON.stringify({ versiones: [{ id: 'v001' }] })) }); };
 
@@ -58,7 +60,7 @@ test('cortes REALES de proceso (SIGKILL) en cada paso: la siguiente operación r
   for (const paso of ['antes_de_journal', 'staging:v002.json', 'staging_completo', 'movido:v002.json', 'movido:v002.manifest.json', 'archivos_en_destino', 'historial_actualizado']) {
     const t = nuevo();
     try {
-      base(t.dir); const A = hijo({ dir: t.dir, id: 'v002', paso, modo: 'kill', contenido: `datos importantes ${paso}` }); const fin = await A.fin; assert.equal(fin.signal, 'SIGKILL', paso);
+      base(t.dir); const A = hijo({ dir: t.dir, id: 'v002', paso, modo: 'kill', contenido: `datos importantes ${paso}` }); const fin = await A.fin; assert.ok(cortado(fin), `${paso}: el proceso fue cortado (${fin.signal}/${fin.code})`);
       const v1 = fs.readFileSync(path.join(t.dir, 'v001.json'), 'utf8');
       const confirmada = hist(t.dir).includes('v002');
       const rec = reconciliar(t.dir, hist(t.dir)); // el proceso dueño murió: se recupera
@@ -179,7 +181,7 @@ test('servicios: corte real (SIGKILL) a mitad de una modificación — la siguie
     const e = entornoServ();
     try {
       const nombre = tipo === '2d' ? 'C' : 'M'; const dir = tipo === '2d' ? e.d2 : e.d3; const svc = tipo === '2d' ? e.A : e.M;
-      const v1 = fs.readFileSync(path.join(dir, 'v001.json'), 'utf8'); const H = hijoServ({ home: e.home, proyecto: 'P', tipo, nombre, ext: 230, altura: 2900, paso, modo: 'kill' }); assert.equal((await H.fin).signal, 'SIGKILL');
+      const v1 = fs.readFileSync(path.join(dir, 'v001.json'), 'utf8'); const H = hijoServ({ home: e.home, proyecto: 'P', tipo, nombre, ext: 230, altura: 2900, paso, modo: 'kill' }); assert.ok(cortado(await H.fin), 'proceso cortado');
       const c = svc.cargar('P', nombre); // abrir = reconciliar
       assert.equal(c.id, 'v001', `${tipo}/${paso}: la versión vigente sigue siendo v001`); assert.ok(limpio(dir)); assert.equal(fs.existsSync(path.join(dir, 'v002.json')), false); assert.equal(fs.readFileSync(path.join(dir, 'v001.json'), 'utf8'), v1);
       if (paso !== 'staging_completo') { const ap = path.join(dir, '.huerfanos'); assert.ok(fs.existsSync(ap) && fs.readdirSync(ap).flatMap((d) => fs.readdirSync(path.join(ap, d))).includes('v002.json'), `${tipo}/${paso}: el contenido se conserva apartado`); }

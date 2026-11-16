@@ -35,7 +35,7 @@ export function tomarBloqueo(dir, { esperaMs = ESPERA_POR_DEFECTO_MS, edadMaxMs 
       return {
         token, abandonado,
         latido() { owner.latido = Date.now(); escribir(owner); },
-        liberar() { const o = leerJson(path.join(lock, OWNER)); if (o?.token === token) fs.rmSync(lock, { recursive: true, force: true }); },
+        liberar() { const o = leerJson(path.join(lock, OWNER)); if (o?.token === token) fs.rmSync(lock, RM); },
       };
     } catch (e) {
       if (e.code !== 'EEXIST') throw e;
@@ -45,7 +45,7 @@ export function tomarBloqueo(dir, { esperaMs = ESPERA_POR_DEFECTO_MS, edadMaxMs 
       const muerto = o ? (mismoHost && !vivo(o.pid)) : edad > 5000; // sin owner.json: creación interrumpida (tras 5 s)
       if (muerto || edad > edadMaxMs) {
         const apartado = `${lock}.abandonado-${token}`;
-        try { fs.renameSync(lock, apartado); abandonado = { pid: o?.pid ?? null, motivo: muerto ? 'proceso_inexistente' : 'latido_vencido', edad_ms: edad }; fs.rmSync(apartado, { recursive: true, force: true }); } catch { /* otro proceso lo tomó primero */ }
+        try { fs.renameSync(lock, apartado); abandonado = { pid: o?.pid ?? null, motivo: muerto ? 'proceso_inexistente' : 'latido_vencido', edad_ms: edad }; fs.rmSync(apartado, RM); } catch { /* otro proceso lo tomó primero */ }
         continue;
       }
       if (Date.now() >= fin) return null;
@@ -61,20 +61,23 @@ export function conBloqueo(dir, fn, opts = {}) {
   try { return fn(b); } finally { b.liberar(); }
 }
 
+const RM = { recursive: true, force: true, maxRetries: 5, retryDelay: 40 };
+/** Aparta (renombra, sin copiar) un archivo/carpeta a `.huerfanos`: nunca se borra contenido en preparación. */
+function apartar(dir, nombre, carpeta) { fs.mkdirSync(carpeta, { recursive: true }); fs.renameSync(path.join(dir, nombre), path.join(carpeta, nombre)); return nombre; }
+
 function reconciliarBajoBloqueo(dir, idsEnHistorial) {
   let out = null; const jf = path.join(dir, JOURNAL);
   if (fs.existsSync(jf)) {
     const j = leerJson(jf);
     if (j?.id && !idsEnHistorial.includes(j.id)) {
-      const dest = path.join(dir, '.huerfanos', `${j.id}-${Date.now()}`); fs.mkdirSync(dest, { recursive: true }); const movidos = [];
-      for (const e of fs.readdirSync(dir)) if (e === j.id || e.startsWith(`${j.id}.`) || e.startsWith(`${j.id}_`)) { fs.renameSync(path.join(dir, e), path.join(dest, e)); movidos.push(e); }
-      const st = path.join(dir, `.staging-${j.id}`);
-      if (fs.existsSync(st)) { fs.cpSync(st, path.join(dest, 'staging'), { recursive: true }); movidos.push('staging'); } // conserva el contenido en preparación
+      const dest = path.join(dir, '.huerfanos', `${j.id}-${Date.now()}`); const movidos = [];
+      for (const e of fs.readdirSync(dir)) if (e === j.id || e.startsWith(`${j.id}.`) || e.startsWith(`${j.id}_`) || e === `.staging-${j.id}`) movidos.push(apartar(dir, e, dest));
       out = { recuperado: true, version: j.id, accion: 'archivos_huerfanos_apartados', movidos, carpeta: path.relative(dir, dest) };
     } else out = { recuperado: true, version: j?.id ?? null, accion: 'journal_residual_eliminado' };
-    fs.rmSync(jf, { force: true });
+    fs.rmSync(jf, RM);
   }
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) if (e.isDirectory() && e.name.startsWith('.staging-')) { fs.rmSync(path.join(dir, e.name), { recursive: true, force: true }); out = out || { recuperado: true, accion: 'staging_residual_eliminado' }; }
+  // Staging sin journal (resto de una confirmación ya completada): se aparta, no se borra
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) if (e.isDirectory() && e.name.startsWith('.staging-')) { apartar(dir, e.name, path.join(dir, '.huerfanos', `residuos-${Date.now()}`)); out = out || { recuperado: true, accion: 'staging_residual_apartado' }; }
   return out;
 }
 
@@ -119,7 +122,7 @@ export function commitVersion({ dir, id, archivos, actualizarHistorial, idsEnHis
     hook('staging_completo'); b.latido();
     for (const n of [...archivos.map((a) => a.nombre), `${id}.manifest.json`]) { fs.renameSync(path.join(staging, n), path.join(dir, n)); hook(`movido:${n}`); }
     hook('archivos_en_destino'); b.latido(); actualizarHistorial(); hook('historial_actualizado');
-    fs.rmSync(staging, { recursive: true, force: true }); fs.rmSync(jf, { force: true });
+    fs.rmSync(staging, RM); fs.rmSync(jf, RM);
   } finally { b.liberar(); }
 }
 

@@ -124,7 +124,7 @@ $doc = New-Object PSObject -Property @{ Name = 'previo.dwg'; FullName = $env:TAN
 // real localiza exactamente ese documento o falla, y que nunca cae al documento activo.
 const MOCK_MULTI = `function global:NuevoDoc($ruta, $capa) {
   $ms = New-Object System.Collections.ArrayList
-  foreach ($k in 1..3) { [void]$ms.Add((New-Object PSObject -Property @{ Handle = ('{0:X}' -f (100 + $k)); ObjectName = 'AcDbLine'; Layer = $capa; StartPoint = @(0.0, 0.0, 0.0); EndPoint = @(1.0, 0.0, 0.0); Length = 1.0 })) }
+  foreach ($k in 1..3) { [void]$ms.Add((New-Object PSObject -Property @{ Handle = [string](100 + $k); ObjectName = 'AcDbLine'; Layer = $capa; StartPoint = @(0.0, 0.0, 0.0); EndPoint = @(1.0, 0.0, 0.0); Length = 1.0 })) }
   $lay = New-Object PSObject -Property @{ L = (New-Object System.Collections.ArrayList) }
   foreach ($n in '0', $capa) { [void]$lay.L.Add((New-Object PSObject -Property @{ Name = $n })) }
   Add-Member -InputObject $lay -MemberType ScriptProperty -Name Count -Value { $this.L.Count }

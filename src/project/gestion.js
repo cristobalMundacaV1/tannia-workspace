@@ -112,6 +112,7 @@ export function importarArchivos(sandbox, nombre, { archivos, modo = 'antecedent
     const r = { origen: typeof origen === 'string' ? path.basename(origen) : String(origen) };
     try {
       if (typeof origen !== 'string' || !(path.isAbsolute(origen) || path.win32.isAbsolute(origen))) throw new UserError('RUTA_NO_ABSOLUTA', 'Se necesita la ruta completa del archivo en el computador.', 'Claude Desktop no entrega los adjuntos del chat al servidor: pida a Tannia que guarde el archivo en una carpeta y indique la ruta, o que lo copie ella a 01 Antecedentes.');
+      if (process.platform === 'win32' && /:/.test(path.win32.basename(origen))) throw new UserError('ORIGEN_INVALIDO', 'La ruta indica un flujo de datos alterno (archivo:flujo), no un archivo normal.', 'Indique la ruta de un archivo común.');
       let lst; try { lst = fs.lstatSync(origen); } catch { throw new UserError('ARCHIVO_NO_ENCONTRADO', 'No se encontró ese archivo en el computador.', 'Un archivo adjunto en el chat no es accesible por el servidor: guárdelo en una carpeta y entregue la ruta.'); }
       if (lst.isSymbolicLink()) throw new UserError('ENLACE_NO_PERMITIDO', 'No se importan enlaces simbólicos.');
       if (!lst.isFile()) throw new UserError('NO_ES_ARCHIVO', 'La ruta no es un archivo.');

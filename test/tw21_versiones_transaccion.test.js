@@ -30,7 +30,7 @@ test('2D: un corte en cualquier paso no deja versión falsa; la siguiente operac
       const rec = A.reconciliar('P', 'C'); // también ocurre solo al abrir; aquí se invoca explícito para observar el resultado
       const hayRestos = fs.readdirSync(dir).some((f) => f.startsWith('v002') || f.startsWith('.staging') || f === '.journal.json');
       assert.equal(hayRestos, false, `${paso}: sin restos de v002 en la carpeta de versiones`);
-      if (rec) assert.ok(['archivos_huerfanos_apartados', 'journal_residual_eliminado', 'staging_residual_eliminado'].includes(rec.accion));
+      if (rec) assert.ok(['archivos_huerfanos_apartados', 'journal_residual_eliminado', 'staging_residual_apartado'].includes(rec.accion));
       const sinCambio = hashDir(dir); for (const [f, hh] of Object.entries(v1)) assert.equal(sinCambio[f], hh, `${paso}: ${f} de v001 intacto`);
     }
     // tras tantos cortes, un cambio normal funciona y crea v002 con manifiesto íntegro
