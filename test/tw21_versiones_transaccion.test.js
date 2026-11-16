@@ -73,7 +73,7 @@ test('manifiesto detecta alteración posterior; versiones inmutables (no se sobr
     fs.writeFileSync(path.join(dir, 'v001.txt'), 'uno');
     assert.throws(() => commitVersion({ dir, id: 'v001', archivos: [{ nombre: 'v001.txt', contenido: 'otro' }], actualizarHistorial: () => {} }), (x) => x.code === 'VERSION_EXISTE'); assert.equal(fs.readFileSync(path.join(dir, 'v001.txt'), 'utf8'), 'uno');
     // un journal ajeno (otra operación en curso) impide pisar: el segundo intento falla en vez de mezclar archivos
-    fs.writeFileSync(path.join(dir, '.journal.json'), JSON.stringify({ id: 'v002' })); assert.throws(() => commitVersion({ dir, id: 'v003', archivos: [{ nombre: 'v003.txt', contenido: 'x' }], actualizarHistorial: () => {} }), (x) => x.code === 'EEXIST');
+    fs.writeFileSync(path.join(dir, '.journal.json'), JSON.stringify({ id: 'v002' })); assert.throws(() => commitVersion({ dir, id: 'v003', archivos: [{ nombre: 'v003.txt', contenido: 'x' }], actualizarHistorial: () => {} }), (x) => x.code === 'VERSION_PENDIENTE_RECONCILIAR');
     assert.equal(reconciliar(dir, ['v001']).accion, 'archivos_huerfanos_apartados'); assert.equal(fs.existsSync(path.join(dir, '.journal.json')), false);
   } finally { e.done(); }
 });

@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { UserError } from '../mcp/util.js';
 import { FOLDERS } from '../security/sandbox.js';
 import { Project, atomicWriteJson, readJson } from '../project/store.js';
-import { commitVersion, reconciliar } from '../project/transaccion.js';
+import { commitConHistorial, mutarHistorial, reconciliar } from '../project/transaccion.js';
 import { VERSION } from '../version.js';
 import { generarModelo } from './generador.js';
 import { derivar } from './derivar.js';
@@ -63,7 +63,8 @@ export class Anteproyectos {
     const { rel } = this.#dir(project, nombre);
     const f = this.#abs(project, `${rel}/historial.json`);
     if (!fs.existsSync(f)) throw new UserError('ANTEPROYECTO_NO_EXISTE', `No existe el anteproyecto "${nombre}".`, 'Créelo con tannia_diseno_crear o consulte los existentes con tannia_diseno_ver.');
-    const h = readJson(f, null); try { reconciliar(this.#abs(project, rel), h.versiones.map((v) => v.id)); } catch { /* la reconciliación nunca bloquea la lectura */ }
+    try { reconciliar(this.#abs(project, rel), () => (readJson(f, null)?.versiones ?? []).map((v) => v.id)); } catch { /* la reconciliación nunca bloquea la lectura */ }
+    const h = readJson(f, null); // se lee DESPUÉS de reconciliar
     return { h, f, rel };
   }
   listar(project) {
@@ -73,15 +74,15 @@ export class Anteproyectos {
   }
 
   /** Escribe la versión como TRANSACCIÓN (staging + journal + manifiesto + historial). `actualizar` es el commit lógico del historial. */
-  #escribirVersion(project, rel, id, registro, modelo, geo, coh, meta, actualizar) {
+  #escribirVersion(project, rel, id, registro, modelo, geo, coh, meta, tx) {
     const dxf = escribirDxf(modelo, geo, meta); const svg = escribirSvg(modelo, geo, meta); const cruzada = verificarDxfContraModelo(dxf, geo);
     const json = JSON.stringify({ ...registro, modelo, coherencia: coh, verificacion_dxf: cruzada, areas: geo.areas }, null, 2);
-    commitVersion({ dir: this.#abs(project, rel), id, archivos: [{ nombre: `${id}.dxf`, contenido: dxf }, { nombre: `${id}.svg`, contenido: svg }, { nombre: `${id}.json`, contenido: json }], actualizarHistorial: actualizar, hook: this.hook || undefined });
+    commitConHistorial({ dir: this.#abs(project, rel), historial: this.#abs(project, `${rel}/historial.json`), id, archivos: [{ nombre: `${id}.dxf`, contenido: dxf }, { nombre: `${id}.svg`, contenido: svg }, { nombre: `${id}.json`, contenido: json }], ...tx, hook: this.hook || undefined, esperaMs: this.esperaMs });
     return { dxf: `${rel}/${id}.dxf`, svg: `${rel}/${id}.svg`, cruzada };
   }
 
   /** Reconcilia cortes previos (archivos huérfanos de una versión que no llegó al historial). */
-  reconciliar(project, nombre) { const { rel } = this.#dir(project, nombre); const f = this.#abs(project, `${rel}/historial.json`); if (!fs.existsSync(f)) return null; const h = readJson(f, { versiones: [] }); return reconciliar(this.#abs(project, rel), h.versiones.map((v) => v.id)); }
+  reconciliar(project, nombre) { const { rel } = this.#dir(project, nombre); const f = this.#abs(project, `${rel}/historial.json`); if (!fs.existsSync(f)) return null; return reconciliar(this.#abs(project, rel), () => (readJson(f, null)?.versiones ?? []).map((v) => v.id)); }
 
   crear(project, { nombre, solicitud, programa = {} }) {
     const { n, rel } = this.#dir(project, nombre);
@@ -92,7 +93,7 @@ export class Anteproyectos {
     const id = `v${num3(1)}`; const creada = new Date().toISOString();
     const meta = { titulo: n, version: id, fecha: creada.slice(0, 10) };
     const registro = { id, numero: 1, padre: null, creada, descripcion: 'Versión inicial generada a partir de la solicitud', solicitud: solicitud || null, operaciones: [], resumen: 'Versión inicial', modelo_sha256: sha(modelo), generado_por: `tannia-workspace ${VERSION}` };
-    const out = this.#escribirVersion(project, rel, id, registro, modelo, geo, coh, meta, () => atomicWriteJson(fh, { nombre: n, creado: creada, head: id, redo: [], versiones: [{ id, padre: null, creada, descripcion: registro.descripcion, resumen: registro.resumen, construida_m2: geo.areas.construida_m2 }] }));
+    const out = this.#escribirVersion(project, rel, id, registro, modelo, geo, coh, meta, { nuevo: { nombre: n, creado: creada, head: id, redo: [], versiones: [{ id, padre: null, creada, descripcion: registro.descripcion, resumen: registro.resumen, construida_m2: geo.areas.construida_m2 }] }, errorExiste: new UserError('ANTEPROYECTO_EXISTE', `Ya existe el anteproyecto "${n}".`, 'Use otro nombre o refine el existente con tannia_diseno_modificar.') });
     new Project(this.sandbox, project).audit('anteproyecto_creado', { nombre: n, version: id });
     return { nombre: n, version: id, modelo, geo, coherencia: coh, archivos: { dxf: out.dxf, svg: out.svg }, verificacion_dxf: out.cruzada };
   }
@@ -119,22 +120,25 @@ export class Anteproyectos {
     const numero = Math.max(...h.versiones.map((v) => Number(v.id.slice(1)))) + 1; const id = `v${num3(numero)}`; const creada = new Date().toISOString();
     const meta = { titulo: h.nombre, version: id, fecha: creada.slice(0, 10) };
     const registro = { id, numero, padre: cur.id, creada, descripcion: descripcion || resumenes.join('; '), operaciones, resumen: resumenes.join('; '), modelo_sha256: sha(modelo), generado_por: `tannia-workspace ${VERSION}` };
-    const out = this.#escribirVersion(project, rel, id, registro, modelo, geo, coh, meta, () => { h.versiones.push({ id, padre: cur.id, creada, descripcion: registro.descripcion, resumen: registro.resumen, construida_m2: geo.areas.construida_m2 }); h.head = id; h.redo = []; atomicWriteJson(f, h); });
+    const out = this.#escribirVersion(project, rel, id, registro, modelo, geo, coh, meta, { base: cur.id, entrada: { id, padre: cur.id, creada, descripcion: registro.descripcion, resumen: registro.resumen, construida_m2: geo.areas.construida_m2 } });
     new Project(this.sandbox, project).audit('anteproyecto_modificado', { nombre: h.nombre, version: id, operaciones: operaciones.map((o) => o.operacion) });
     return { nombre: h.nombre, version: id, padre: cur.id, resumen: resumenes, retiradas, cambios: diff(cur.modelo, modelo, cur.geo, geo), modelo, geo, coherencia: coh, archivos: { dxf: out.dxf, svg: out.svg }, verificacion_dxf: out.cruzada };
   }
 
   historial(project, nombre, accion, version) {
-    const { h, f } = this.#historial(project, nombre);
-    const idx = (id) => h.versiones.find((v) => v.id === id);
+    const { h, f, rel } = this.#historial(project, nombre);
     if (accion === 'listar') return { head: h.head, redo: h.redo, versiones: h.versiones, arbol: h.versiones.map((v) => `${v.id}${v.padre ? ` ← ${v.padre}` : ''}${v.id === h.head ? '  (actual)' : ''}: ${v.descripcion}`) };
-    if (accion === 'deshacer') { const v = idx(h.head); if (!v.padre) throw new UserError('NADA_QUE_DESHACER', 'Ya está en la versión inicial.'); h.redo.push(h.head); h.head = v.padre; }
-    else if (accion === 'rehacer') { const r = h.redo.pop(); if (!r) throw new UserError('NADA_QUE_REHACER', 'No hay cambios deshechos para rehacer.'); h.head = r; }
-    else if (accion === 'restaurar') { if (!version || !idx(version)) throw new UserError('VERSION_NO_EXISTE', `No existe la versión ${version}.`, `Versiones: ${h.versiones.map((v) => v.id).join(', ')}.`); if (h.head !== version) h.redo = []; h.head = version; }
-    else throw new UserError('ACCION_INVALIDA', 'accion debe ser listar, deshacer, rehacer o restaurar.');
-    atomicWriteJson(f, h);
-    new Project(this.sandbox, project).audit('anteproyecto_historial', { nombre: h.nombre, accion, head: h.head });
-    return { head: h.head, redo: h.redo, accion };
+    if (!['deshacer', 'rehacer', 'restaurar'].includes(accion)) throw new UserError('ACCION_INVALIDA', 'accion debe ser listar, deshacer, rehacer o restaurar.');
+    // El puntero del historial se mueve bajo el bloqueo y sobre el historial FRESCO (no se pisan los cambios de otra sesión)
+    const r = mutarHistorial({ dir: this.#abs(project, rel), historial: f, esperaMs: this.esperaMs, fn: (h) => {
+      const idx = (id) => h.versiones.find((v) => v.id === id);
+      if (accion === 'deshacer') { const v = idx(h.head); if (!v.padre) throw new UserError('NADA_QUE_DESHACER', 'Ya está en la versión inicial.'); h.redo.push(h.head); h.head = v.padre; }
+      else if (accion === 'rehacer') { const r = h.redo.pop(); if (!r) throw new UserError('NADA_QUE_REHACER', 'No hay cambios deshechos para rehacer.'); h.head = r; }
+      else { if (!version || !idx(version)) throw new UserError('VERSION_NO_EXISTE', `No existe la versión ${version}.`, `Versiones: ${h.versiones.map((v) => v.id).join(', ')}.`); if (h.head !== version) h.redo = []; h.head = version; }
+      return { head: h.head, redo: h.redo, nombre: h.nombre };
+    } });
+    new Project(this.sandbox, project).audit('anteproyecto_historial', { nombre: r.nombre, accion, head: r.head });
+    return { head: r.head, redo: r.redo, accion };
   }
 
   verificar(project, nombre, version) {

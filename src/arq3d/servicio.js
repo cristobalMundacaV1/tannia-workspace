@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { UserError } from '../mcp/util.js';
 import { FOLDERS } from '../security/sandbox.js';
 import { Project, atomicWriteJson, readJson } from '../project/store.js';
-import { commitVersion, reconciliar } from '../project/transaccion.js';
+import { commitConHistorial, mutarHistorial, reconciliar } from '../project/transaccion.js';
 import { VERSION } from '../version.js';
 import { construirPrimitivas } from './geometria.js';
 import { aplicarOperaciones3d } from './operaciones.js';
@@ -24,20 +24,20 @@ export class Modelos3d {
   #hist(project, nombre) {
     const { rel } = this.#dir(nombre); const f = this.#abs(project, `${rel}/historial.json`);
     if (!fs.existsSync(f)) throw new UserError('MODELO3D_NO_EXISTE', `No existe el modelo 3D "${nombre}".`, 'Créelo con tannia_3d_crear o consulte los existentes con tannia_3d_ver.');
-    const h = readJson(f, null); try { reconciliar(this.#abs(project, rel), h.versiones.map((v) => v.id)); } catch { /* la reconciliación nunca bloquea la lectura */ }
-    return { h, f, rel };
+    try { reconciliar(this.#abs(project, rel), () => (readJson(f, null)?.versiones ?? []).map((v) => v.id)); } catch { /* la reconciliación nunca bloquea la lectura */ }
+    return { h: readJson(f, null), f, rel };
   }
   listar(project) {
     const base = this.#abs(project, `${FOLDERS.trabajo}/${RAIZ}`); if (!fs.existsSync(base)) return [];
     return fs.readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory() && fs.existsSync(path.join(base, d.name, 'historial.json'))).map((d) => { const h = readJson(path.join(base, d.name, 'historial.json'), {}); return { nombre: h.nombre, head: h.head, versiones: (h.versiones || []).length }; });
   }
-  #escribir(project, rel, id, registro, modelo, actualizar) {
+  #escribir(project, rel, id, registro, modelo, tx) {
     const built = construirPrimitivas(modelo);
     // Registro de supuestos DERIVADO del modelo final (se actualiza con cada cambio de altura/espesor; nunca queda desfasado)
     built.modelo.supuestos = { niveles: built.modelo.niveles.map((n) => ({ id: n.id, altura_mm: n.altura_mm, fuente: n.fuente_altura || 'indicada' })), espesores_losa_mm: [...new Set(built.modelo.losas.map((l) => l.espesor_mm))], nota: 'Alturas y espesores verticales: supuestos preliminares editables (no normativos).' };
     const reg = { ...registro, modelo: built.modelo, modelo_sha256: sha(built.modelo), primitivas: built.primitivas, capas: built.capas, nota: built.nota, resumen_geometria: built.resumen, supuestos_lista: built.supuestos, advertencias: built.advertencias, generado_por: `tannia-workspace ${VERSION}` };
     // Transacción: staging + journal + manifiesto con hashes + historial como último paso (commit lógico)
-    commitVersion({ dir: this.#abs(project, rel), id, archivos: [{ nombre: `${id}.json`, contenido: JSON.stringify(reg, null, 2) }], actualizarHistorial: actualizar, hook: this.hook || undefined });
+    commitConHistorial({ dir: this.#abs(project, rel), historial: this.#abs(project, `${rel}/historial.json`), id, archivos: [{ nombre: `${id}.json`, contenido: JSON.stringify(reg, null, 2) }], ...tx, hook: this.hook || undefined, esperaMs: this.esperaMs });
     return reg;
   }
   /** Crea v001. `modelo` estructurado O `desde_anteproyecto:{nombre,version?}` + parámetros (alturas/cubierta como supuestos explícitos). */
@@ -52,7 +52,7 @@ export class Modelos3d {
       m = modeloDesdeGeo(c.geo, { ...parametros, altura_2d_mm: c.modelo.altura_piso_cielo_mm, origen });
     }
     const id = `v${num3(1)}`; const creada = new Date().toISOString();
-    const reg = this.#escribir(project, rel, id, { id, numero: 1, padre: null, creada, descripcion: 'Versión inicial', solicitud: solicitud || null, operaciones: [], origen }, m, () => atomicWriteJson(fh, { nombre: n, creado: creada, head: id, redo: [], versiones: [{ id, padre: null, creada, descripcion: 'Versión inicial' }] }));
+    const reg = this.#escribir(project, rel, id, { id, numero: 1, padre: null, creada, descripcion: 'Versión inicial', solicitud: solicitud || null, operaciones: [], origen }, m, { nuevo: { nombre: n, creado: creada, head: id, redo: [], versiones: [{ id, padre: null, creada, descripcion: 'Versión inicial' }] }, errorExiste: new UserError('MODELO3D_EXISTE', `Ya existe el modelo 3D "${n}".`, 'Use otro nombre o modifíquelo con tannia_3d_modificar.') });
     new Project(this.sandbox, project).audit('modelo3d_creado', { nombre: n, version: id });
     return { nombre: n, version: id, reg, rel };
   }
@@ -80,18 +80,22 @@ export class Modelos3d {
     else if (!actualizar_desde_anteproyecto) throw new UserError('SIN_OPERACIONES', 'Indique operaciones o actualizar_desde_anteproyecto.');
     const numero = Math.max(...h.versiones.map((v) => Number(v.id.slice(1)))) + 1; const id = `v${num3(numero)}`; const creada = new Date().toISOString();
     const desc = descripcion || resumen.join('; ');
-    const reg = this.#escribir(project, rel, id, { id, numero, padre: cur.id, creada, descripcion: desc, operaciones: operaciones || [], origen }, m, () => { h.versiones.push({ id, padre: cur.id, creada, descripcion: desc }); h.head = id; h.redo = []; atomicWriteJson(f, h); });
+    const reg = this.#escribir(project, rel, id, { id, numero, padre: cur.id, creada, descripcion: desc, operaciones: operaciones || [], origen }, m, { base: cur.id, entrada: { id, padre: cur.id, creada, descripcion: desc } });
     new Project(this.sandbox, project).audit('modelo3d_modificado', { nombre: h.nombre, version: id });
     return { nombre: h.nombre, version: id, padre: cur.id, resumen, reg, rel };
   }
   historial(project, nombre, accion, version) {
-    const { h, f } = this.#hist(project, nombre); const hay = (id) => h.versiones.find((v) => v.id === id);
+    const { h, f, rel } = this.#hist(project, nombre);
     if (accion === 'listar') return { head: h.head, redo: h.redo, versiones: h.versiones };
-    if (accion === 'deshacer') { const v = hay(h.head); if (!v.padre) throw new UserError('NADA_QUE_DESHACER', 'Ya está en la versión inicial.'); h.redo.push(h.head); h.head = v.padre; }
-    else if (accion === 'rehacer') { const r = h.redo.pop(); if (!r) throw new UserError('NADA_QUE_REHACER', 'No hay cambios deshechos.'); h.head = r; }
-    else if (accion === 'restaurar') { if (!version || !hay(version)) throw new UserError('VERSION_NO_EXISTE', `No existe la versión ${version}.`); if (h.head !== version) h.redo = []; h.head = version; }
-    else throw new UserError('ACCION_INVALIDA', 'accion debe ser listar, deshacer, rehacer o restaurar.');
-    atomicWriteJson(f, h); return { head: h.head, redo: h.redo, accion };
+    if (!['deshacer', 'rehacer', 'restaurar'].includes(accion)) throw new UserError('ACCION_INVALIDA', 'accion debe ser listar, deshacer, rehacer o restaurar.');
+    // El puntero se mueve bajo el bloqueo y sobre el historial FRESCO
+    return mutarHistorial({ dir: this.#abs(project, rel), historial: f, esperaMs: this.esperaMs, fn: (h) => {
+      const hay = (id) => h.versiones.find((v) => v.id === id);
+      if (accion === 'deshacer') { const v = hay(h.head); if (!v.padre) throw new UserError('NADA_QUE_DESHACER', 'Ya está en la versión inicial.'); h.redo.push(h.head); h.head = v.padre; }
+      else if (accion === 'rehacer') { const r = h.redo.pop(); if (!r) throw new UserError('NADA_QUE_REHACER', 'No hay cambios deshechos.'); h.head = r; }
+      else { if (!version || !hay(version)) throw new UserError('VERSION_NO_EXISTE', `No existe la versión ${version}.`); if (h.head !== version) h.redo = []; h.head = version; }
+      return { head: h.head, redo: h.redo, accion };
+    } });
   }
   /** Coherencia con el 2D de origen (si lo hay): re-deriva el anteproyecto y compara huella y vanos. */
   coherencia2d(project, nombre, version) {
