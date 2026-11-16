@@ -157,7 +157,10 @@ export class Project {
       } else if (info.mtime_ms != null && Math.round(st.mtimeMs) !== info.mtime_ms) notas.push({ archivo: rel, nota: 'contenido idéntico (hash) pero cambió la fecha de modificación' });
       if (this.#hayBloqueo(full)) abiertos.push(rel);
     }
-    return { ok: problemas.length === 0, verificados: Object.keys(man.archivos).length, problemas, metadatos: notas, posiblemente_abiertos_en_autocad: abiertos, ignorados_por_politica: man.migrados.length };
+    const verificados = Object.keys(man.archivos).length;
+    // 0 originales verificados solo prueba que no hay NADA que comparar: no es evidencia de que la protección funcione
+    const estado = problemas.length ? 'comprometidos' : verificados === 0 ? 'sin_originales_que_verificar' : 'integros';
+    return { ok: problemas.length === 0, estado, proteccion_validada: estado === 'integros', verificados, problemas, metadatos: notas, posiblemente_abiertos_en_autocad: abiertos, ignorados_por_politica: man.migrados.length };
   }
 
   /** Copia un original (o antecedente) a 03 Trabajo comprobando el hash; nunca devuelve ruta del original para escritura. */

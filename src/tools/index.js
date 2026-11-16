@@ -137,7 +137,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   });
   reg('tannia_originales_verificar', { title: 'Verificar integridad de originales', description: 'Comprueba que los originales no cambiaron.', inputSchema: { proyecto }, annotations: RO }, async ({ proyecto: n }) => {
     const r = P(n).verifyOriginals();
-    return ok(r.ok ? 'Originales íntegros.' : 'ATENCIÓN: hay originales modificados o faltantes.', r);
+    return ok(r.estado === 'sin_originales_que_verificar' ? 'No hay originales registrados: no hay nada que verificar (esto NO prueba que la protección de originales funcione; registre un original para comprobarlo).' : r.ok ? `Originales íntegros (${r.verificados} verificado(s) por hash).` : 'ATENCIÓN: hay originales modificados o faltantes.', r);
   });
   reg('tannia_copia_trabajo', {
     title: 'Crear copia de trabajo', description: 'Copia un archivo del proyecto a "03 Trabajo" (verificando hash). Es la ÚNICA forma de obtener un archivo editable: los originales nunca se modifican.',
@@ -368,6 +368,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   registerCad(reg, { cad, detectar });
   registerDiseno(reg, { sandbox, cad });
   registerArq3d(reg, { sandbox, cad });
+  registerProyectos(reg, { sandbox });
 }
 
 // La verificación es el acto de revisión: no invalida el estado (sí invalida cualquier cambio de datos).
@@ -387,3 +388,4 @@ export function staleMark(pr, partidas) {
 import { registerCad } from './cad.js';
 import { registerDiseno } from './diseno.js';
 import { registerArq3d } from './arq3d.js';
+import { registerProyectos } from './proyectos.js';
