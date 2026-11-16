@@ -69,14 +69,28 @@ foreach ($p in $progids) {
   catch { $intentos += ($p + '=' + (HR (Inner $_.Exception))) }
 }
 if ($null -eq $acad) { Emit @{ ok = $false; etapa = 'conectar'; codigo = 'AUTOCAD_NO_ABIERTO'; intentos = @($intentos | Select-Object -First 4) }; exit 0 }
-try { $doc = $acad.ActiveDocument } catch { Fail 'documento_activo' $_; exit 0 }
+$doc = $null
+`;
+// Resolución del documento de trabajo: por RUTA esperada cuando se indica (no depende de cuál esté activo) y, si no, el activo.
+// Los scripts que crean o abren dibujos (SIN_DOCUMENTO_PREVIO) no lo necesitan: funcionan con AutoCAD abierto y cero documentos.
+export const PS_DOC = `if ($in.ruta_esperada -and ($null -eq $doc -or [string]$doc.FullName -ne [string]$in.ruta_esperada)) {
+  $nd0 = [int]$acad.Documents.Count
+  for ($i0 = 0; $i0 -lt $nd0; $i0++) { $d0 = $acad.Documents.Item($i0); if ([string]$d0.FullName -eq [string]$in.ruta_esperada) { $doc = $d0; break } }
+}
+if ($null -eq $doc) { try { $doc = $acad.ActiveDocument } catch { $doc = $null } }
 if ($null -eq $doc) { Emit @{ ok = $false; etapa = 'documento_activo'; codigo = 'SIN_DOCUMENTO' }; exit 0 }
 `;
+export const SIN_DOCUMENTO_PREVIO = new Set(['construir_3d', 'abrir_copia', 'dxf_a_dwg', 'estado']);
+// Solo las lecturas pueden reintentarse si AutoCAD está ocupado: una escritura repetida podría duplicar o alterar el dibujo.
+export const REINTENTO_SEGURO = new Set(['estado', 'listar', 'medir', 'leer_lote', 'enumerar', 'resumen']);
 
 // Cuerpos estáticos: los datos del usuario viajan SOLO en $in, nunca interpolados en el script.
 export const SCRIPTS = {
-  estado: `$ruta = [string]$doc.FullName
-Emit @{ ok = $true; data = @{ version = [string]$acad.Version; nombre = [string]$acad.Name; progid = $usado; documento = [string]$doc.Name; ruta = $ruta; guardado = [bool]$doc.Saved; unidades_insunits = $doc.GetVariable('INSUNITS') } }`,
+  estado: `$nd = [int]$acad.Documents.Count
+if ($null -eq $doc) { try { $doc = $acad.ActiveDocument } catch { $doc = $null } }
+if ($null -eq $doc) { Emit @{ ok = $true; data = @{ version = [string]$acad.Version; nombre = [string]$acad.Name; progid = $usado; documento = $null; ruta = $null; guardado = $null; documentos = $nd; sin_documento = $true } }; exit 0 }
+$ruta = [string]$doc.FullName
+Emit @{ ok = $true; data = @{ documentos = $nd; version = [string]$acad.Version; nombre = [string]$acad.Name; progid = $usado; documento = [string]$doc.Name; ruta = $ruta; guardado = [bool]$doc.Saved; unidades_insunits = $doc.GetVariable('INSUNITS') } }`,
   listar: `$total = [int]$doc.ModelSpace.Count; $items = @(); $n = 0; $trunc = $false
 for ($i = 0; $i -lt $total; $i++) {
   $e = $doc.ModelSpace.Item($i)
@@ -131,7 +145,12 @@ $ruta = [string]$objetivo.FullName
 try { $objetivo.Close($false) } catch { Fail 'cerrar' $_; exit 0 }
 Start-Sleep -Milliseconds 400
 try { $nuevo = $acad.Documents.Open($ruta, $false) } catch { $ex = Inner $_.Exception; Emit @{ ok = $false; etapa = 'reabrir'; codigo = 'REAPERTURA_FALLIDA'; hresult = (HR $ex) }; exit 0 }
-Emit @{ ok = $true; data = @{ documento = [string]$nuevo.Name; guardado = [bool]$nuevo.Saved; entidades = [int]$nuevo.ModelSpace.Count; unidades_insunits = $nuevo.GetVariable('INSUNITS') } }`,
+try { $nuevo.Activate() } catch { }
+# Instrumentación: el conteo del espacio modelo puede tardar en estar disponible tras abrir; se registra el valor inicial, el final y la espera.
+$esperadas = 0; if ($null -ne $in.esperadas) { $esperadas = [int]$in.esperadas }
+$inicial = [int]$nuevo.ModelSpace.Count; $final = $inicial; $espera = 0
+while ($final -ne $esperadas -and $espera -lt 6000) { Start-Sleep -Milliseconds 300; $espera += 300; $final = [int]$nuevo.ModelSpace.Count }
+Emit @{ ok = $true; data = @{ documento = [string]$nuevo.Name; ruta = [string]$nuevo.FullName; guardado = [bool]$nuevo.Saved; entidades = $final; conteo_inicial_tras_abrir = $inicial; espera_ms = $espera; unidades_insunits = $nuevo.GetVariable('INSUNITS') } }`,
   dxf_a_dwg: `$d = $acad.Documents.Open([string]$in.dxf, $false)
 try { $d.SetVariable('INSUNITS', 4) } catch { }
 # Normaliza textos: si AutoCAD dejó secuencias \\U+XXXX sin decodificar, se sustituyen por el carácter real (ñ, Ñ, tildes)
@@ -269,7 +288,7 @@ Emit @{ ok = $true; data = @{ handles = $handles; capa_creada = $creada } }`,
 
 export function buildScript(name, { connect = PS_CONNECT } = {}) {
   if (!SCRIPTS[name]) throw new Error(`script desconocido ${name}`);
-  return `${PS_PRELUDE}${connect}try {\n${SCRIPTS[name]}\n} catch { Fail 'operacion_${name}' $_; exit 0 }\n`;
+  return `${PS_PRELUDE}${connect}${SIN_DOCUMENTO_PREVIO.has(name) ? '' : PS_DOC}try {\n${SCRIPTS[name]}\n} catch { Fail 'operacion_${name}' $_; exit 0 }\n`;
 }
 
 const MARCA = /TANNIA_OUT:([A-Za-z0-9+/=]+)/g;
@@ -353,6 +372,33 @@ export function normalizarRuta(p) {
   return t.normalize('NFC');
 }
 
+const mismaRuta = (a, b) => normalizarRuta(String(a || '')).toLowerCase() === normalizarRuta(String(b || '')).toLowerCase();
+/**
+ * Comprobación GLOBAL de una reapertura: ningún conteo informado puede contradecir a otro y el espacio modelo debe ser el mismo en
+ * ambos sentidos (nada falta, nada nuevo). Un `SHA` idéntico o la lectura correcta de algunos handles NO sustituyen esto.
+ */
+export function comprobarGlobal({ resumenAntes, todosAntes, resumenDespues, todosDespues, cierre, rutaEsperada, rutaDespues }) {
+  const problemas = []; const noVerif = [];
+  const n = (v) => (Number.isInteger(v) ? v : null);
+  const conteos = { antes_resumen: n(resumenAntes.entidades), antes_enumerado: todosAntes.length, despues_reapertura: n(cierre.entidades), despues_resumen: n(resumenDespues.entidades), despues_enumerado: todosDespues.length };
+  const base = conteos.antes_enumerado;
+  for (const [k, v] of Object.entries(conteos)) {
+    if (v === null) { noVerif.push({ aspecto: `conteo_${k}`, motivo: 'AutoCAD no informó el valor' }); continue; }
+    if (v !== base) problemas.push({ problema: 'conteo_global_distinto', fuente: k, esperado: base, informado: v });
+  }
+  if (base > 0 && todosDespues.length === 0) problemas.push({ problema: 'reapertura_sin_entidades', antes: base, despues: 0 });
+  if (!mismaRuta(rutaDespues, rutaEsperada)) problemas.push({ problema: 'documento_reabierto_distinto', esperado: 'ruta del documento cerrado', informado: 'otra ruta' });
+  const A = new Set(todosAntes.map((e) => String(e.handle).toUpperCase())); const D = new Set(todosDespues.map((e) => String(e.handle).toUpperCase()));
+  const faltan = [...A].filter((h) => !D.has(h)); const nuevos = [...D].filter((h) => !A.has(h));
+  if (faltan.length) problemas.push({ problema: 'handles_ausentes_tras_reabrir', total: faltan.length, muestra: faltan.slice(0, 20) });
+  if (nuevos.length) problemas.push({ problema: 'handles_nuevos_tras_reabrir', total: nuevos.length, muestra: nuevos.slice(0, 20) });
+  const ca = resumenAntes.entidades_por_capa || {}; const cd = resumenDespues.entidades_por_capa || {};
+  const dif = [...new Set([...Object.keys(ca), ...Object.keys(cd)])].filter((c) => (ca[c] || 0) !== (cd[c] || 0)).map((c) => ({ capa: c, antes: ca[c] || 0, despues: cd[c] || 0 }));
+  if (dif.length) problemas.push({ problema: 'conteo_por_capa_distinto', capas: dif.slice(0, 20) });
+  const estado = problemas.length ? 'fallida' : noVerif.length ? 'no_concluyente' : 'verificada';
+  return { estado, conteos, problemas, no_verificables: noVerif, handles: { antes: A.size, despues: D.size, ausentes: faltan.length, nuevos: nuevos.length }, documento_identico: mismaRuta(rutaDespues, rutaEsperada) };
+}
+
 export class AutoCadCom {
   constructor({ sandbox, runner, platform = process.platform, connect, sleep = sleepReal } = {}) {
     this.sandbox = sandbox; this.platform = platform; this.connect = connect; this.sleep = sleep;
@@ -368,7 +414,7 @@ export class AutoCadCom {
       catch (e) { throw this.#errorProceso(e); }
       let r; try { r = JSON.parse(String(out).trim()); } catch { throw new UserError('AUTOCAD_RESPUESTA_INVALIDA', 'AutoCAD respondió de forma inesperada.', 'Reintente; si persiste, ejecute el diagnóstico.', { etapa: 'interpretar_respuesta' }); }
       if (r.ok) return r.data;
-      if (BUSY.has(String(r.hresult).toUpperCase().replace(/^0X/, '0x')) && intento < 2) { await this.sleep(700 * (intento + 1)); continue; }
+      if (BUSY.has(String(r.hresult).toUpperCase().replace(/^0X/, '0x')) && intento < 2 && REINTENTO_SEGURO.has(name)) { await this.sleep(700 * (intento + 1)); continue; }
       throw this.#errorScript(r, name);
     }
   }
@@ -413,12 +459,18 @@ export class AutoCadCom {
   }
 
   async estado() { return this.#exec('estado'); }
+  /** Estado exigiendo un dibujo abierto (las operaciones sobre el dibujo no tienen sentido con AutoCAD abierto y cero documentos). */
+  async #estadoDoc() {
+    const st = await this.estado();
+    if (st.sin_documento) throw new UserError('AUTOCAD_SIN_DOCUMENTO', 'AutoCAD está abierto pero no tiene ningún dibujo abierto.', 'Abra la copia de trabajo con tannia_cad_abrir_copia (o un dibujo en AutoCAD) y repita.', { documentos_abiertos: st.documentos ?? 0 });
+    return st;
+  }
 
   /** Estado + clasificación de la ubicación del documento (sin devolver rutas fuera de Tannia Workspace). */
   async estadoSeguro() {
     const st = await this.estado();
     const { ruta, ...resto } = st;
-    return { ...resto, ubicacion_documento: this.clasificarDocumento(ruta) };
+    return { ...resto, ubicacion_documento: st.sin_documento ? { clase: 'sin_documento', guardado_en_disco: false } : this.clasificarDocumento(ruta) };
   }
 
   clasificarDocumento(ruta) {
@@ -481,7 +533,7 @@ export class AutoCadCom {
     if (!Array.isArray(lineas) || lineas.length < 1 || lineas.length > 100) throw new UserError('DATO_INVALIDO', 'Indique entre 1 y 100 líneas.');
     for (const l of lineas) for (const k of ['x1', 'y1', 'x2', 'y2']) if (!Number.isFinite(l?.[k])) throw new UserError('DATO_INVALIDO', 'Coordenadas no válidas.');
     if (capa !== undefined && capa !== null && !LAYER.test(capa)) throw new UserError('DATO_INVALIDO', 'Nombre de capa no válido (sin \\ / : * ? " < > | ; , = \' `).');
-    const st = await this.estado();
+    const st = await this.#estadoDoc();
     this.#assertWorkCopy(project, st.ruta); // el documento ACTIVO debe ser copia de trabajo (verificación 1, en Node)
     const r = await this.#exec('agregar_lineas', { lineas: lineas.map(({ x1, y1, x2, y2 }) => ({ x1, y1, x2, y2 })), capa: capa || null, ruta_esperada: st.ruta }); // verificación 2, en PowerShell
     const handles = r.handles || [];
@@ -492,24 +544,24 @@ export class AutoCadCom {
    * Lectura TIPADA por lotes (evita timeouts con muchas entidades): cada lote es una llamada COM independiente con su propio
    * tiempo límite proporcional. Devuelve solo propiedades que existen para cada tipo (nunca 0 por ausencia).
    */
-  async leerLote(handles, { tam = 150 } = {}) {
+  async leerLote(handles, { tam = 150, ruta } = {}) {
     if (!Array.isArray(handles) || !handles.every((h) => HANDLE.test(String(h)))) throw new UserError('DATO_INVALIDO', 'Handles no válidos (hexadecimales).');
     if (handles.length > MAX_ENTIDADES) throw new UserError('DEMASIADAS_ENTIDADES', `Máximo ${MAX_ENTIDADES} entidades por verificación.`);
     const tamano = Math.min(Math.max(10, tam | 0), 400); const entidades = []; let lotes = 0; let unidades = null;
     for (let i = 0; i < handles.length; i += tamano) {
       const trozo = handles.slice(i, i + tamano).map(String);
-      const r = await this.#exec('leer_lote', { handles: trozo }, { timeoutMs: 30000 + trozo.length * 80 });
+      const r = await this.#exec('leer_lote', { handles: trozo, ruta_esperada: ruta || null }, { timeoutMs: 30000 + trozo.length * 80 });
       entidades.push(...r.entidades); unidades = r.unidades_insunits; lotes++;
     }
     return { entidades, lotes, tam_lote: tamano, unidades_insunits: unidades };
   }
 
   /** Enumera handles del espacio modelo por páginas (índices, no `foreach` COM). */
-  async enumerarHandles({ capa, pagina = 500 } = {}) {
+  async enumerarHandles({ capa, pagina = 500, ruta } = {}) {
     if (capa !== undefined && capa !== null && !LAYER.test(capa)) throw new UserError('DATO_INVALIDO', 'Nombre de capa no válido.');
     const entidades = []; let offset = 0; let total = 0;
     for (let n = 0; n < 1000; n++) {
-      const r = await this.#exec('enumerar', { capa: capa || null, offset, limite: pagina }, { timeoutMs: 60000 });
+      const r = await this.#exec('enumerar', { capa: capa || null, offset, limite: pagina, ruta_esperada: ruta || null }, { timeoutMs: 60000 });
       total = r.total; entidades.push(...r.entidades);
       if (entidades.length > MAX_ENTIDADES) throw new UserError('DEMASIADAS_ENTIDADES', `El dibujo tiene más de ${MAX_ENTIDADES} entidades en el alcance pedido; acote por capa.`);
       if (r.siguiente == null) break; offset = r.siguiente;
@@ -536,7 +588,7 @@ export class AutoCadCom {
   async #copiaActiva(project, archivo) {
     const { abs } = this.sandbox.resolve(project, archivo);
     const objetivo = this.#assertWorkCopy(project, abs);
-    const st = await this.estado();
+    const st = await this.#estadoDoc();
     const activo = this.#assertWorkCopy(project, st.ruta);
     if (activo !== objetivo) throw new UserError('DOCUMENTO_ACTIVO_DISTINTO', 'El dibujo activo en AutoCAD no es la copia indicada; no se cierra nada.', 'Active la copia de trabajo indicada y repita.');
     return { objetivo, st };
@@ -550,6 +602,7 @@ export class AutoCadCom {
    */
   async verificarPersistencia(project, { archivo, handles, capa, creado_en, tolerancia = 1e-6, tam_lote = 150 }) {
     if (handles !== undefined && (!Array.isArray(handles) || handles.length < 1 || !handles.every((h) => HANDLE.test(String(h))))) throw new UserError('DATO_INVALIDO', 'Los handles deben ser hexadecimales.');
+    if (capa !== undefined && capa !== null && !LAYER.test(capa)) throw new UserError('DATO_INVALIDO', 'Nombre de capa no válido.');
     const { objetivo, st } = await this.#copiaActiva(project, archivo);
     const stat = (f) => { const s0 = fs.statSync(f); return { bytes: s0.size, modificado: new Date(s0.mtimeMs).toISOString(), mtime_ms: s0.mtimeMs, sha256: sha256File(f) }; };
     const disco0 = stat(objetivo);
@@ -557,22 +610,33 @@ export class AutoCadCom {
       throw new UserError('NO_GUARDADO_EN_DISCO', 'El archivo en disco es anterior a la creación de las líneas: los cambios NO están guardados en el DWG.', 'Guarde la copia en AutoCAD y repita.', { archivo_modificado: disco0.modificado, creado_en });
     }
     const alcance = handles ? 'handles' : capa ? `capa ${capa}` : 'todo el espacio modelo';
-    const lista = handles ? handles.map(String) : (await this.enumerarHandles({ capa })).entidades.map((e) => e.handle);
+    const ruta = st.ruta;
+    // Fotografía GLOBAL antes de cerrar: conteo, capas y todos los handles (aunque solo se verifique un subconjunto)
+    const resumenAntes = await this.#exec('resumen', { ruta_esperada: ruta }, { timeoutMs: 60000 });
+    const todosAntes = (await this.enumerarHandles({ ruta })).entidades;
+    const lista = handles ? handles.map(String) : capa ? todosAntes.filter((e) => e.capa === capa).map((e) => e.handle) : todosAntes.map((e) => e.handle);
     if (!lista.length) throw new UserError('SIN_ENTIDADES', 'No hay entidades que verificar en ese alcance.');
-    const antes = await this.leerLote(lista, { tam: tam_lote });
+    const antes = await this.leerLote(lista, { tam: tam_lote, ruta });
     let cierre;
-    try { cierre = await this.#exec('cerrar_reabrir', { ruta_esperada: st.ruta }, { timeoutMs: 90000 }); }
+    try { cierre = await this.#exec('cerrar_reabrir', { ruta_esperada: ruta, esperadas: todosAntes.length }, { timeoutMs: 120000 }); }
     catch (e) {
       if (e.detalle?.codigo === 'CAMBIOS_SIN_GUARDAR' || e.code === 'CAMBIOS_SIN_GUARDAR') throw new UserError('CAMBIOS_SIN_GUARDAR', 'La copia tiene cambios sin guardar: no se cierra para no perderlos.', 'Guárdela en AutoCAD y repita.');
       if (e.code === 'REAPERTURA_FALLIDA') e.detalle = { ...(e.detalle || {}), lecturas_previas: antes.entidades.slice(0, 50) };
       throw e;
     }
-    const despues = await this.leerLote(lista, { tam: tam_lote });
+    // Fotografía GLOBAL después de reabrir, tomada del documento reabierto (por ruta) y re-enumerada: nada se da por supuesto
+    const rutaDespues = cierre.ruta || ruta;
+    const resumenDespues = await this.#exec('resumen', { ruta_esperada: rutaDespues }, { timeoutMs: 60000 });
+    const todosDespues = (await this.enumerarHandles({ ruta: rutaDespues })).entidades;
+    const despues = await this.leerLote(lista, { tam: tam_lote, ruta: rutaDespues });
     const disco1 = stat(objetivo);
     const cmp = compararLecturas(antes.entidades, despues.entidades, { tol: tolerancia });
+    const global = comprobarGlobal({ resumenAntes, todosAntes, resumenDespues, todosDespues, cierre, rutaEsperada: ruta, rutaDespues });
+    const estadoFinal = cmp.estado === 'fallida' || global.estado === 'fallida' ? 'fallida' : (cmp.estado === 'no_concluyente' || global.estado === 'no_concluyente') ? 'no_concluyente' : 'verificada';
     const archivoIntacto = disco0.sha256 === disco1.sha256;
     return {
-      persistencia: cmp.estado, alcance, entidades_leidas: lista.length, entidades_tras_reabrir: cierre.entidades,
+      persistencia: estadoFinal, alcance, entidades_leidas: lista.length, entidades_tras_reabrir: todosDespues.length,
+      verificacion_global: global,
       cobertura: cmp.cobertura, diferencias: cmp.diferencias.slice(0, 50), diferencias_total: cmp.diferencias.length,
       no_verificables: cmp.no_verificables.slice(0, 50), no_verificables_total: cmp.no_verificables.length,
       inconsistencias_internas: cmp.inconsistencias_internas.slice(0, 50), inconsistencias_total: cmp.inconsistencias_internas.length,
@@ -580,7 +644,9 @@ export class AutoCadCom {
       archivo_en_disco: { antes: { bytes: disco0.bytes, modificado: disco0.modificado, sha256: disco0.sha256 }, despues: { bytes: disco1.bytes, modificado: disco1.modificado, sha256: disco1.sha256 }, sin_cambios_por_el_cierre_y_reapertura: archivoIntacto },
       guardado_posterior_a_la_creacion: creado_en ? disco0.mtime_ms + 2000 >= Date.parse(creado_en) : null,
       unidades_insunits: cierre.unidades_insunits,
-      independencia: 'Releído desde el DWG en disco tras cerrar y reabrir en AutoCAD, comparando cada tipo por sus propiedades reales. El contenido del DWG no se interpreta fuera de AutoCAD.',
+      reapertura: { conteo_inicial_tras_abrir: cierre.conteo_inicial_tras_abrir ?? null, espera_ms: cierre.espera_ms ?? null },
+      aviso: 'Un SHA-256 idéntico del archivo en disco NO prueba la persistencia: la prueba es la reapertura (conteo global, capas, handles y propiedades).',
+      independencia: 'Releído desde el DWG en disco tras cerrar y reabrir en AutoCAD (documento localizado por ruta y re-enumerado), comparando cada tipo por sus propiedades reales y el estado global del espacio modelo. El contenido del DWG no se interpreta fuera de AutoCAD.',
     };
   }
 
@@ -672,14 +738,14 @@ export class AutoCadCom {
     if (!VISTAS[vista]) throw new UserError('DATO_INVALIDO', `Vista no válida. Use: ${Object.keys(VISTAS).join(', ')}.`);
     if (estilo !== null && !ESTILOS[estilo]) throw new UserError('DATO_INVALIDO', `Estilo no válido. Use: ${Object.keys(ESTILOS).join(', ')}.`);
     for (const c of [...mostrar, ...ocultar]) if (!LAYER.test(c)) throw new UserError('DATO_INVALIDO', 'Nombre de capa no válido.');
-    const st = await this.estado(); this.#assertWorkCopy(project, st.ruta);
+    const st = await this.#estadoDoc(); this.#assertWorkCopy(project, st.ruta);
     const r = await this.#exec('vista_3d', { dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null, mostrar, ocultar, ruta_esperada: st.ruta }, { timeoutMs: 60000 });
     return { ...r, vista, estilo_solicitado: estilo, nota: 'La vista no se guarda en el DWG hasta que lo guarde en AutoCAD. El estilo visual se solicita por comando: confírmelo en pantalla.' };
   }
 
   /** Inspección de solo lectura: sólidos 3D del dibujo activo (volumen, centroide, caja envolvente) por capa. */
   async inspeccionarSolidos(project, { capa, max = 400, tam_lote = 100 } = {}) {
-    const st = await this.estado(); this.#assertWorkCopy(project, st.ruta);
+    const st = await this.#estadoDoc(); this.#assertWorkCopy(project, st.ruta);
     const lista = (await this.enumerarHandles({ capa })).entidades; const sol = lista.filter((e) => e.tipo === 'AcDb3dSolid');
     const tomar = sol.slice(0, Math.min(max, MAX_ENTIDADES)); const lect = await this.leerLote(tomar.map((e) => e.handle), { tam: tam_lote });
     const porCapa = {}; for (const e of lect.entidades) { if (e.error) continue; const c = (porCapa[e.capa] ||= { solidos: 0, volumen_mm3: 0 }); c.solidos++; c.volumen_mm3 += e.volumen || 0; }
@@ -694,7 +760,7 @@ export class AutoCadCom {
     if (!['mover', 'rotar_z'].includes(operacion)) throw new UserError('DATO_INVALIDO', 'operacion debe ser mover o rotar_z.');
     for (const v of [dx, dy, dz, grados, centro[0], centro[1]]) if (!Number.isFinite(v)) throw new UserError('DATO_INVALIDO', 'Valores numéricos no válidos.');
     if (Math.abs(dx) > 1e6 || Math.abs(dy) > 1e6 || Math.abs(dz) > 1e6) throw new UserError('DATO_INVALIDO', 'Desplazamiento fuera de rango (máx. 1 000 000 mm).');
-    const st = await this.estado(); this.#assertWorkCopy(project, st.ruta);
+    const st = await this.#estadoDoc(); this.#assertWorkCopy(project, st.ruta);
     const r = await this.#exec('transformar_solido', { handle: String(handle), operacion, dx, dy, dz, grados, cx: centro[0], cy: centro[1], guardar: !!guardar, ruta_esperada: st.ruta }, { timeoutMs: 60000 });
     return { ...r, aviso: 'El DWG ya NO coincide con el modelo 3D guardado: la modificación manual no actualiza el modelo. Para cambios que deban persistir en el modelo use tannia_3d_modificar.' };
   }

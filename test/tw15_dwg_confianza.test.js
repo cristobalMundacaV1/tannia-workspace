@@ -135,7 +135,7 @@ test('persistencia por LOTES: 2000 entidades sin superar el límite por llamada;
     const r = await com.verificarPersistencia('Casa', { archivo: '03 Trabajo/Anteproyectos/Casa 80/v001.dwg' });
     assert.equal(r.persistencia, 'verificada'); assert.equal(r.entidades_leidas, 2000); assert.deepEqual(r.lotes, { antes: 14, despues: 14, tam_lote: 150 });
     assert.ok(calls.filter((c) => c.name === 'leer_lote').every((c) => c.input.handles.length <= 150), 'ninguna llamada supera el tamaño de lote');
-    assert.equal(calls.filter((c) => c.name === 'enumerar').length, 4, 'enumeración en páginas de 500');
+    assert.equal(calls.filter((c) => c.name === 'enumerar').length, 8, 'enumeración global en páginas de 500, antes y después de reabrir');
     assert.equal(calls.filter((c) => c.name === 'cerrar_reabrir').length, 1, 'se cierra y reabre UNA sola vez');
     assert.ok(calls.findIndex((c) => c.name === 'cerrar_reabrir') > calls.findLastIndex((c) => c.name === 'leer_lote' && calls.indexOf(c) < calls.findIndex((x) => x.name === 'cerrar_reabrir')), 'lee antes, cierra, lee después');
     // sin lotes, la misma verificación habría excedido el límite por llamada (simulación de timeout)
