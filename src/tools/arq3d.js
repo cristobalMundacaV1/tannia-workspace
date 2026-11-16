@@ -14,7 +14,7 @@ const RO = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, o
 const RW = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 const AVISO = 'MODELO 3D PRELIMINAR de visualización y anteproyecto: alturas, espesores y pendientes son supuestos editables (no normativos); sin cálculo estructural, térmico ni de instalaciones; no apto para construcción. Los criterios chilenos (OGUC/NCh) son orientación: confirme los valores vigentes con tannia_conocimiento_consultar y las fuentes oficiales.';
 
-const pt = z.tuple([z.number(), z.number()]).describe('[x, y] en mm');
+const pt = z.array(z.number()).min(2).max(2).describe('[x, y] en mm (exactamente 2 números)');
 const vanoS = z.object({ id: z.string(), tipo: z.enum(['puerta', 'ventana', 'paso']), posicion_mm: z.number().describe('Centro del vano medido a lo largo del muro desde p1'), ancho_mm: z.number(), alto_mm: z.number(), antepecho_mm: z.number().optional().describe('Obligatorio en ventanas (altura del alféizar)') });
 const muroS = z.object({ id: z.string(), nivel: z.string(), p1: pt, p2: pt, espesor_mm: z.number(), tipo: z.enum(['ext', 'int']), altura_mm: z.number().optional().describe('Si falta, se usa la altura del nivel'), vanos: z.array(vanoS).optional() });
 const nivelS = z.object({ id: z.string(), nombre: z.string().optional(), cota_mm: z.number(), altura_mm: z.number().describe('Altura libre de muros del nivel: SUPUESTO editable que debe declararse') });

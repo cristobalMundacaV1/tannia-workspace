@@ -294,3 +294,35 @@ test('límites de Windows: scripts 3D largos van comprimidos y entradas grandes 
   for (const n of ['construir_3d', 'vista_3d', 'transformar_solido', 'enumerar', 'leer_lote', 'dxf_a_dwg', 'agregar_lineas']) { const l = prepararLlamada(buildScript(n), { handles: [], x: 1 }); assert.ok(l.comando.length < 32000 && Object.values(l.env).every((v) => v.length < 32000), n); }
   assert.ok(LIMITE_COMANDO < 32000);
 });
+
+test('esquemas MCP compatibles con la API: ninguna herramienta usa tuplas (items como lista / prefixItems) ni construcciones no admitidas', async () => {
+  const home = tmpHome('Tannia esquemas '); const cli = await startClient(home);
+  try {
+    const tools = (await cli.client.listTools()).tools; assert.ok(tools.length > 50);
+    const malos = [];
+    const visitar = (nodo, ruta, tool) => {
+      if (Array.isArray(nodo)) { nodo.forEach((x, i) => visitar(x, `${ruta}[${i}]`, tool)); return; }
+      if (!nodo || typeof nodo !== 'object') return;
+      if (Array.isArray(nodo.items)) malos.push(`${tool}: ${ruta}.items es una lista (tupla)`);
+      if (nodo.prefixItems) malos.push(`${tool}: ${ruta}.prefixItems`);
+      if (nodo.type === 'array' && nodo.items !== undefined && (typeof nodo.items !== 'object' || Array.isArray(nodo.items))) malos.push(`${tool}: ${ruta}.items inválido`);
+      for (const [k, v] of Object.entries(nodo)) visitar(v, `${ruta}.${k}`, tool);
+    };
+    for (const t of tools) visitar(t.inputSchema, 'inputSchema', t.name);
+    assert.deepEqual(malos, []);
+    const crear = tools.find((t) => t.name === 'tannia_3d_crear').inputSchema; assert.equal(crear.properties.modelo.properties.muros.items.properties.p1.items.type, 'number');
+    // las nueve herramientas 3D están y todos sus esquemas son objetos JSON válidos de primer nivel
+    const t3d = tools.filter((t) => t.name.startsWith('tannia_3d_')); assert.equal(t3d.length, 9);
+    for (const t of t3d) { assert.equal(t.inputSchema.type, 'object', t.name); assert.ok(Object.keys(t.inputSchema.properties).includes('proyecto'), t.name); }
+    // coordenadas: exactamente 2 números (el esquema lo exige) y los datos aceptados SE PROCESAN de verdad
+    const pt = crear.properties.modelo.properties.muros.items.properties.p1; assert.equal(pt.minItems, 2); assert.equal(pt.maxItems, 2);
+    await call(cli.client, 'tannia_proyecto_crear', { nombre: 'Esq' });
+    const muro = (id, p1, p2) => ({ id, nivel: 'N1', tipo: 'ext', espesor_mm: 150, p1, p2 });
+    const ok = await call(cli.client, 'tannia_3d_crear', { proyecto: 'Esq', nombre: 'M', modelo: { niveles: [{ id: 'N1', cota_mm: 0, altura_mm: 2500 }], muros: [muro('A', [0, 0], [4000, 0]), muro('B', [4000, 0], [4000, 3000]), muro('C', [4000, 3000], [0, 3000]), muro('D', [0, 3000], [0, 0])], losas: [{ id: 'L', nivel: 'N1', espesor_mm: 150, contorno: [[0, 0], [4000, 0], [4000, 3000], [0, 3000]] }], cubiertas: [] } });
+    assert.ok(!ok.isError, JSON.stringify(ok.content)); assert.equal(data(ok).muros, 4);
+    for (const mal of [[0], [0, 0, 0], ['a', 1]]) { const r = await call(cli.client, 'tannia_3d_crear', { proyecto: 'Esq', nombre: 'Mal', modelo: { niveles: [{ id: 'N1', cota_mm: 0, altura_mm: 2500 }], muros: [muro('A', mal, [4000, 0])] } }); assert.equal(r.isError, true, `coordenada inválida ${JSON.stringify(mal)} debe rechazarse`); }
+    // `centro` de la transformación: el esquema lo acepta y el dato llega a la función (falla después, por no haber AutoCAD, no por validación)
+    const tr = await call(cli.client, 'tannia_3d_solido_transformar', { proyecto: 'Esq', handle: 'A1', operacion: 'rotar_z', grados: 90, centro: [100, 200] }); assert.equal(tr.isError, true); assert.doesNotMatch(JSON.stringify(tr.content), /invalid|Invalid|centro/i);
+    const tr3 = await call(cli.client, 'tannia_3d_solido_transformar', { proyecto: 'Esq', handle: 'A1', operacion: 'rotar_z', grados: 90, centro: [1, 2, 3] }); assert.equal(tr3.isError, true, 'centro con 3 coordenadas se rechaza');
+  } finally { await cli.close(); fs.rmSync(home, { recursive: true, force: true }); }
+});
