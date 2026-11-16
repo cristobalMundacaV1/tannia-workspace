@@ -157,7 +157,7 @@
     "sha_codigo": "329c8ddd103f9e537dfb9f5f1411849f1eb14e0d",
     "h1_h5": "corregidos_y_probados",
     "comunicacion": "servidor_verificado_conducta_del_modelo_pendiente_en_campo",
-    "ci": "pendiente (329c8dd)",
+    "ci": "success 43962157216 (329c8dd, pull_request); success 43962236250 (0c50520, push)",
     "p1_consentimiento": "corregido_y_probado_adversarialmente"
   }
 }
