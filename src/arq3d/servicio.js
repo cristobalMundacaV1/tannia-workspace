@@ -31,6 +31,8 @@ export class Modelos3d {
   }
   #escribir(project, rel, id, registro, modelo) {
     const built = construirPrimitivas(modelo);
+    // Registro de supuestos DERIVADO del modelo final (se actualiza con cada cambio de altura/espesor; nunca queda desfasado)
+    built.modelo.supuestos = { niveles: built.modelo.niveles.map((n) => ({ id: n.id, altura_mm: n.altura_mm, fuente: n.fuente_altura || 'indicada' })), espesores_losa_mm: [...new Set(built.modelo.losas.map((l) => l.espesor_mm))], nota: 'Alturas y espesores verticales: supuestos preliminares editables (no normativos).' };
     const reg = { ...registro, modelo: built.modelo, modelo_sha256: sha(built.modelo), primitivas: built.primitivas, capas: built.capas, nota: built.nota, resumen_geometria: built.resumen, supuestos_lista: built.supuestos, advertencias: built.advertencias, generado_por: `tannia-workspace ${VERSION}` };
     const f = this.#abs(project, `${rel}/${id}.json`); fs.mkdirSync(path.dirname(f), { recursive: true });
     if (fs.existsSync(f)) throw new UserError('VERSION_EXISTE', `La versión ${id} ya existe (las versiones son inmutables).`);
@@ -45,7 +47,7 @@ export class Modelos3d {
     if (desde_anteproyecto) {
       const c = this.ante.cargar(project, desde_anteproyecto.nombre, desde_anteproyecto.version);
       origen = { tipo: 'anteproyecto', nombre: c.h.nombre, version: c.id, modelo_sha256: c.reg.modelo_sha256 };
-      m = modeloDesdeGeo(c.geo, { ...parametros, origen });
+      m = modeloDesdeGeo(c.geo, { ...parametros, altura_2d_mm: c.modelo.altura_piso_cielo_mm, origen });
     }
     const id = `v${num3(1)}`; const creada = new Date().toISOString();
     const reg = this.#escribir(project, rel, id, { id, numero: 1, padre: null, creada, descripcion: 'Versión inicial', solicitud: solicitud || null, operaciones: [], origen }, m);
@@ -68,8 +70,8 @@ export class Modelos3d {
     if (actualizar_desde_anteproyecto) {
       if (!origen) throw new UserError('SIN_ORIGEN_2D', 'Este modelo 3D no se creó desde un anteproyecto 2D: no hay plano con el cual sincronizar.');
       const c = this.ante.cargar(project, origen.nombre, actualizar_desde_anteproyecto.version);
-      const nuevo = modeloDesdeGeo(c.geo, { altura_muros_mm: m.niveles[0].altura_mm, espesor_losa_mm: m.losas[0]?.espesor_mm, cubierta: m.cubiertas[0] ? (({ id, nivel, ...r }) => r)(m.cubiertas[0]) : null, cubierta_visible: m.opciones?.cubierta_visible });
-      m = { ...nuevo, niveles: m.niveles, supuestos: m.supuestos }; // conserva niveles/alturas/supuestos del 3D; muros, vanos y losa vienen del 2D
+      const nuevo = modeloDesdeGeo(c.geo, { altura_muros_mm: m.niveles[0].altura_mm, altura_2d_mm: c.modelo.altura_piso_cielo_mm, espesor_losa_mm: m.losas[0]?.espesor_mm, cubierta: m.cubiertas[0] ? (({ id, nivel, ...r }) => r)(m.cubiertas[0]) : null, cubierta_visible: m.opciones?.cubierta_visible });
+      m = { ...nuevo, niveles: m.niveles }; // conserva niveles/alturas/supuestos del 3D; muros, vanos y losa vienen del 2D
       origen = { tipo: 'anteproyecto', nombre: c.h.nombre, version: c.id, modelo_sha256: c.reg.modelo_sha256 }; m.origen = origen;
       resumen.push(`Muros, vanos y losa actualizados desde el anteproyecto ${c.h.nombre} ${c.id}; niveles, alturas y cubierta del 3D conservados.`);
     }
@@ -95,8 +97,10 @@ export class Modelos3d {
     const c = this.cargar(project, nombre, version); const o = c.reg.origen;
     if (!o) return { estado: 'no_aplica', motivo: 'El modelo 3D no se creó desde un anteproyecto 2D.' };
     const a = this.ante.cargar(project, o.nombre, o.version);
-    const r = coherenciaConGeo(c.reg.modelo, a.geo);
+    const r = coherenciaConGeo(c.reg.modelo, a.geo, a.modelo);
     const actual = this.ante.cargar(project, o.nombre);
+    r.facetas.revision_origen = { estado: actual.id === o.version ? 'verificado' : 'revisar', comparado: 'versión del plano 2D usada frente a la actual', usada: o.version, actual: actual.id, plano_modificado_desde_el_3d: a.reg.modelo_sha256 !== o.modelo_sha256 };
+    if (r.estado === 'coherente_en_alcance' && actual.id !== o.version) r.estado = 'con_observaciones';
     return { ...r, origen: o, anteproyecto_versiones: { usada: o.version, actual: actual.id }, plano_2d_modificado_desde_el_3d: a.reg.modelo_sha256 !== o.modelo_sha256, hay_version_2d_mas_reciente: actual.id !== o.version, nota: actual.id !== o.version ? `El anteproyecto tiene una versión más reciente (${actual.id}); use tannia_3d_modificar con actualizar_desde_anteproyecto para sincronizar.` : null };
   }
 }

@@ -145,6 +145,18 @@ export class Anteproyectos {
     return { version: c.id, coherencia: coh, verificacion_dxf: cruzada, areas: c.geo.areas, indicadores: c.geo.indicadores };
   }
 
+  /** Previsualización PURA: aplica las operaciones a una copia en memoria y devuelve el efecto; no escribe ni crea versión. */
+  previsualizar(project, nombre, { operaciones }) {
+    const cur = this.cargar(project, nombre);
+    if (!Array.isArray(operaciones) || !operaciones.length) throw new UserError('SIN_OPERACIONES', 'Indique al menos una operación.', `Operaciones: ${Object.keys(CATALOGO).join(', ')}.`);
+    let modelo = cur.modelo; const resumenes = [];
+    try { for (const [i, op] of operaciones.entries()) { const r = aplicarOperacion(modelo, op); modelo = r.modelo; resumenes.push(r.resumen); void i; } }
+    catch (e) { if (e instanceof UserError) return { aplicable: false, motivo: e.message, pista: e.hint ?? null, codigo: e.code, se_escribio_algo: false }; throw e; }
+    const geo = derivar(modelo); const coh = verificarCoherencia(modelo, geo);
+    return { aplicable: coh.errores.length === 0, motivo: coh.errores.length ? `Dejaría la geometría inconsistente: ${coh.errores.map((x) => x.mensaje).join(' | ')}` : null, resumen: resumenes, cambios: diff(cur.modelo, modelo, cur.geo, geo), errores: coh.errores, advertencias: coh.advertencias, areas: geo.areas, aberturas_invalidas: geo.aberturas.filter((a) => a.invalida).map((a) => ({ id: a.id, motivo: a.motivo })), se_escribio_algo: false,
+      alcance: 'Previsualización geométrica: no crea versión ni archivos; que sea aplicable no es una aprobación estructural ni normativa.' };
+  }
+
   rutas(project, nombre, version) { const c = this.cargar(project, nombre, version); return { version: c.id, dxf: `${c.rel}/${c.id}.dxf`, svg: `${c.rel}/${c.id}.svg`, abs_dxf: this.#abs(project, `${c.rel}/${c.id}.dxf`), abs_svg: this.#abs(project, `${c.rel}/${c.id}.svg`) }; }
 }
 
