@@ -1,0 +1,19 @@
+{
+  "macrofase": "TW-11",
+  "nombre": "Construction Intelligence Core",
+  "estado": "PLANIFICACION_ENTREGADA",
+  "rama_base": "feat/tw10-architectural-reasoning",
+  "sha_base": "64cdec3ba13e98e93ff3ec1d3cf77aafa3934663",
+  "gates": {
+    "G0": "pendiente", "G1": "pendiente", "G2": "pendiente", "G3": "pendiente",
+    "G4": "pendiente", "G5": "pendiente", "G6": "pendiente", "G7": "pendiente",
+    "G8": "pendiente", "G9": "pendiente", "G10": "pendiente", "G11": "pendiente", "G12": "pendiente"
+  },
+  "reglas": {
+    "sin_merge_sin_po": true, "pr12_permanece_borrador": true,
+    "no_declarar_validacion_real_no_ejecutada": true,
+    "tools_existentes_72_intactas": true, "flag_TANNIA_CIC_default": "off"
+  },
+  "pendientes_externos": ["Claude Desktop real", "AutoCAD real", "Taller con Tannia", "Revision independiente", "Decision PO"],
+  "decisiones_po_abiertas": ["D1","D2","D3","D4","D5","D6","D7"]
+}
