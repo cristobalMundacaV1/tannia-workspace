@@ -7,21 +7,73 @@ import { clasificarOriginal, dibujoDelBloqueo } from './originals_policy.js';
 
 export const ESTADOS = ['nuevo', 'analisis', 'borrador', 'revision', 'aprobado', 'entregable'];
 
-export function atomicWriteJson(file, obj) {
-  const tmp = `${file}.${process.pid}.tmp`;
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.bak`);
-  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2));
-  fs.renameSync(tmp, file);
+const igual = (a, b) => (process.platform === 'win32' ? String(a).toLowerCase() === String(b).toLowerCase() : a === b);
+/**
+ * CONTENCIÓN CANÓNICA: `objetivo` debe quedar dentro de `raiz` y ningún componente existente entre ambos puede ser un enlace
+ * (symlink/junction) ni resolverse a otra ruta. Se llama ANTES de toda escritura (y de lecturas de metadatos internos).
+ */
+export function verificarContencion(raiz, objetivo) {
+  const falla = (codigo, msg) => new UserError(codigo, msg, 'No se escribe para no salir del proyecto. Revise esa carpeta (no debe ser un acceso directo/enlace).');
+  let raizReal; try { raizReal = fs.realpathSync.native(raiz); } catch { throw falla('DESTINO_NO_CANONICO', 'La carpeta del proyecto no se puede resolver.'); }
+  const rel = path.relative(raiz, objetivo);
+  if (rel === '') return raizReal;
+  if (rel.startsWith('..') || path.isAbsolute(rel)) throw falla('DESTINO_FUERA_DE_RAIZ', 'El destino está fuera de la carpeta del proyecto.');
+  let actual = raiz; let esperado = raizReal;
+  for (const parte of rel.split(path.sep)) {
+    actual = path.join(actual, parte); let l; try { l = fs.lstatSync(actual); } catch { return raizReal; } // lo que aún no existe se creará bajo un ancestro ya verificado
+    if (l.isSymbolicLink()) throw falla('DESTINO_ENLAZADO', `"${parte}" es un enlace (symlink/junction).`);
+    esperado = path.join(esperado, parte);
+    if (!igual(fs.realpathSync.native(actual), esperado)) throw falla('DESTINO_NO_CANONICO', `La ruta real de "${parte}" no es la esperada dentro del proyecto.`);
+  }
+  return raizReal;
 }
 
-/** Lee JSON; si está dañado recupera el respaldo .bak; si no hay, devuelve `def`. */
-export function readJson(file, def) {
+/** Abre `file` (flags) y confirma que el descriptor es el archivo que está DENTRO de la raíz (descarta una sustitución entre comprobar y abrir). */
+function abrirDentro(raiz, file, flags) {
+  const fd = fs.openSync(file, flags);
+  try {
+    const raizReal = fs.realpathSync.native(raiz); const real = fs.realpathSync.native(file); const rel = path.relative(raizReal, real);
+    const a = fs.fstatSync(fd); const b = fs.statSync(real);
+    if (rel.startsWith('..') || path.isAbsolute(rel) || a.ino !== b.ino || a.dev !== b.dev) throw new UserError('DESTINO_CAMBIO_DURANTE_ESCRITURA', 'El destino cambió mientras se escribía (posible enlace); se descartó lo escrito.');
+    return fd;
+  } catch (e) { fs.closeSync(fd); try { fs.rmSync(file, { force: true }); } catch { /* ya no existe */ } throw e; }
+}
+
+/** Escritura atómica con respaldo. Con `{ raiz }` valida la contención ANTES de cada paso y confirma el destino tras escribir. */
+export function atomicWriteJson(file, obj, { raiz } = {}) {
+  const dir = path.dirname(file); const tmp = `${file}.${process.pid}.tmp`; const datos = JSON.stringify(obj, null, 2);
+  if (!raiz) { fs.mkdirSync(dir, { recursive: true }); if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.bak`); fs.writeFileSync(tmp, datos); fs.renameSync(tmp, file); return; }
+  verificarContencion(raiz, dir); fs.mkdirSync(dir, { recursive: true }); verificarContencion(raiz, dir);
+  if (fs.existsSync(file)) { verificarContencion(raiz, file); verificarContencion(raiz, `${file}.bak`); fs.copyFileSync(file, `${file}.bak`); }
+  verificarContencion(raiz, tmp); const fd = abrirDentro(raiz, tmp, 'wx');
+  try { fs.writeSync(fd, datos); } finally { fs.closeSync(fd); }
+  verificarContencion(raiz, dir);
+  fs.renameSync(tmp, file);
+  try { verificarContencion(raiz, file); } catch (e) { try { fs.rmSync(file, { force: true }); } catch { /* ya no existe */ } throw e; }
+}
+
+/** Añade una línea a un archivo dentro de la raíz (auditoría) con las mismas garantías de contención. */
+export function adjuntarLinea(raiz, file, linea) {
+  verificarContencion(raiz, path.dirname(file)); verificarContencion(raiz, file);
+  const fd = abrirDentro(raiz, file, 'a');
+  try { fs.writeSync(fd, linea); } finally { fs.closeSync(fd); }
+}
+
+/** Copia sin sobrescribir `origen` → `destino` (dentro de la raíz): comprueba antes y confirma después; si falla, elimina lo creado. */
+export function copiarDentro(raiz, origen, destino) {
+  verificarContencion(raiz, path.dirname(destino)); verificarContencion(raiz, destino);
+  fs.copyFileSync(origen, destino, fs.constants.COPYFILE_EXCL);
+  try { verificarContencion(raiz, destino); } catch (e) { try { fs.rmSync(destino, { force: true }); } catch { /* ya no existe */ } throw e; }
+}
+
+/** Lee JSON; si está dañado recupera el respaldo .bak; si no hay, devuelve `def`. Con `{ raiz }` la recuperación también valida la contención. */
+export function readJson(file, def, { raiz } = {}) {
   const tryRead = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
+  if (raiz) verificarContencion(raiz, file);
   if (!fs.existsSync(file)) return def;
   try { return tryRead(file); } catch {
     if (fs.existsSync(`${file}.bak`)) {
-      try { const v = tryRead(`${file}.bak`); atomicWriteJson(file, v); return v; } catch { /* sigue */ }
+      try { const v = tryRead(`${file}.bak`); atomicWriteJson(file, v, { raiz }); return v; } catch (e) { if (e instanceof UserError && e.code?.startsWith('DESTINO_')) throw e; }
     }
     throw new UserError('ARCHIVO_DE_PROYECTO_DANADO', `El archivo interno "${path.basename(file)}" está dañado y no hay respaldo utilizable.`, 'Restaure desde una copia de seguridad del proyecto.');
   }
@@ -34,19 +86,19 @@ export class Project {
     this.name = sandbox.projectName(name);
   }
   p(...parts) { return path.join(this.root, ...parts); }
-  meta() { return readJson(this.p('.tannia', 'project.json'), null); }
-  saveMeta(m) { atomicWriteJson(this.p('.tannia', 'project.json'), m); }
-  partidas() { return readJson(this.p(FOLDERS.cubicaciones, 'partidas.json'), []); }
-  savePartidas(x, { revisar = false } = {}) { atomicWriteJson(this.p(FOLDERS.cubicaciones, 'partidas.json'), x); if (!revisar) this.invalidateApproval('Se modificaron las partidas.'); }
-  apus() { return readJson(this.p(FOLDERS.presupuestos, 'apus.json'), []); }
-  saveApus(x) { atomicWriteJson(this.p(FOLDERS.presupuestos, 'apus.json'), x); this.invalidateApproval('Se modificaron los APU.'); }
-  config() { return readJson(this.p(FOLDERS.presupuestos, 'config.json'), { gastos_generales_pct: 0, utilidades_pct: 0, iva_pct: 19 }); }
-  saveConfig(x) { atomicWriteJson(this.p(FOLDERS.presupuestos, 'config.json'), x); this.invalidateApproval('Se modificó la configuración del presupuesto.'); }
-  calibraciones() { return readJson(this.p('.tannia', 'calibraciones.json'), []); }
-  saveCalibraciones(x) { atomicWriteJson(this.p('.tannia', 'calibraciones.json'), x); }
+  meta() { return this.leer(this.p('.tannia', 'project.json'), null); }
+  saveMeta(m) { this.escribir(this.p('.tannia', 'project.json'), m); }
+  partidas() { return this.leer(this.p(FOLDERS.cubicaciones, 'partidas.json'), []); }
+  savePartidas(x, { revisar = false } = {}) { this.escribir(this.p(FOLDERS.cubicaciones, 'partidas.json'), x); if (!revisar) this.invalidateApproval('Se modificaron las partidas.'); }
+  apus() { return this.leer(this.p(FOLDERS.presupuestos, 'apus.json'), []); }
+  saveApus(x) { this.escribir(this.p(FOLDERS.presupuestos, 'apus.json'), x); this.invalidateApproval('Se modificaron los APU.'); }
+  config() { return this.leer(this.p(FOLDERS.presupuestos, 'config.json'), { gastos_generales_pct: 0, utilidades_pct: 0, iva_pct: 19 }); }
+  saveConfig(x) { this.escribir(this.p(FOLDERS.presupuestos, 'config.json'), x); this.invalidateApproval('Se modificó la configuración del presupuesto.'); }
+  calibraciones() { return this.leer(this.p('.tannia', 'calibraciones.json'), []); }
+  saveCalibraciones(x) { this.escribir(this.p('.tannia', 'calibraciones.json'), x); }
   /** Manifiesto v2 {version, archivos, migrados}. Un manifiesto antiguo (mapa plano) se normaliza en memoria SIN perder hashes. */
   manifiesto() {
-    const raw = readJson(this.p('.tannia', 'originales.json'), {});
+    const raw = this.leer(this.p('.tannia', 'originales.json'), {});
     if (raw && raw.version === 2) return { version: 2, archivos: raw.archivos || {}, migrados: raw.migrados || [] };
     const archivos = {}; const migrados = [];
     for (const [rel, info] of Object.entries(raw || {})) {
@@ -56,12 +108,13 @@ export class Project {
     }
     return { version: 2, archivos, migrados };
   }
-  saveManifiesto(m) { atomicWriteJson(this.p('.tannia', 'originales.json'), m); }
+  saveManifiesto(m) { this.escribir(this.p('.tannia', 'originales.json'), m); }
   originales() { return this.manifiesto().archivos; }
 
   /** Reparación segura: recrea carpetas faltantes y valida/recupera los JSON internos. No toca originales. */
   repair() {
     const acciones = [];
+    for (const f of [...Object.values(FOLDERS), '.tannia']) verificarContencion(this.root, this.p(f)); // carpetas enlazadas: no se repara a ciegas
     for (const f of Object.values(FOLDERS)) if (!fs.existsSync(this.p(f))) { fs.mkdirSync(this.p(f), { recursive: true }); acciones.push(`Carpeta recreada: ${f}`); }
     fs.mkdirSync(this.p('.tannia'), { recursive: true });
     const files = [[this.p('.tannia', 'project.json'), null], [this.p('.tannia', 'originales.json'), {}], [this.p('.tannia', 'calibraciones.json'), []], [this.p(FOLDERS.cubicaciones, 'partidas.json'), []], [this.p(FOLDERS.presupuestos, 'apus.json'), []], [this.p(FOLDERS.presupuestos, 'config.json'), {}]];
@@ -82,8 +135,12 @@ export class Project {
   }
 
   audit(evento, datos = {}) {
-    fs.appendFileSync(this.p('.tannia', 'auditoria.jsonl'), `${JSON.stringify({ t: new Date().toISOString(), evento, ...datos })}\n`);
+    adjuntarLinea(this.root, this.p('.tannia', 'auditoria.jsonl'), `${JSON.stringify({ t: new Date().toISOString(), evento, ...datos })}\n`);
   }
+  /** `.tannia` debe ser una carpeta real dentro del proyecto (no un enlace). Se exige antes de leer o escribir metadatos. */
+  verificarTannia() { verificarContencion(this.root, this.p('.tannia')); }
+  leer(file, def) { return readJson(file, def, { raiz: this.root }); }
+  escribir(file, obj) { atomicWriteJson(file, obj, { raiz: this.root }); }
 
   setEstado(estado, nota) {
     const m = this.meta();
@@ -157,7 +214,10 @@ export class Project {
       } else if (info.mtime_ms != null && Math.round(st.mtimeMs) !== info.mtime_ms) notas.push({ archivo: rel, nota: 'contenido idéntico (hash) pero cambió la fecha de modificación' });
       if (this.#hayBloqueo(full)) abiertos.push(rel);
     }
-    return { ok: problemas.length === 0, verificados: Object.keys(man.archivos).length, problemas, metadatos: notas, posiblemente_abiertos_en_autocad: abiertos, ignorados_por_politica: man.migrados.length };
+    const verificados = Object.keys(man.archivos).length;
+    // 0 originales verificados solo prueba que no hay NADA que comparar: no es evidencia de que la protección funcione
+    const estado = problemas.length ? 'comprometidos' : verificados === 0 ? 'sin_originales_que_verificar' : 'integros';
+    return { ok: problemas.length === 0, estado, proteccion_validada: estado === 'integros', verificados, problemas, metadatos: notas, posiblemente_abiertos_en_autocad: abiertos, ignorados_por_politica: man.migrados.length };
   }
 
   /** Copia un original (o antecedente) a 03 Trabajo comprobando el hash; nunca devuelve ruta del original para escritura. */

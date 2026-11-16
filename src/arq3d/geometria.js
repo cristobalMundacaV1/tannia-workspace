@@ -201,7 +201,8 @@ export function construirPrimitivas(entrada) {
   }
   prims.forEach((p, i) => { p.id = `S${String(i + 1).padStart(3, '0')}`; });
   const sup = [];
-  for (const w of m.muros) if (!w.altura_mm) sup.push(`Altura de muros del nivel ${w.nivel} = ${niv.get(w.nivel).altura_mm} mm (supuesto preliminar editable).`);
+  const textoFuente = { plano_2d: 'tomada de la altura piso–cielo del plano 2D (valor de práctica de diseño; no se suma losa/cielo)', indicada: 'indicada por el proyectista', supuesto_por_defecto: 'supuesto por defecto (el plano 2D no declara altura)' };
+  for (const w of m.muros) if (!w.altura_mm) { const n = niv.get(w.nivel); sup.push(`Altura de muros del nivel ${w.nivel} = ${n.altura_mm} mm, ${textoFuente[n.fuente_altura] || 'supuesto preliminar editable'}. Editable; no normativa.`); }
   const oculta = m.opciones?.cubierta_visible !== true;
   const capas = Object.entries(CAPAS_3D).map(([nombre, c]) => ({ nombre, color: c.color, visible: !(nombre === 'TW3D_CUBIERTA' && oculta) }));
   const vol = (cl) => prims.filter((p) => cl.includes(p.clase)).reduce((a, p) => a + p.esperado.volumen, 0) / 1e9;

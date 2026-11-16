@@ -34,3 +34,15 @@
 - **Edición:** catálogo de operaciones acotado; la interpretación del lenguaje natural la hace Claude y puede equivocarse: por eso cada cambio muestra *qué cambió* y se puede deshacer.
 - **DXF/DWG en AutoCAD real: NO VERIFICADO.** El DXF es AC1009 (R12) y se validó con el motor DXF propio y con ezdxf; la unidad (mm) se fija al guardar el DWG por COM (`INSUNITS`). `SaveAs` con el tipo 64 (DWG 2018) no se ejecutó contra AutoCAD real.
 - **Indicadores sísmicos** (densidad y balance de muros): referencia de anteproyecto sin umbral normativo.
+
+## TW-09 (actualización 2026-11-16)
+- **Verificado en AutoCAD real (ensayos del PO):** DXF→DWG, persistencia por lotes de 232 entidades y modelo 3D de 50 sólidos. **No verificado:** causa del conteo 0 tras reabrir en el último ensayo (instrumentada), `AUDIT` automatizado, ACL/junctions de Windows, rutas >260.
+- **Adjuntos del chat:** el servidor solo puede importar archivos por ruta local; si Claude Desktop no entrega la ruta del adjunto, la importación no es posible (el producto lo informa, no lo simula).
+- **Diseño 2D:** generador de un piso, planta rectangular, 2–3 dormitorios, 1–2 baños, 55–130 m². Otros encargos: modelo 3D estructurado, sin estructura ni mobiliario; BIM/IFC, cálculo estructural, instalaciones y planos de permiso: no soportados.
+- **Coherencia 2D↔3D:** compara huella, vanos, altos/antepechos, espesores y altura libre; no es una verificación estructural ni normativa.
+- **Versiones:** transaccionales con reconciliación; el DWG aún no tiene manifiesto propio.
+- **Exclusión entre procesos:** el bloqueo de versiones asume sistema de archivos local; no hay garantías en carpetas de red ni se probó con OneDrive/antivirus activos. La recuperación de un bloqueo con pid reutilizado espera al vencimiento del latido (10 min); nunca pierde datos.
+- **Identidad documental:** verificada con PowerShell simulado y CI Windows; no contra la normalización real de rutas de AutoCAD 2027.
+- **Bloqueo de versiones (H5):** un dueño vivo nunca se interviene; una escritura realmente colgada (proceso vivo que no avanza) exige cerrar esa aplicación. La identidad de proceso para pid reutilizado se consulta con `ps`/PowerShell y no se probó en Windows real.
+- **Contención de escrituras (H4):** se valida antes y después de cada escritura y por descriptor, pero queda una ventana mínima entre la última comprobación y la apertura del archivo (inherente al sistema de archivos).
+

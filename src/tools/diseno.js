@@ -6,6 +6,7 @@ import { Project } from '../project/store.js';
 import { sha256File } from '../security/sandbox.js';
 import { Anteproyectos, resumenRecintos, vistaAscii } from '../design/servicio.js';
 import { CATALOGO } from '../design/operaciones.js';
+import { inspeccionarMuros, candidatosLibres } from '../design/inspeccion.js';
 import { cubicarAnteproyecto } from '../design/cubicacion.js';
 import { consultarConocimiento } from '../conocimiento/index.js';
 import { SISTEMAS } from '../conocimiento/criterios.js';
@@ -71,6 +72,26 @@ export function registerDiseno(reg, { sandbox, cad }) {
     const c = r.cambios; const ab = c.aberturas;
     const que = [`Cambió: ${r.resumen.join('; ')}`, `Recintos sin cambios: ${c.recintos_sin_cambio}.`, ...(ab.agregadas.length ? [`Aberturas agregadas: ${ab.agregadas.join(', ')}.`] : []), ...(ab.eliminadas.length ? [`Aberturas eliminadas: ${ab.eliminadas.join(', ')}.`] : []), ...(ab.modificadas.length ? [`Aberturas modificadas: ${ab.modificadas.join(', ')}.`] : []), `Se puede volver atrás con tannia_diseno_historial (deshacer).`].join('\n');
     return ok(presentar(`Anteproyecto "${r.nombre}"`, r, que), { anteproyecto: r.nombre, version: r.version, padre: r.padre, cambios: r.cambios, archivos: r.archivos, recintos: resumenRecintos(r.geo), areas: r.geo.areas, advertencias: r.coherencia.advertencias.map((a) => a.mensaje), verificacion_dxf: r.verificacion_dxf });
+  });
+
+  reg('tannia_diseno_inspeccionar', {
+    title: 'Inspeccionar muros y aberturas (ids, posiciones, tramos libres)',
+    description: 'Solo lectura: lista cada muro con su eje, espesor y aberturas (centro y bordes medidos desde el INICIO del muro: oeste en horizontales, sur en verticales) y sus tramos libres. Con "segmento" y "ancho_mm" calcula dónde cabe una abertura nueva (rango del CENTRO). Úsela en vez de pedirle ids o medidas a Tannia. Solo geometría: no aprueba estructura ni normativa.',
+    inputSchema: { proyecto, nombre, version: z.string().optional(), segmento: z.string().optional().describe('Id de muro para calcular candidatos'), ancho_mm: z.number().min(200).max(6000).optional() }, annotations: RO,
+  }, async ({ proyecto: p, nombre: n, version, segmento, ancho_mm }) => {
+    const c = A.cargar(p, n, version); const muros = inspeccionarMuros(c.geo);
+    const cand = segmento && ancho_mm ? candidatosLibres(c.geo, segmento, ancho_mm) : null;
+    if (segmento && !cand) throw new UserError('NO_EXISTE', `No existe el muro ${segmento}.`, `Muros: ${muros.map((m) => m.id).join(', ')}.`);
+    return ok(`${muros.length} muros y ${c.geo.aberturas.filter((a) => !a.invalida).length} aberturas en ${c.h.nombre} ${c.id}.${cand ? ` Candidatos en ${segmento}: ${cand.viable ? cand.rangos_centro_mm.map((r) => `centro ${r.centro_min_mm}–${r.centro_max_mm} mm`).join('; ') : cand.motivo}` : ''}`, { anteproyecto: c.h.nombre, version: c.id, convencion: 'distancia_mm mide el CENTRO de la abertura; ancla inicio = extremo oeste (muros horizontales) o sur (verticales)', muros, candidatos: cand });
+  });
+
+  reg('tannia_diseno_previsualizar', {
+    title: 'Previsualizar cambios sin crear versión',
+    description: 'Aplica operaciones del catálogo a una copia EN MEMORIA y devuelve qué cambiaría, si la geometría sigue coherente y por qué no sería aplicable. No escribe archivos ni crea versiones. Use antes de tannia_diseno_modificar cuando haya riesgo de que no quepa (ventanas, divisiones, tamaños).',
+    inputSchema: { proyecto, nombre, operaciones: z.array(z.object({ operacion: z.enum(Object.keys(CATALOGO)) }).catchall(z.any())).min(1).max(20) }, annotations: RO,
+  }, async ({ proyecto: p, nombre: n, operaciones }) => {
+    const r = A.previsualizar(p, n, { operaciones });
+    return ok(r.aplicable ? `Se puede aplicar: ${r.resumen.join('; ')}. No se escribió nada.` : `No sería aplicable: ${r.motivo}. No se escribió nada.`, r);
   });
 
   reg('tannia_diseno_ver', {

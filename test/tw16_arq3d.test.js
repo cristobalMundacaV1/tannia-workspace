@@ -154,7 +154,7 @@ test('2D → 3D con CUALQUIER anteproyecto: coherencia con el plano, desfase det
       const nom = `Casa ${i}`; e.A.crear('Obra', { nombre: nom, programa: prog }); const M = new Modelos3d(e.sb, e.A);
       const r = M.crear('Obra', { nombre: `3D ${nom}`, desde_anteproyecto: { nombre: nom }, parametros: { altura_muros_mm: 2500 } });
       const geo = e.A.cargar('Obra', nom).geo;
-      assert.equal(r.reg.origen.version, 'v001'); assert.equal(M.coherencia2d('Obra', `3D ${nom}`).estado, 'coherente');
+      assert.equal(r.reg.origen.version, 'v001'); assert.equal(M.coherencia2d('Obra', `3D ${nom}`).estado, 'coherente_en_alcance');
       assert.equal(r.reg.modelo.muros.length, geo.murosSeg.length); assert.deepEqual(r.reg.resumen_geometria.envolvente_mm.min.slice(0, 2), [0, 0]);
       near(r.reg.resumen_geometria.volumen_losas_m3, (geo.exterior.x1 * geo.exterior.y1 * 150) / 1e9, 1e-3);
       // las alturas son las pedidas (supuesto explícito) y el supuesto queda listado para confirmar
@@ -174,7 +174,7 @@ test('2D → 3D: tras modificar el anteproyecto el 3D avisa del desfase y actual
     let coh = M.coherencia2d('Obra', 'M'); assert.equal(coh.hay_version_2d_mas_reciente, true); assert.match(coh.nota, /actualizar_desde_anteproyecto/);
     const m2 = M.modificar('Obra', 'M', { actualizar_desde_anteproyecto: {} });
     assert.equal(m2.version, 'v002'); assert.equal(m2.reg.origen.version, 'v002'); assert.equal(m2.reg.modelo.niveles[0].altura_mm, 2600, 'conserva la altura del 3D'); assert.equal(m2.reg.modelo.cubiertas[0].pendiente_pct, 15, 'conserva la cubierta'); assert.equal(m2.reg.modelo.opciones.cubierta_visible, true);
-    assert.equal(M.coherencia2d('Obra', 'M').estado, 'coherente');
+    const cs = M.coherencia2d('Obra', 'M'); assert.equal(cs.estado, 'con_observaciones', 'altura 3D 2600 vs libre 2D 2500: no se presenta como coherente sin más'); assert.equal(cs.facetas.alturas.estado, 'revisar'); assert.equal(cs.facetas.planta.estado, 'verificado'); assert.equal(cs.facetas.vanos_en_planta.estado, 'verificado');
     // el espesor de muros cambia con el sistema → la huella 3D cambia con él (nada fijo)
     assert.notEqual(c1.reg.resumen_geometria.volumen_muros_m3, m2.reg.resumen_geometria.volumen_muros_m3);
     // versiones inmutables + historial
@@ -193,10 +193,10 @@ test('2D → 3D: tras modificar el anteproyecto el 3D avisa del desfase y actual
 });
 
 test('coherencia 2D detecta manipulaciones: muro movido o vano desplazado en el 3D', () => {
-  const g = derivar(generarModelo({})); const m = modeloDesdeGeo(g, {});
-  assert.equal(coherenciaConGeo(m, g).estado, 'coherente');
+  const g = derivar(generarModelo({})); const m = modeloDesdeGeo(g, { altura_2d_mm: 2500 });
+  assert.equal(coherenciaConGeo(m, g, generarModelo({})).estado, 'coherente_en_alcance');
   const v = structuredClone(m); const w = v.muros.find((x) => x.vanos.length); w.vanos[0].posicion_mm += 50;
-  assert.equal(coherenciaConGeo(v, g).estado, 'con_diferencias');
+  assert.equal(coherenciaConGeo(v, g, generarModelo({})).estado, 'con_diferencias');
   const h = structuredClone(m); h.muros.find((x) => x.tipo === 'int' && !x.vanos.length).espesor_mm += 40;
   assert.equal(coherenciaConGeo(h, g).diferencias[0].aspecto, 'huella_de_muros');
 });
@@ -277,7 +277,7 @@ test('MCP: flujo completo de herramientas 3D sin AutoCAD (crear, ver, modificar,
     r = await call(c, 'tannia_3d_crear', { proyecto: 'Taller', nombre: 'Sin pendiente', modelo: { ...modelo, cubiertas: [{ id: 'C', nivel: 'N1', tipo: 'un_agua', direccion: '+y' }] } }); assert.equal(r.isError, true); assert.match(JSON.stringify(r.content), /PENDIENTE_REQUERIDA/);
     // diseño 2D → 3D por MCP
     await call(c, 'tannia_diseno_crear', { proyecto: 'Taller', nombre: 'Casa', programa: { dormitorios: 3 } });
-    r = await call(c, 'tannia_3d_crear', { proyecto: 'Taller', nombre: 'Casa 3D', desde_anteproyecto: { nombre: 'Casa' } }); d = data(r); assert.equal(d.coherencia_2d.estado, 'coherente'); assert.ok(d.supuestos_a_confirmar[0].includes('2400'));
+    r = await call(c, 'tannia_3d_crear', { proyecto: 'Taller', nombre: 'Casa 3D', desde_anteproyecto: { nombre: 'Casa' } }); d = data(r); assert.equal(d.coherencia_2d.estado, 'coherente_en_alcance'); assert.ok(d.supuestos_a_confirmar[0].includes('2500') && /plano 2D/.test(d.supuestos_a_confirmar[0]));
     r = await call(c, 'tannia_3d_a_autocad', { proyecto: 'Taller', nombre: 'Casa 3D' }); assert.equal(r.isError, true); assert.match(JSON.stringify(r.content), /AUTOCAD_NO_DISPONIBLE|AUTOCAD_NO_ABIERTO|Windows/);
     assert.ok(fs.existsSync(path.join(home, 'Proyectos', 'Taller', '03 Trabajo', 'Modelos3D', 'Casa 3D', 'v001.json')));
     assert.ok(!fs.existsSync(path.join(home, 'Proyectos', 'Taller', '03 Trabajo', 'Modelos3D', 'Casa 3D', 'v001_3D.dwg')), 'sin AutoCAD no se inventa un DWG');

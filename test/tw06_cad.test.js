@@ -267,7 +267,7 @@ const RECT = (h = ['39A', '39B', '39C', '39D']) => [
 test('verificar contorno: lee extremos por COM y concluye cierre del rectángulo 6000×4000 (cálculo independiente)', async () => {
   const sb = new Sandbox(tmpHome());
   const calls = [];
-  const com = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: '/x/a.dwg', calls, onScript: (n, i) => (n === 'leer_lote' ? JSON.stringify({ ok: true, data: { unidades_insunits: 4, documento: 'a.dwg', entidades: RECT().filter((e) => i.handles.includes(e.handle)) } }) : undefined) }) });
+  const com = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: '/x/a.dwg', calls, onScript: (n, i) => (n === 'leer_lote' ? JSON.stringify({ ok: true, data: { ruta: '/x/a.dwg', unidades_insunits: 4, documento: 'a.dwg', entidades: RECT().filter((e) => i.handles.includes(e.handle)) } }) : undefined) }) });
   const r = await com.verificarContorno(['39A', '39B', '39C', '39D'], { ancho: 6000, alto: 4000 });
   assert.equal(r.analisis.cerrado, true); assert.equal(r.analisis.es_rectangulo, true); assert.equal(r.analisis.estado, 'ok');
   assert.equal(r.analisis.area, 24000000); assert.equal(r.analisis.perimetro, 20000); assert.equal(r.analisis.dimensiones_coinciden_con_lo_esperado, true);

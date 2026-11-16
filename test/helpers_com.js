@@ -42,7 +42,8 @@ export function tipado(e, h) {
  * Runner que simula AutoCAD: estado/enumerar/leer_lote/resumen/cerrar_reabrir/dxf_a_dwg.
  * opciones: { activePath, maxHandles (simula timeout si una llamada trae más), alReabrir(entidades)→entidades, capasVacias, calls }
  */
-export function servidorSimulado(entidades, { activePath, maxHandles = Infinity, alReabrir, capasVacias = false, calls = [], arcoLongitud0 = false, escribeDwg, sinBbox = false, defectoSolido, falloConstruir } = {}) {
+export function servidorSimulado(entidades, { activePath, maxHandles = Infinity, alReabrir, capasVacias = false, calls = [], arcoLongitud0 = false, escribeDwg, sinBbox = false, defectoSolido, falloConstruir, reaperturaConteoCero = false, rutaReabierta, sinDocumento = false } = {}) {
+  let reabierto = false;
   let ents = entidades.map((e, i) => ({ ...e, handle: (0x100 + i).toString(16).toUpperCase() }));
   const leer = (e) => { const t = tipado(e, e.handle); if (arcoLongitud0 && t.tipo === 'AcDbArc') t.longitud_arco = 0; return t; };
   const capas = () => (capasVacias ? [] : ['0', ...new Set(ents.map((e) => e.capa))]);
@@ -51,14 +52,15 @@ export function servidorSimulado(entidades, { activePath, maxHandles = Infinity,
     const marca = (n) => script.includes(SCRIPT_MARCAS[n]);
     const n = Object.keys(SCRIPT_MARCAS).find(marca); calls.push({ name: n, input });
     let data;
-    if (n === 'estado') data = { version: '26.0s', nombre: 'AutoCAD', progid: 'AutoCAD.Application.26', documento: String(activePath).split(/[\\/]/).pop(), ruta: activePath, guardado: true, unidades_insunits: 4 };
-    else if (n === 'enumerar') { const lista = ents.filter((e) => !input.capa || e.capa === input.capa); const pagina = lista.slice(input.offset, input.offset + input.limite); const sig = input.offset + input.limite < lista.length ? input.offset + input.limite : null; data = { total: ents.length, entidades: pagina.map((e) => ({ handle: e.handle, tipo: e.tipo, capa: e.capa })), siguiente: sig }; }
+    if (n === 'estado' && sinDocumento) data = { version: '26.0s', nombre: 'AutoCAD', progid: 'AutoCAD.Application.26', documento: null, ruta: null, guardado: null, documentos: 0, sin_documento: true };
+    else if (n === 'estado') data = { version: '26.0s', nombre: 'AutoCAD', progid: 'AutoCAD.Application.26', documento: String(activePath).split(/[\\/]/).pop(), ruta: activePath, guardado: true, unidades_insunits: 4 };
+    else if (n === 'enumerar') { const lista = (reabierto && reaperturaConteoCero ? [] : ents).filter((e) => !input.capa || e.capa === input.capa); const pagina = lista.slice(input.offset, input.offset + input.limite); const sig = input.offset + input.limite < lista.length ? input.offset + input.limite : null; data = { ruta: activePath, total: ents.length, entidades: pagina.map((e) => ({ handle: e.handle, tipo: e.tipo, capa: e.capa })), siguiente: sig }; }
     else if (n === 'leer_lote') {
       if (input.handles.length > maxHandles) throw Object.assign(new Error('tiempo'), { clase: 'tiempo_agotado' });
       const m = new Map(ents.map((e) => [e.handle, e]));
-      data = { unidades_insunits: 4, documento: 'x.dwg', entidades: input.handles.map((h) => (m.has(h) ? leer(m.get(h)) : { handle: h, error: 'no_encontrada' })) };
-    } else if (n === 'resumen') data = { documento: 'x.dwg', ruta: activePath, guardado: true, entidades: ents.length, capas: capas(), entidades_por_capa: porCapa(), entidades_por_tipo: {}, unidades_insunits: 4 };
-    else if (n === 'cerrar_reabrir') { if (alReabrir) ents = alReabrir(ents); data = { documento: 'x.dwg', guardado: true, entidades: ents.length, unidades_insunits: 4 }; }
+      data = { ruta: activePath, unidades_insunits: 4, documento: 'x.dwg', entidades: input.handles.map((h) => (m.has(h) ? leer(m.get(h)) : { handle: h, error: 'no_encontrada' })) };
+    } else if (n === 'resumen') data = { documento: 'x.dwg', ruta: activePath, guardado: true, entidades: reabierto && reaperturaConteoCero ? 0 : ents.length, capas: capas(), entidades_por_capa: porCapa(), entidades_por_tipo: {}, unidades_insunits: 4 };
+    else if (n === 'cerrar_reabrir') { if (alReabrir) ents = alReabrir(ents); reabierto = true; data = { documento: 'x.dwg', ruta: rutaReabierta || activePath, guardado: true, entidades: reaperturaConteoCero ? 0 : ents.length, conteo_inicial_tras_abrir: reaperturaConteoCero ? 0 : ents.length, espera_ms: 0, unidades_insunits: 4 }; }
     else if (n === 'dxf_a_dwg') { if (escribeDwg) escribeDwg(input.dwg); data = { documento: 'v001.dwg', ruta: input.dwg, entidades: ents.length, capas: capas(), entidades_por_capa: porCapa(), textos_normalizados: 0, unidades_insunits: 4 }; }
     else if (n === 'construir_3d') {
       if (falloConstruir) throw Object.assign(new Error('fallo'), { clase: 'powershell_fallo' });
@@ -80,3 +82,20 @@ export function servidorSimulado(entidades, { activePath, maxHandles = Infinity,
 import { SCRIPTS } from '../src/cad/autocad_com.js';
 // huella única de cada script (su cuerpo) para identificarlo dentro del texto completo enviado a PowerShell
 const SCRIPT_MARCAS = Object.fromEntries(Object.entries(SCRIPTS).map(([k, v]) => [k, v]));
+
+/**
+ * Varios dibujos abiertos a la vez. Modela lo que HACE el script real (PS_DOC): con `ruta_esperada` se localiza EXACTAMENTE ese
+ * documento y, si no está abierto, se falla con DOCUMENTO_NO_ABIERTO (nunca se cae al activo). Sin ruta, se usa el activo.
+ * opciones: { activo (ruta), abiertos: {ruta: entidades}, ignorarRuta (simula el defecto antiguo: siempre el activo), alLlamar(n, input, estado) }
+ */
+export function servidorMultiDoc({ abiertos, activo, ignorarRuta = false, alLlamar, escribeDwg } = {}) {
+  const estado = { activo, abiertos: new Set(Object.keys(abiertos)) };
+  const internos = Object.fromEntries(Object.entries(abiertos).map(([ruta, ents]) => [ruta, servidorSimulado(ents, { activePath: ruta, escribeDwg })]));
+  return async (script, input) => {
+    const n = Object.keys(SCRIPT_MARCAS).find((k) => script.includes(SCRIPT_MARCAS[k]));
+    alLlamar?.(n, input, estado);
+    const objetivo = !ignorarRuta && input?.ruta_esperada ? input.ruta_esperada : estado.activo;
+    if (!estado.abiertos.has(objetivo)) return JSON.stringify({ ok: false, etapa: 'localizar_documento', codigo: input?.ruta_esperada ? 'DOCUMENTO_NO_ABIERTO' : 'SIN_DOCUMENTO' });
+    return internos[objetivo](script, input);
+  };
+}
