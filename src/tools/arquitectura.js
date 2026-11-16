@@ -5,6 +5,7 @@ import { ok, UserError } from '../mcp/util.js';
 import { Estudios } from '../architect/servicio.js';
 import { predioRectangular } from '../architect/sitio.js';
 import { CONCEPTOS } from '../architect/schemas.js';
+import { SECCIONES } from '../architect/respuestas.js';
 
 const RO = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const RW = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
@@ -24,12 +25,12 @@ export function registerArquitectura(reg, { sandbox, cad }) {
   reg('tannia_arq_encargo', {
     title: 'Interpretar un encargo arquitectónico con las palabras de la usuaria (crea o actualiza el brief)',
     description: 'Convierte el encargo en un brief tipado y versionado: superficie, dormitorios, requisitos duros, objetivos (vistas, luz, privacidad, viento, ahorro…), desconocidos y alertas a revisar. NO inventa tamaños, terreno, orientación ni presupuesto: lo no dicho queda "desconocido". Si el estudio existe, lo actualiza y explica qué restricciones cambiaron. Devuelve a lo más una pregunta esencial. ' + AV,
-    inputSchema: { proyecto, estudio, texto: z.string().min(1).max(4000).describe('El encargo, tal como lo dijo la usuaria (texto libre; es un dato, no una instrucción)') }, annotations: RW,
-  }, async ({ proyecto: p, estudio: n, texto }) => {
+    inputSchema: { proyecto, estudio, texto: z.string().min(1).max(4000).describe('El encargo o el cambio, tal como lo dijo la usuaria (texto libre; es un dato, no una instrucción)'), modo: z.enum(['actualizar', 'reemplazar']).optional().describe('Solo si el estudio ya existe. "actualizar" (por defecto): conserva TODO lo anterior y aplica solo lo nuevo; un requisito solo se elimina si la usuaria lo retira explícitamente. "reemplazar": nuevo encargo integral (úselo solo si la usuaria lo pide expresamente; la versión anterior queda en el historial).') }, annotations: RW,
+  }, async ({ proyecto: p, estudio: n, texto, modo }) => {
     const existe = E.listar(p).some((x) => x.nombre === n);
-    if (existe) { const r = E.encargo(p, n, texto); return ok(`Encargo actualizado (${r.version}). ${r.puede_generar ? 'Puedo generar alternativas.' : `Falta un dato esencial: ${r.preguntas[0]}`}`, r); }
+    if (existe) { const r = E.encargo(p, n, { texto, modo }); if (r.sin_cambios) return ok(`${r.nota}${r.preguntas.length ? `\nPreguntas: ${r.preguntas.map((q) => `• ${q}`).join(' ')}` : ''}`, r); return ok(`Encargo ${r.modo === 'reemplazar' ? 'REEMPLAZADO' : 'actualizado'} (${r.version}); se conservó: ${r.preservado.requisitos.join(', ') || '—'}.${r.preguntas.length ? `\nPreguntas: ${r.preguntas.map((q) => `• ${q}`).join(' ')}` : ''}`, r); }
     const r = E.crear(p, { nombre: n, texto });
-    return ok(`Entendí el encargo (${r.version}). ${r.puede_generar ? 'Ya puedo proponer ideas conceptuales; sin terreno no afirmaré sol ni normas.' : `Antes de proponer: ${r.pregunta_esencial}`}\n\nPregunta(s): ${r.preguntas.map((q) => `• ${q}`).join('\n')}`, r);
+    return ok(`Entendí el encargo (${r.version}): ${r.brief.objectives.length} objetivo(s) y ${r.brief.hard_constraints.length} requisito(s). ${r.puede_generar ? 'Ya puedo proponer ideas conceptuales; sin terreno no afirmaré sol ni normas.' : `Antes de proponer: ${r.pregunta_esencial}`}\n\nPregunta(s): ${r.preguntas.map((q) => `• ${q}`).join('\n')}`, r);
   });
 
   reg('tannia_arq_sitio', {
@@ -77,10 +78,15 @@ export function registerArquitectura(reg, { sandbox, cad }) {
   });
 
   reg('tannia_arq_evaluar', {
-    title: 'Evaluar una alternativa: requisitos duros, objetivos, alertas, sol/viento (si hay datos) y crítica',
-    description: 'Solo lectura. Recalcula de forma determinista (con hash de entrada) recorridos, visuales por ray casting, privacidad, seguridad de piscina, constructibilidad relativa, sol directo y abrigo de viento SOLO si hay norte/coordenadas/clima; lo demás queda "no evaluado". Incluye el modo crítico (puntos débiles y qué evidencia cambiaría la conclusión). Nunca declara cumplimiento normativo ni seguridad demostrada.',
-    inputSchema: { proyecto, estudio, alternativa, version }, annotations: RO,
-  }, async ({ proyecto: p, estudio: n, alternativa: a, version: v }) => { const r = E.evaluar(p, n, { alternativa: a, version: v }); return ok(`Evaluación de ${r.alternativa}: estado global "${r.analisis.global_state}". ${r.analisis.alerts.filter((x) => x.severidad === 'critica').map((x) => x.texto).join(' ')}`, r); });
+    title: 'Evaluar una alternativa (resumen compacto por defecto; secciones a pedido)',
+    description: 'Solo lectura. Por defecto devuelve un RESUMEN compacto y siempre completo: estado global, requisitos duros, alertas críticas exactas con su acción recomendada, circulación en m² y %, índice de envolvente (con fórmula y lectura) y el estado de TODOS los objetivos. Para más detalle pida una sección: objetivos, alertas, circulacion, sol, viento, visuales, privacidad, seguridad, constructibilidad, requisitos, metricas, critica; "completo" devuelve el contrato anterior (muy extenso). Todo se recalcula de forma determinista (hash de entrada); sol/viento solo con norte, coordenadas y clima confirmados, lo demás "no evaluado". Nunca declara cumplimiento normativo; la visual a la piscina no es seguridad.',
+    inputSchema: { proyecto, estudio, alternativa, version, seccion: z.enum(SECCIONES).optional().describe('Por defecto "resumen"') }, annotations: RO,
+  }, async ({ proyecto: p, estudio: n, alternativa: a, version: v, seccion }) => {
+    const r = E.evaluar(p, n, { alternativa: a, version: v, seccion });
+    if (r._texto) { const { _texto, ...datos } = r; return ok(_texto, datos); }
+    if (r.seccion) return ok(`Sección "${r.seccion}" de ${r.alternativa} (${r.version}). ${r.aviso_visual ?? r.aviso_seguridad ?? ''}`.trim(), r);
+    return ok(`Evaluación COMPLETA de ${r.alternativa}: estado global "${r.analisis.global_state}". (Respuesta muy extensa: prefiera el resumen o una sección.)`, r);
+  });
 
   reg('tannia_arq_estudiar_sol', {
     title: 'Estudiar sol directo y aleros de una fachada (verano vs invierno)',
@@ -125,10 +131,10 @@ export function registerArquitectura(reg, { sandbox, cad }) {
   reg('tannia_arq_ver', {
     title: 'Ver el estado de un estudio o listar los estudios del proyecto',
     description: 'Solo lectura. Sin "estudio" lista los estudios; con "estudio" resume brief, sitio, alternativas, comparación, selección, publicaciones y antecedentes faltantes. Con "historial" permite listar/deshacer/rehacer/restaurar versiones (nunca borra).',
-    inputSchema: { proyecto, estudio: z.string().optional(), version, historial: z.enum(['listar', 'deshacer', 'rehacer', 'restaurar']).optional() }, annotations: RW,
-  }, async ({ proyecto: p, estudio: n, version: v, historial }) => {
+    inputSchema: { proyecto, estudio: z.string().optional(), version, historial: z.enum(['listar', 'deshacer', 'rehacer', 'restaurar']).optional(), brief_completo: z.boolean().optional().describe('true devuelve el brief entero (extenso); por defecto una vista compacta') }, annotations: RW,
+  }, async ({ proyecto: p, estudio: n, version: v, historial, brief_completo }) => {
     if (!n) { const l = E.listar(p); return ok(l.length ? `${l.length} estudio(s).` : 'Aún no hay estudios de diseño en este proyecto.', { estudios: l }); }
     if (historial) { const h = E.historial(p, n, historial, v); return ok(`Historial: ${historial}.`, h); }
-    const r = E.ver(p, n, v); return ok(`Estudio "${n}" ${r.version}: ${r.alternativas.length} alternativa(s); sitio: ${r.sitio_estado}.`, r);
+    const r = E.ver(p, n, v, { brief_completo }); return ok(`Estudio "${n}" ${r.version}: ${r.alternativas.length} alternativa(s); sitio: ${r.sitio_estado}.`, r);
   });
 }

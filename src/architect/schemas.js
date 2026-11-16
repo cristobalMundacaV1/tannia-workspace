@@ -25,7 +25,7 @@ export const OBJETIVOS = ['daylight_preference', 'sightline', 'privacy', 'circul
 export const REQUISITOS_DUROS = ['one_story', 'area_target', 'bedrooms', 'bathrooms', 'footprint_class', 'within_parcel', 'no_stairs'];
 export const BriefV1 = z.object({
   schema: z.literal(SCHEMA_IDS.brief), project_id: id, version: z.number().int().min(1).default(1),
-  request_original: z.string().min(1).max(4000),
+  request_original: z.string().min(1).max(4000), request_updates: z.array(z.object({ version: z.number().int().min(2), text: z.string().max(1000) }).strict()).max(40).default([]),
   program: z.array(z.object({ id, usage: z.enum(['social', 'private', 'service', 'outdoor', 'circulation']), target_area_m2: z.number().positive().max(2000).optional(), quantity: z.number().int().min(1).max(20).optional(), status: estadoEpistemico.default('confirmed') }).strict()).max(60),
   household: z.object({ needs: z.array(id).max(20) }).strict(), // sin biografías íntimas ni edades
   objectives: z.array(z.object({ id, kind: z.enum(OBJETIVOS), from: id.optional(), to: id.optional(), target: id.optional(), priority: prioridad, evidence: z.enum(['user_statement', 'inferred_from_user', 'default']), status: estadoEpistemico }).strict()).max(40),
@@ -107,7 +107,7 @@ export const ResultadoMetrica = z.object({
 export const AnalysisV1 = z.object({
   schema: z.literal(SCHEMA_IDS.analysis), scheme_id: id, input_hash: z.string().max(80), engine_version: z.string().max(40),
   hard_gates: z.array(z.object({ id, passed: z.boolean(), detalle: texto }).strict()),
-  metrics: z.array(ResultadoMetrica), alerts: z.array(z.object({ id, severidad: z.enum(['critica', 'alta', 'media', 'info']), texto }).strict()),
+  metrics: z.array(ResultadoMetrica), alerts: z.array(z.object({ id, severidad: z.enum(['critica', 'alta', 'media', 'info']), texto, accion: z.string().max(600).optional() }).strict()),
   global_state: z.enum(['no_conclusive', 'con_alertas_criticas', 'sin_alertas_detectadas']), // nunca "excelente"/"apto"/"cumple"
   disclaimers: z.array(texto).min(1),
 }).strict();

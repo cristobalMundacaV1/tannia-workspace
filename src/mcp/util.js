@@ -10,6 +10,7 @@ export const MAX_JSON_TEXTO = 6000;
 /** Respuesta estándar: resumen en español + datos (JSON, acotado en el texto) + datos estructurados completos. */
 export function ok(summary, data = {}) {
   let json = JSON.stringify(data, null, 2); let nota = '';
+  if (json.length > MAX_JSON_TEXTO) { const compacto = JSON.stringify(data); if (compacto.length <= MAX_JSON_TEXTO) json = compacto; } // sin sangrías antes de recortar
   if (json.length > MAX_JSON_TEXTO) { json = `${json.slice(0, MAX_JSON_TEXTO)}\n… (recortado)`; nota = `\n\n(Detalle truncado en este texto: ${JSON.stringify(data).length} caracteres en total; el contenido estructurado completo está disponible. Resuma para la usuaria sin pegar el JSON.)`; }
   return {
     content: [{ type: 'text', text: `${summary}\n\n\`\`\`json\n${json}\n\`\`\`${nota}` }],

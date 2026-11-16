@@ -36,7 +36,7 @@ test('flujo: encargo → ideas sin terreno → terreno con norte → alternativa
     const v2 = d.version; const dir = path.join(home, 'Proyectos', P, '03 Trabajo', 'Arquitectura', E);
     assert.ok(fs.existsSync(path.join(dir, `${v2}-comparacion.svg`))); assert.match(fs.readFileSync(path.join(dir, `${v2}-comparacion.svg`), 'utf8'), /no apto para construcción/);
     const dosAlas = d.alternativas.find((a) => a.id === 'alt-dos_alas'); assert.ok(dosAlas.bloqueada, 'no cumple la superficie pedida');
-    r = await call(c, 'tannia_arq_evaluar', { proyecto: P, estudio: E, alternativa: 'alt-L_con_patio' }); d = data(r);
+    r = await call(c, 'tannia_arq_evaluar', { proyecto: P, estudio: E, alternativa: 'alt-L_con_patio', seccion: 'completo' }); d = data(r);
     const sol = d.analisis.metrics.find((m) => m.id === 'sol_directo_invierno'); assert.equal(sol.estado, 'blocked'); assert.equal(sol.valor, null);
     assert.ok(d.analisis.alerts.some((a) => a.id === 'piscina_barrera' && a.severidad === 'critica')); assert.notEqual(d.analisis.global_state, 'sin_alertas_detectadas');
     const hashV2 = sha(path.join(dir, `${v2}.json`));
@@ -50,7 +50,7 @@ test('flujo: encargo → ideas sin terreno → terreno con norte → alternativa
     // 5) regenerar con terreno: respeta predio y acceso; sol ahora calculado
     r = await call(c, 'tannia_arq_generar_alternativas', { proyecto: P, estudio: E }); d = data(r); assert.ok(d.alternativas.length >= 2, JSON.stringify(d.descartadas));
     assert.ok(d.archivos.some((a) => /sombras-invierno\.svg$/.test(a)));
-    r = await call(c, 'tannia_arq_evaluar', { proyecto: P, estudio: E, alternativa: 'alt-L_con_patio' }); d = data(r);
+    r = await call(c, 'tannia_arq_evaluar', { proyecto: P, estudio: E, alternativa: 'alt-L_con_patio', seccion: 'completo' }); d = data(r);
     assert.equal(d.analisis.metrics.find((m) => m.id === 'sol_directo_invierno').estado, 'computed'); assert.equal(d.analisis.metrics.find((m) => m.id === 'abrigo_patio_viento').estado, 'computed');
     assert.ok(d.critica.puntos_debiles.length > 0);
     // 6) estudio de alero y refinamiento (nueva versión; geometría intacta)

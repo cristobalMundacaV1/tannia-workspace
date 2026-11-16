@@ -7,6 +7,7 @@ import { horasSolVentanas, sitioApto, escena, rayoGolpea } from './sombras.js';
 import { verificarContraSitio, retranqueosParaGenerar } from './sitio.js';
 import { SECTORES_VIENTO } from './clima.js';
 import { VERSION_MOTOR } from './version.js';
+import { accionDe } from './respuestas.js';
 import { bbox } from './poligonos.js';
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v)); const R2 = (v) => Math.round(v * 100) / 100;
@@ -32,7 +33,7 @@ export function ventilacionPotencial({ esq, geo }) {
   const por = {}; for (const a of geo.aberturas.filter((x) => !x.invalida && x.ext && x.tipo === 'ventana')) { const s = geo.murosSeg.find((q) => q.id === a.segmento); (por[s.recinto] ||= new Set()).add(s.lado); }
   const OPUESTO = { S: 'N', N: 'S', E: 'O', O: 'E' }; const hab = Object.values(geo.recintos).filter((r) => ['dormitorio', 'dormitorio_principal', 'living_comedor'].includes(r.tipo));
   const filas = hab.map((r) => { const l = [...(por[r.id] ?? [])]; const cruzada = l.some((x) => l.includes(OPUESTO[x])); return { recinto: r.id, fachadas_con_ventana: l, potencial: cruzada ? 'cruzada' : l.length >= 2 ? 'en_esquina' : l.length === 1 ? 'unilateral' : 'sin_ventana' }; });
-  return { recintos: filas, fraccion_con_ventilacion_cruzada_o_esquina: R2(filas.filter((f) => f.potencial === 'cruzada' || f.potencial === 'en_esquina').length / Math.max(1, filas.length)), limites: 'Potencial GEOMÉTRICO (ventanas en distintas fachadas, supuestas practicables); no calcula caudales ni renovaciones de aire.' };
+  return { recintos: filas, fraccion_con_ventilacion_cruzada_o_esquina: R2(filas.filter((f) => f.potencial === 'cruzada' || f.potencial === 'en_esquina').length / Math.max(1, filas.length)), limites: 'Potencial GEOMÉTRICO (ventanas en distintas fachadas, supuestas practicables); un valor 0 NO demuestra falta de ventilación; no calcula caudales ni renovaciones de aire.' };
 }
 
 // ---------- evaluación ----------
@@ -98,9 +99,9 @@ export function evaluarEsquema({ esq, geo, brief = null, sitio = null, perfil = 
   if (!perfil) alertas.push({ id: 'sin_clima', severidad: 'info', texto: 'Sin clima cargado: no se evalúa viento ni confort.' });
   const critica = alertas.some((a) => a.severidad === 'critica'); const noEval = objetivos.some((o) => o.estado === 'no_evaluado');
   const estado = critica ? 'con_alertas_criticas' : bloqueada || noEval || !solarOk ? 'no_conclusive' : 'sin_alertas_detectadas';
-  const analisis = { schema: SCHEMA_IDS.analysis, scheme_id: esq.id, input_hash: hash, engine_version: VERSION_MOTOR, hard_gates: gates, metrics: metricas, alerts: alertas.map(({ id, severidad, texto }) => ({ id, severidad, texto })), global_state: estado, disclaimers: DISCLAIMERS };
+  const analisis = { schema: SCHEMA_IDS.analysis, scheme_id: esq.id, input_hash: hash, engine_version: VERSION_MOTOR, hard_gates: gates, metrics: metricas, alerts: alertas.map(({ id, severidad, texto }) => ({ id, severidad, texto, accion: accionDe(id) })), global_state: estado, disclaimers: DISCLAIMERS };
   const v = validar('analysis', analisis); if (!v.ok) throw new Error(`analysis/1 inválido: ${v.errores.join(' | ')}`);
-  return { analisis: v.valor, objetivos, bloqueada, detalle: { recorridos: rec, seguridad: seg, privacidad: priv, constructibilidad: con, viento: { abrigo, ventilacion: vent }, sol }, hash };
+  return { analisis: v.valor, objetivos, bloqueada, detalle: { visuales: vis.map(({ o, r }) => ({ objetivo: o.id, desde: o.from, hacia: o.to, prioridad: o.priority, ...r })), recorridos: rec, seguridad: seg, privacidad: priv, constructibilidad: con, viento: { abrigo, ventilacion: vent }, sol }, hash };
 }
 
 // ---------- multiobjetivo: Pareto, pesos visibles, sensibilidad, contrafactuales ----------

@@ -18,6 +18,7 @@ import { derivarEsquema } from './derivar_poly.js';
 import { evaluarEsquema, compararMultiobjetivo, criticar, decisionesDe } from './evaluacion.js';
 import { estudioAlero } from './sombras.js';
 import { esquemaA3d } from './a3d.js';
+import { resumenEvaluacion, seccionEvaluacion, textoResumen, SECCIONES } from './respuestas.js';
 import { hojaComparativa, planoSvg, diagramaSombras } from './reporte.js';
 import { validar } from './schemas.js';
 import { VERSION_MOTOR } from './version.js';
@@ -65,19 +66,24 @@ export class Estudios {
     const evals = Object.values(estado.alternativas).map((a) => { const esq = a.esquema; const geo = derivarEsquema(esq); const aleros = estado.aleros?.[esq.id] ?? []; const e = evaluarEsquema({ esq, geo, brief: estado.brief, sitio: estado.sitio, perfil: estado.clima?.perfiles ?? null, aleros }); return { id: esq.id, ...e, esq, geo, gatesFallidos: e.analisis.hard_gates.filter((g) => !g.passed && g.id !== 'clase_de_huella').map((g) => g.id) }; });
     const comparacion = evals.length ? compararMultiobjetivo(evals) : null; return { evals, comparacion };
   }
-  #resumenAlt(e) { return { id: e.id, concepto: e.esq.concept, huella_m2: e.geo.huella.area_m2, util_m2: e.geo.areas.util_neta_m2, clase_huella: e.detalle.constructibilidad.clase_huella, bloqueada: e.bloqueada, requisitos_fallidos: e.gatesFallidos, clase_de_huella_pedida_cumplida: e.analisis.hard_gates.find((g) => g.id === 'clase_de_huella')?.passed ?? null, estado_global: e.analisis.global_state, alertas_criticas: e.analisis.alerts.filter((a) => a.severidad === 'critica').length, objetivos: e.objetivos.map((o) => ({ id: o.id, objetivo: o.kind, estado: o.estado, indice: o.score, aviso: o.aviso, razon: o.razon })), motivo: e.esq.rationale }; }
-
+  #resumenAlt(e) { return { id: e.id, concepto: e.esq.concept, huella_m2: e.geo.huella.area_m2, util_m2: e.geo.areas.util_neta_m2, clase_huella: e.detalle.constructibilidad.clase_huella, bloqueada: e.bloqueada, requisitos_fallidos: e.gatesFallidos, clase_de_huella_pedida_cumplida: e.analisis.hard_gates.find((g) => g.id === 'clase_de_huella')?.passed ?? null, estado_global: e.analisis.global_state, alertas_criticas: e.analisis.alerts.filter((a) => a.severidad === 'critica').length, objetivos: e.objetivos.map((o) => `${o.kind}: ${o.estado}${o.score != null ? ` ${o.score}` : ''}`), motivo: e.esq.rationale, detalle_objetivos: 'tannia_arq_evaluar (seccion "objetivos")' }; }
+  #briefCompacto(b) { return { version: b.version, encargo_original: b.request_original.length > 600 ? `${b.request_original.slice(0, 599)}…` : b.request_original, actualizaciones: (b.request_updates ?? []).length, requisitos: b.hard_constraints.map((h) => `${h.kind}${h.value != null ? `=${h.value}` : ''}`), objetivos: b.objectives.map((o) => `${o.kind}${o.from ? ` ${o.from}→${o.to}` : o.target ? ` (${o.target})` : ''} [${o.priority}${o.status !== 'confirmed' ? `, ${o.status}` : ''}]`), necesidades: b.household.needs, desconocidos: b.unknowns, a_revisar: b.review_required }; }
   crear(project, { nombre, texto }) {
     const { n } = this.#dir(nombre); const r = interpretarEncargo(texto, { projectId: new Project(this.sandbox, project).name });
     const estado = { nombre: n, brief: r.brief, sitio: actualizarSitio(null, {}), clima: null, alternativas: {}, aleros: {}, seleccion: null, publicaciones: [], semilla: 0, supuestos: [] };
     const c = this.#commit(project, nombre, { estado, descripcion: 'Encargo interpretado (brief v1)', creando: true });
-    return { nombre: n, version: c.id, brief: r.brief, hechos: r.hechos, preguntas: r.preguntas, pregunta_esencial: r.pregunta_esencial, puede_generar: r.puede_generar_conceptos, grafo_relaciones: grafoRelaciones(r.brief), faltantes: antecedentesFaltantes(estado.sitio), rel: c.rel };
+    return { nombre: n, version: c.id, brief: r.brief, hechos: r.hechos, preguntas: r.preguntas, pregunta_esencial: r.pregunta_esencial, ambiguedades: r.ambiguedades, puede_generar: r.puede_generar_conceptos, grafo_relaciones: grafoRelaciones(r.brief), faltantes: antecedentesFaltantes(estado.sitio), rel: c.rel };
   }
-  encargo(project, nombre, texto) {
-    const cur = this.cargar(project, nombre); const r = interpretarEncargo(texto, { projectId: cur.estado.brief.project_id, previo: cur.estado.brief }); const cambios = diffBrief(cur.estado.brief, r.brief);
-    const estado = { ...cur.estado, brief: r.brief, alternativas: cur.estado.alternativas }; // las alternativas previas se conservan; se reevalúan contra el brief nuevo
-    const c = this.#commit(project, nombre, { estado, descripcion: `Encargo actualizado (brief v${r.brief.version})` });
-    return { version: c.id, cambios, brief: r.brief, preguntas: r.preguntas, puede_generar: r.puede_generar_conceptos, nota: 'Las alternativas existentes se conservan en sus versiones anteriores; regenere para reflejar el encargo nuevo.' };
+  encargo(project, nombre, arg) {
+    const { texto, modo = 'actualizar' } = typeof arg === 'string' ? { texto: arg } : arg; if (!['actualizar', 'reemplazar'].includes(modo)) throw new UserError('MODO_INVALIDO', 'modo debe ser "actualizar" (conserva lo anterior) o "reemplazar" (encargo integral nuevo).');
+    const cur = this.cargar(project, nombre); const prev = cur.estado.brief; const r = interpretarEncargo(texto, { projectId: prev.project_id, previo: prev, modo });
+    if (r.sin_cambios) return { version: cur.id, sin_cambios: true, modo: 'actualizar', preguntas: r.preguntas, ambiguedades: r.ambiguedades, puede_generar: r.puede_generar_conceptos, nota: r.nota };
+    const cambios = diffBrief(prev, r.brief); const val = (h) => `${h.value ?? ''}`; const mapa = new Map(prev.hard_constraints.map((h) => [h.kind, val(h)]));
+    const preservado = { requisitos: r.brief.hard_constraints.filter((h) => mapa.get(h.kind) === val(h)).map((h) => h.kind), objetivos: [...new Set(r.brief.objectives.filter((o) => prev.objectives.some((q) => q.kind === o.kind && (q.to ?? '') === (o.to ?? ''))).map((o) => o.kind))] };
+    const perdidos = r.modo === 'reemplazar' ? { restricciones_quitadas: cambios.restricciones_quitadas, objetivos_quitados: cambios.objetivos_quitados } : null;
+    const estado = { ...cur.estado, brief: r.brief };
+    const c = this.#commit(project, nombre, { estado, descripcion: `Encargo ${r.modo === 'reemplazar' ? 'REEMPLAZADO' : 'actualizado'} (brief v${r.brief.version})` });
+    return { version: c.id, modo: r.modo, cambios, preservado, ...(perdidos ? { perdidos } : {}), brief: r.brief, preguntas: r.preguntas, ambiguedades: r.ambiguedades, puede_generar: r.puede_generar_conceptos, nota: r.modo === 'reemplazar' ? r.nota : 'Las alternativas existentes se conservan en sus versiones anteriores; regenere para reflejar el encargo nuevo. Lo no mencionado se conservó.' };
   }
   sitio(project, nombre, cambios) {
     const cur = this.cargar(project, nombre); const s = actualizarSitio(cur.estado.sitio, cambios);
@@ -117,14 +123,20 @@ export class Estudios {
   }
   #resumenCmp(c) { if (!c) return null; return { estado: c.estado, frontera_pareto: c.frontera_pareto, dimensiones: c.dimensiones, no_comparables: c.no_comparables, bloqueadas: c.bloqueadas, pesos_visibles: c.pesos_visibles, estabilidad_del_lider: c.sensibilidad?.estabilidad ?? null, lider_estable: c.sensibilidad?.lider_estable ?? null, contrafactuales: c.contrafactuales, aviso: c.aviso_ranking, tabla: c.tabla }; }
 
-  ver(project, nombre, version) {
+  ver(project, nombre, version, opciones = {}) {
     const cur = this.cargar(project, nombre, version); const { evals, comparacion } = this.calcular(cur.estado);
-    return { version: cur.id, historial: cur.h.versiones.map((v) => v.id), head: cur.h.head, brief: cur.estado.brief, sitio_estado: cur.estado.sitio.status, clima: cur.estado.clima?.meta ?? null, alternativas: evals.map((e) => this.#resumenAlt(e)), comparacion: this.#resumenCmp(comparacion), seleccion: cur.estado.seleccion, publicaciones: cur.estado.publicaciones, faltantes: antecedentesFaltantes(cur.estado.sitio) };
+    return { version: cur.id, historial: cur.h.versiones.map((v) => v.id), head: cur.h.head, brief: opciones.brief_completo ? cur.estado.brief : this.#briefCompacto(cur.estado.brief), sitio_estado: cur.estado.sitio.status, clima: cur.estado.clima ? { fuente: cur.estado.clima.meta.source_ref, estacion: cur.estado.clima.meta.station_or_grid, representatividad: cur.estado.clima.meta.representativeness } : null, alternativas: evals.map((e) => this.#resumenAlt(e)), comparacion: this.#resumenCmp(comparacion), seleccion: cur.estado.seleccion, publicaciones: cur.estado.publicaciones, faltantes: antecedentesFaltantes(cur.estado.sitio) };
   }
-  evaluar(project, nombre, { alternativa, version } = {}) {
+  /** Solo lectura. `seccion`: resumen (por defecto, compacto) | objetivos | alertas | circulacion | sol | viento | visuales | privacidad | seguridad | constructibilidad | requisitos | metricas | critica | completo (contrato anterior). */
+  evaluar(project, nombre, { alternativa, version, seccion = 'resumen' } = {}) {
+    if (!SECCIONES.includes(seccion)) throw new UserError('SECCION_INVALIDA', `seccion debe ser una de: ${SECCIONES.join(', ')}.`);
     const cur = this.cargar(project, nombre, version); const { evals, comparacion } = this.calcular(cur.estado); const e = alternativa ? evals.find((x) => x.id === alternativa) : (evals.length === 1 ? evals[0] : cur.estado.seleccion ? evals.find((x) => x.id === cur.estado.seleccion) : null);
     if (!e) throw new UserError('ALTERNATIVA_NO_EXISTE', `Indique la alternativa (${evals.map((x) => x.id).join(', ') || 'ninguna generada aún'}).`);
-    return { version: cur.id, alternativa: e.id, analisis: e.analisis, objetivos: e.objetivos, detalle: { recorridos: e.detalle.recorridos, seguridad: e.detalle.seguridad, privacidad: e.detalle.privacidad, constructibilidad: e.detalle.constructibilidad, viento: e.detalle.viento, sol: e.detalle.sol ? { verano: this.#solRes(e.detalle.sol.verano), invierno: this.#solRes(e.detalle.sol.invierno) } : null }, sitio_urbano: verificarContraSitio(e.geo, cur.estado.sitio), critica: criticar(e, comparacion, e.esq) };
+    const ctx = { version: cur.id, alternativa: e.id, hash_entrada: e.analisis.input_hash };
+    if (seccion === 'resumen') { const r = resumenEvaluacion(e, ctx); return { ...r, _texto: textoResumen(r) }; }
+    const critica = seccion === 'critica' || seccion === 'completo' ? criticar(e, comparacion, e.esq) : null;
+    if (seccion !== 'completo') return seccionEvaluacion(e, ctx, seccion, critica);
+    return { version: cur.id, alternativa: e.id, analisis: e.analisis, objetivos: e.objetivos, detalle: { recorridos: e.detalle.recorridos, seguridad: e.detalle.seguridad, privacidad: e.detalle.privacidad, constructibilidad: e.detalle.constructibilidad, viento: e.detalle.viento, sol: e.detalle.sol ? { verano: this.#solRes(e.detalle.sol.verano), invierno: this.#solRes(e.detalle.sol.invierno) } : null }, sitio_urbano: verificarContraSitio(e.geo, cur.estado.sitio), critica };
   }
   #solRes(s) { return s ? { estado: s.estado, fecha: s.fecha, ventanas: s.ventanas?.map((v) => ({ id: v.id, recinto: v.recinto, lado: v.lado, horas_sol_directo: v.horas_sol_directo })), limites: s.limites, razon: s.razon ?? null } : null; }
   comparar(project, nombre, version) { const cur = this.cargar(project, nombre, version); const { evals, comparacion } = this.calcular(cur.estado); if (!evals.length) throw new UserError('SIN_ALTERNATIVAS', 'Aún no hay alternativas: use tannia_arq_generar_alternativas.'); return { version: cur.id, comparacion: this.#resumenCmp(comparacion), alternativas: evals.map((e) => this.#resumenAlt(e)) }; }
