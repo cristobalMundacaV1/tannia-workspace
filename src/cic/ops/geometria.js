@@ -42,3 +42,14 @@ defineOp({
   outputs: [{ name: 'area', dimension: 'L2', unit_out: 'm2' }, { name: 'perimetro', dimension: 'L', unit_out: 'm' }],
   applicability: { assumptions: ['círculo completo'], validity: ['radio>0'], error_bound: 'exacto' }, formula: 'A=πr²; P=2πr', tolerance: { relative: 1e-12, oracle: ['analytic'] }, maturity: 'E2', requires_review_by: [], failure_modes: ['INVALID_INPUT'],
 }, ({ radio }) => { if (!(radio > 0)) throw new OpError('INVALID_INPUT', 'El radio debe ser positivo.'); return { outputs: { area: Math.PI * radio * radio, perimetro: 2 * Math.PI * radio }, warnings: [] }; });
+
+defineOp({
+  id: 'edu.hydraulics.manning_rectangular_channel', version: '1.0.0', title: 'Manning en canal rectangular a sección llena (EJERCICIO ACADÉMICO)', disciplines: ['hidraulica', 'obras_civiles'],
+  inputs: [{ name: 'ancho', dimension: 'L', unit_in: 'm', shape: 'scalar', required: true }, { name: 'altura_agua', dimension: 'L', unit_in: 'm', shape: 'scalar', required: true }, { name: 'n_manning', dimension: null, unit_in: null, shape: 'scalar', required: true }, { name: 'pendiente', dimension: null, unit_in: null, shape: 'scalar', required: true }],
+  outputs: [{ name: 'caudal', dimension: 'L3·T-1', unit_out: 'm3/s' }, { name: 'area', dimension: 'L2', unit_out: 'm2' }, { name: 'radio_hidraulico', dimension: 'L', unit_out: 'm' }, { name: 'velocidad', dimension: 'L·T-1', unit_out: 'm/s' }],
+  applicability: { assumptions: ['flujo uniforme permanente', 'n de Manning y pendiente APORTADOS por el enunciado (no se asumen)', 'canal rectangular prismático'], validity: ['ancho>0, altura_agua>0, n>0, pendiente>0'], error_bound: 'fórmula empírica: solo para ejercicio; NO es un diseño hidráulico profesional' },
+  formula: 'Q = (1/n)·A·R^(2/3)·S^(1/2); A=b·y; P=b+2y; R=A/P', tolerance: { relative: 1e-12, oracle: ['cálculo manual independiente'] }, maturity: 'E1', requires_review_by: ['ingeniero_hidraulico'], failure_modes: ['INVALID_INPUT'],
+}, ({ ancho: b, altura_agua: y, n_manning: n, pendiente: S }) => {
+  if (!(b > 0 && y > 0 && n > 0 && S > 0)) throw new OpError('INVALID_INPUT', 'ancho, altura_agua, n_manning y pendiente deben ser positivos.');
+  const A = b * y; const R = A / (b + 2 * y); const Q = (1 / n) * A * R ** (2 / 3) * Math.sqrt(S); return { outputs: { caudal: Q, area: A, radio_hidraulico: R, velocidad: Q / A }, warnings: ['E1: fórmula educativa; no válido para diseño profesional sin revisión'] };
+});

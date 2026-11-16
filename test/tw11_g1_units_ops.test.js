@@ -20,7 +20,7 @@ test('unidades: conversiones exactas, dimensiones y rechazo de incompatibles/des
 
 test('catálogo: todas las operaciones declaran contrato completo y madurez E2 con oráculo', () => {
   const ops = listarOperaciones(); assert.ok(ops.length >= 9);
-  for (const o of ops) { assert.ok(o.applicability.validity.length && o.applicability.assumptions.length, o.id); assert.ok(o.tolerance.oracle.length, o.id); assert.equal(o.maturity, 'E2'); assert.ok(o.failure_modes.length, o.id); }
+  for (const o of ops) { assert.ok(o.applicability.validity.length && o.applicability.assumptions.length, o.id); assert.ok(o.tolerance.oracle.length, o.id); assert.ok(['E1', 'E2'].includes(o.maturity)); if (o.maturity === 'E1') assert.match(o.id, /^edu./); assert.ok(o.failure_modes.length, o.id); }
 });
 
 test('geo.polygon.properties: rectángulo, círculo (2 bulges), semicírculo, huecos; invariancias', () => {
