@@ -13,8 +13,8 @@ export const MCPB_JS = path.join(ROOT, 'node_modules', '@anthropic-ai', 'mcpb', 
 export const mcpb = (args, opts = {}) => execFileSync(process.execPath, [MCPB_JS, ...args], { stdio: 'pipe', ...opts });
 export const tmpHome = (prefix = 'tannia test ñ ') => fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 
-export async function startClient(home, entry = path.join(ROOT, 'src', 'main.js')) {
-  const transport = new StdioClientTransport({ command: process.execPath, args: [entry], env: { ...process.env, TANNIA_HOME: home }, stderr: 'pipe' });
+export async function startClient(home, entry = path.join(ROOT, 'src', 'main.js'), extraEnv = {}) {
+  const transport = new StdioClientTransport({ command: process.execPath, args: [entry], env: { ...process.env, TANNIA_HOME: home, ...extraEnv }, stderr: 'pipe' });
   const client = new Client({ name: 'test', version: '1' });
   await client.connect(transport);
   return { client, close: () => client.close() };
