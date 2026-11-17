@@ -76,7 +76,7 @@ export function buildMemoriaPdf(data) {
     doc.moveDown().fontSize(9).fillColor('#555555').text(`Documento generado por Tannia Workspace como apoyo. ${origenTxt} Registrar un archivo y comprobar su huella no acredita su autoridad técnica; confirmar una cantidad manual no la convierte en medición geométrica. Partidas, parámetros, precios y conformidad normativa deben ser revisados por un profesional competente.`, { width: 495 }).fillColor('black');
 
     const range = doc.bufferedPageRange();
-    for (let i = 0; i < range.count; i++) { doc.switchToPage(range.start + i); doc.fontSize(8).fillColor('#777777').text(`Tannia Workspace · ${data.proyecto} · página ${i + 1} de ${range.count}`, 50, 800, { width: 495, align: 'center', lineBreak: false }); }
+    for (let i = 0; i < range.count; i++) { doc.switchToPage(range.start + i); doc.page.margins.bottom = 0; /* el pie va bajo el margen: sin esto PDFKit agrega una página casi vacía (UAT-01) */ doc.fontSize(8).fillColor('#777777').text(`Tannia Workspace · ${data.proyecto} · página ${i + 1} de ${range.count}`, 50, 800, { width: 495, align: 'center', lineBreak: false }); }
     doc.end();
   });
 }

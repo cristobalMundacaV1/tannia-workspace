@@ -6,6 +6,18 @@ export function round0(x) {
   const sgn = x < 0 ? -1 : 1;
   return sgn * Math.floor(Math.abs(x) + 0.5 + 1e-9);
 }
+/**
+ * POLÍTICA ECONÓMICA ÚNICA (auditoría 2026-11-17, hallazgo B): todas las rutas de presupuesto (computeBudget, bud.rollup del CIC
+ * y las fórmulas del XLSX) usan exactamente estas reglas. Porcentajes en escala 0–100.
+ *   PU = ROUND(pu, 0); subtotal = ROUND(cantidad × PU, 0); CD = Σ subtotales;
+ *   GG = ROUND(CD × gg/100); U = ROUND(CD × u/100); Neto = CD + GG + U; IVA = ROUND(Neto × iva/100); Total = Neto + IVA.
+ */
+export const POLITICA_REDONDEO = 'Cada precio unitario y cada total de partida, GG, utilidades e IVA se redondean a peso entero (ROUND, mitad hacia arriba).';
+export const subtotalPartida = (cantidad, pu) => round0(cantidad * round0(pu));
+export function rubros(costoDirecto, { gastos_generales_pct: gg, utilidades_pct: ut, iva_pct: iva }) {
+  const g = round0(costoDirecto * gg / 100); const u = round0(costoDirecto * ut / 100); const neto = costoDirecto + g + u; const i = round0(neto * iva / 100);
+  return { costo_directo: costoDirecto, gastos_generales: g, utilidades: u, neto, iva: i, total: neto + i };
+}
 export const TIPOS_INSUMO = ['material', 'mano_obra', 'equipo', 'subcontrato'];
 
 export function insumoCantidad(i) {
@@ -74,21 +86,18 @@ export function computeBudget({ partidas, apus, config }) {
     }
     if (p.estado_revision === 'needs_review') probs.push(`Partida ${p.codigo}: cantidad con needs_review.`);
     if (!p.cantidad_verificada) probs.push(`Partida ${p.codigo}: cantidad NO verificada por una persona.`);
-    const total = pu === null || probs.some((x) => x.includes('unidad de partida')) ? null : round0(p.cantidad * pu);
+    const total = pu === null || probs.some((x) => x.includes('unidad de partida')) ? null : subtotalPartida(p.cantidad, pu);
     return { codigo: p.codigo, descripcion: p.descripcion, unidad: p.unidad, cantidad: p.cantidad, apu: p.apu, precio_unitario: pu, total, problemas: probs };
   });
   const incompleto = lineas.some((l) => l.total === null);
   const directo = lineas.reduce((a, l) => a + (l.total || 0), 0);
-  const gg = round0(directo * pct('gastos_generales_pct') / 100);
-  const ut = round0(directo * pct('utilidades_pct') / 100);
-  const neto = directo + gg + ut;
-  const iva = round0(neto * pct('iva_pct') / 100);
-  const total = neto + iva;
+  const R = rubros(directo, { gastos_generales_pct: pct('gastos_generales_pct'), utilidades_pct: pct('utilidades_pct'), iva_pct: pct('iva_pct') });
+  const { gastos_generales: gg, utilidades: ut, neto, iva, total } = R;
   for (const k of noDefinidos) bloqueos.push(`Parámetro económico no definido: ${PARAM[k]} (%). Indíquelo explícitamente (0 es válido si así se decide); no se supone.`);
   for (const l of lineas) bloqueos.push(...l.problemas);
   return {
     config: cfg, lineas, costo_directo: directo, gastos_generales: gg, utilidades: ut, neto, iva, total,
-    moneda: 'CLP', redondeo: 'Cada precio unitario y cada total de partida, GG, utilidades e IVA se redondean a peso entero (ROUND, mitad hacia arriba).',
+    moneda: 'CLP', redondeo: POLITICA_REDONDEO,
     parametros_no_definidos: noDefinidos, parcial: incompleto || noDefinidos.length > 0, bloqueos: [...new Set(bloqueos)],
     estado_final_posible: bloqueos.length === 0 && partidas.length > 0,
   };
