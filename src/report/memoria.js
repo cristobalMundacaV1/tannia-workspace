@@ -57,7 +57,8 @@ export function buildMemoriaPdf(data) {
       const B = data.presupuesto;
       H('3. Resumen de presupuesto (CLP)');
       doc.text(`Costo directo: ${clp(B.costo_directo)}`).text(`Gastos generales (${B.config.gastos_generales_pct ?? 'NO DEFINIDO'}%): ${clp(B.gastos_generales)}`).text(`Utilidades (${B.config.utilidades_pct ?? 'NO DEFINIDO'}%): ${clp(B.utilidades)}`).text(`Neto: ${clp(B.neto)}`).text(`IVA (${B.config.iva_pct ?? 'NO DEFINIDO'}%): ${clp(B.iva)}`);
-      doc.font('Helvetica-Bold').text(`TOTAL${B.parcial ? ' PARCIAL (excluye partidas pendientes)' : ''}: ${clp(B.total)}`).font('Helvetica');
+      doc.font('Helvetica-Bold').text(`${B.etiqueta_total || 'TOTAL'}: ${clp(B.total)}`, { width: 495 }).font('Helvetica');
+      for (const w of B.advertencias || []) doc.fillColor('#C00000').text(`Advertencia: ${w}`, { width: 495 }).fillColor('black');
       doc.text(B.redondeo, { width: 495 });
       if (data.origen_economico) doc.text(`Origen de precios y porcentajes: ${data.origen_economico}`, { width: 495 });
     }
@@ -76,7 +77,7 @@ export function buildMemoriaPdf(data) {
     doc.moveDown().fontSize(9).fillColor('#555555').text(`Documento generado por Tannia Workspace como apoyo. ${origenTxt} Registrar un archivo y comprobar su huella no acredita su autoridad técnica; confirmar una cantidad manual no la convierte en medición geométrica. Partidas, parámetros, precios y conformidad normativa deben ser revisados por un profesional competente.`, { width: 495 }).fillColor('black');
 
     const range = doc.bufferedPageRange();
-    for (let i = 0; i < range.count; i++) { doc.switchToPage(range.start + i); doc.fontSize(8).fillColor('#777777').text(`Tannia Workspace · ${data.proyecto} · página ${i + 1} de ${range.count}`, 50, 800, { width: 495, align: 'center', lineBreak: false }); }
+    for (let i = 0; i < range.count; i++) { doc.switchToPage(range.start + i); doc.page.margins.bottom = 0; /* el pie va bajo el margen: sin esto PDFKit agrega una página casi vacía (UAT-01) */ doc.fontSize(8).fillColor('#777777').text(`Tannia Workspace · ${data.proyecto} · página ${i + 1} de ${range.count}`, 50, 800, { width: 495, align: 'center', lineBreak: false }); }
     doc.end();
   });
 }

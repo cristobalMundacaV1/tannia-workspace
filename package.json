@@ -1,6 +1,6 @@
 {
   "name": "tannia-workspace",
-  "version": "0.2.0-rc.1",
+  "version": "0.2.0-rc.2",
   "private": true,
   "type": "module",
   "description": "Tannia Workspace: servidor MCP local para AutoCAD 2D/3D, cubicaciones, presupuestos y documentos.",

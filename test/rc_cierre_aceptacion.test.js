@@ -60,7 +60,7 @@ test('aceptación de cierre: flujo completo M1 manual → APU → resultados de 
     // 8. Aprobación y exportación; hashes, tamaños, recibo
     await OK('tannia_proyecto_avanzar', { ...p, a_estado: 'revision' }); cola.push(SI);
     const ap1 = await OK('tannia_proyecto_avanzar', { ...p, a_estado: 'aprobado' });
-    assert.match(vistos.at(-1), /TOTAL \$109\.480/); assert.match(vistos.at(-1), /Advertencias que permanecen/);
+    assert.match(vistos.at(-1), /TOTAL \(alcance no declarado\): \$109\.480/); assert.match(vistos.at(-1), /Advertencias que permanecen/);
     const ex1 = await OK('tannia_entregable_exportar', p);
     const dir1 = path.join(root, ex1.carpeta); const man1 = JSON.parse(fs.readFileSync(path.join(dir1, 'manifiesto-entrega.json'), 'utf8'));
     for (const a of man1.archivos) { const f = path.join(dir1, path.basename(a.rel)); assert.equal(sha(f), a.sha256); assert.equal(fs.statSync(f).size, a.bytes); assert.deepEqual(marcasNoFinales(f), []); }

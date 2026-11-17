@@ -28,6 +28,7 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   // Nombres estables: las fórmulas no dependen de la posición de filas informativas (incidente R5–R8: IVA leía texto en B4).
   wb.definedNames.add('Parametros!$B$2', 'PCT_GG'); wb.definedNames.add('Parametros!$B$3', 'PCT_UTILIDAD'); wb.definedNames.add('Parametros!$B$4', 'PCT_IVA');
   wp.addRow([]);
+  wp.addRow(['Alcance del presupuesto', B.etiqueta_total, B.alcance === 'no_declarado' ? 'Indique si cubre la obra completa o solo una parte.' : '']);
   wp.addRow(['Política económica', 'GG y utilidades sobre costo directo; IVA sobre costo directo + GG + utilidades; cada total redondeado a peso (ROUND).', '']);
   if (aviso_modalidad) wp.addRow(['Modalidad / originales', aviso_modalidad, 'Protección de originales: no aplica (sin originales registrados).']);
   if (origen_economico) wp.addRow(['Origen de precios y porcentajes', origen_economico, 'Tannia no puede acreditar quién aportó estos valores.']);
@@ -108,8 +109,10 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   const rUt = pr; sumRow('Utilidades', `ROUND(F${rDir}*PCT_UTILIDAD/100,0)`, B.utilidades);
   const rNeto = pr; sumRow('Neto', `F${rDir}+F${rGG}+F${rUt}`, B.neto, true);
   const rIva = pr; sumRow('IVA', `ROUND(F${rNeto}*PCT_IVA/100,0)`, B.iva);
-  sumRow('TOTAL', `F${rNeto}+F${rIva}`, B.total, true);
-  if (B.parcial) { ws.getRow(pr + 1).getCell(2).value = 'TOTAL PARCIAL: excluye partidas con PENDIENTE.'; ws.getRow(pr + 1).getCell(2).font = { bold: true, color: { argb: 'FFC00000' } }; }
+  const rTot = sumRow('TOTAL', `F${rNeto}+F${rIva}`, B.total, true);
+  // Rótulo de alcance/cálculo junto al total (la fila conserva «TOTAL» como ancla estable para lectores y fórmulas).
+  ws.getRow(rTot).getCell(3).value = B.etiqueta_total; ws.getRow(rTot).getCell(3).font = { bold: true, color: { argb: B.alcance === 'completo' && !B.calculo_incompleto ? 'FF1F3864' : 'FFC00000' } }; ws.getRow(rTot).getCell(3).alignment = { wrapText: true };
+  if (B.calculo_incompleto) { ws.getRow(pr + 1).getCell(2).value = 'TOTAL INCOMPLETO: excluye partidas con PENDIENTE.'; ws.getRow(pr + 1).getCell(2).font = { bold: true, color: { argb: 'FFC00000' } }; }
 
   // --- Cubicación (trazabilidad)
   const wc = wb.addWorksheet('Cubicacion');

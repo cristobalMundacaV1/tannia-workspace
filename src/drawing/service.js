@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { tunnelModel, compose, verifyDimensions } from './model.js';
+import { tunnelModel, compose, verifyDimensions, cantidadesFortificacion, prefijoDe } from './model.js';
+import { modeloDesdeEspecificacion } from './especificacion.js';
 import { buildSheetsPdf, verifyPdf, sceneForSheet, validateScene } from './pdf.js';
 import { buildDrawingDxf } from './dxf.js';
 import { digest } from '../cad/operations.js';
@@ -35,9 +36,11 @@ export class DrawingService {
     const composition = readJson(path.join(dir, `${h.head}-composicion.json`), null, { raiz: root });
     return cad.guardarLaminas(project, { dxf: path.relative(root, copy), dwg: path.relative(root, path.join(work, 'planos.dwg')), operacion: `dwg-${h.head}`, composition });
   }
-  async generate(project, { model: input = {}, paper = 'A3', orientation = 'landscape', margin = 12 } = {}) {
+  async generate(project, { model: input = {}, especificacion = null, paper = 'A3', orientation = 'landscape', margin = 12 } = {}) {
     const { root, dir, history } = this.location(project);
-    const model = tunnelModel({ ...input, project }); const composition = compose(model, { paper, orientation, margin });
+    // Motor genérico: una especificación (planta/corte/elevación/perfil/sección/detalle) o el adaptador de túnel.
+    const model = especificacion ? modeloDesdeEspecificacion({ ...especificacion, proyecto: especificacion.proyecto || project }) : tunnelModel({ ...input, project });
+    const pdfOpts = especificacion ? { prefijo: prefijoDe(model), marca: model.warnings[0].slice(0, 24) } : {}; const composition = compose(model, { paper, orientation, margin });
     const id = `r-${digest({ model, paper, orientation, margin }).slice(0, 20)}`;
     const prior = readJson(history, null, { raiz: root });
     if (prior?.versiones.some(v => v.id === id)) {
@@ -56,18 +59,20 @@ export class DrawingService {
       const pdf = await buildSheetsPdf(composition, sheet.id); const rendered = await renderPdf(pdf);
       if (rendered.length !== 1 || !rendered[0].qa.ok) throw new UserError('RENDER_INVALIDO', 'El PDF renderizado está vacío o fuera del área de página.');
       add(`lamina-${sheet.id}.png`, rendered[0].png);
-      const qa = await verifyPdf(pdf, [sheet]); pdfQa.push({ sheet: sheet.id, ...qa, raster: rendered[0].qa, visual_review: 'RENDERED_HUMAN_REVIEW_PENDING' });
+      const qa = await verifyPdf(pdf, [sheet], pdfOpts); pdfQa.push({ sheet: sheet.id, ...qa, raster: rendered[0].qa, visual_review: 'RENDERED_HUMAN_REVIEW_PENDING' });
       if (!qa.ok) throw new UserError('PDF_INVALIDO', 'El PDF no supera el control físico y de contenido.', '', qa);
       add(`lamina-${sheet.id}.pdf`, pdf);
     }
-    const combined = await buildSheetsPdf(composition); const combinedQa = await verifyPdf(combined, composition.sheets);
+    const combined = await buildSheetsPdf(composition); const combinedQa = await verifyPdf(combined, composition.sheets, pdfOpts);
     if (!combinedQa.ok) throw new UserError('PDF_INVALIDO', 'El PDF combinado es inválido.');
     add('conjunto.pdf', combined);
-    const columns = Object.keys(model.quantities[0]); add('cantidades.csv', `${columns.join(';')}\n${model.quantities.map(q => columns.map(c => q[c]).join(';')).join('\n')}\n`);
+    const csv = (rows) => { const cols = [...new Set(rows.flatMap((q) => Object.keys(q)))]; return `${cols.join(';')}\n${rows.map((q) => cols.map((c) => q[c] ?? '').join(';')).join('\n')}\n`; };
+    if (model.quantities?.length) add('cantidades.csv', csv(model.quantities));
+    const fort = cantidadesFortificacion(model); if (fort) add('fortificacion.csv', csv(fort));
     add('verificacion.json', JSON.stringify({ dimensions: verifyDimensions(model), composition: sceneQa, layouts_dxf: layoutQa, pdf: pdfQa, combined: combinedQa, dwg: 'NOT_RUN', ready_for_delivery: false, warnings: model.warnings }, null, 2));
     const entry = { id, files: all.map(a => a.nombre), model_sha256: digest(model), status: 'review_candidate', origin: model.provenance };
     const next = { schema: 'tw.drawing.history/1', head: id, versiones: [entry], redo: [] };
     commitConHistorial({ dir, historial: history, id, archivos: all, base: prior?.head || null, nuevo: prior ? null : next, entrada: entry, raiz: root });
-    return { revision: id, files: entry.files, folder: '06 Informes/Planos', dimensions: verifyDimensions(model), pdf: pdfQa, ready_for_delivery: false, pending: ['PDF generado desde el modelo: no se ha contrastado con un DWG guardado.', 'Revisión visual humana de los PNG', 'AutoCAD 2027 y aprobación profesional'] };
+    return { revision: id, files: entry.files, folder: '06 Informes/Planos', dimensions: verifyDimensions(model), pdf: pdfQa, ...(fort ? { fortificacion: fort } : {}), ready_for_delivery: false, pending: ['PDF generado desde el modelo: no se ha contrastado con un DWG guardado.', 'Revisión visual humana de los PNG', 'AutoCAD 2027 y aprobación profesional'] };
   }
 }

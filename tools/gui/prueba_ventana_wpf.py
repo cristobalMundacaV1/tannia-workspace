@@ -125,7 +125,7 @@ def no_verificada(r, codigo):
     assert r["recibos_verificacion"] == 0, r
 
 
-ESPERADO_TEXTO = ["Cantidad que va a confirmar: 10 m²", "5 m × 2,4 m = 12 m²", "Descuento por puerta: 1 m × 2 m = 2 m²", "Superficie neta: 12 − 2 = 10 m²", "no medidas en el plano", "No se comprobó en el plano si existen otros vanos", "sin trazabilidad geométrica", "la aprobación de la entrega es un paso posterior"]
+ESPERADO_TEXTO = ["Cantidad que va a confirmar: 10 m²", "5 m × 2,4 m = 12 m²", "Descuento por puerta: 1 m × 2 m = 2 m²", "Superficie neta: 12 − 2 = 10 m²", "no medidas en el plano", "No se comprobó en el plano si existen otros vanos", "sin trazabilidad geométrica"]
 
 
 def c_contenido_y_confirmar(escala="1", modalidad=None):
@@ -137,6 +137,13 @@ def c_contenido_y_confirmar(escala="1", modalidad=None):
         esperado = ESPERADO_TEXTO + (["Sin originales registrados. Datos suministrados en conversación"] if modalidad else [])
         faltan = [e for e in esperado if e not in txt]
         assert not faltan, f"texto faltante: {faltan}"
+        # Comprensión de la autorización (criterio por SECCIÓN, más exigente que buscar una frase en todo el texto):
+        titulo = control(w, "txtTitulo").window_text()
+        assert titulo.startswith("¿Confirmas que Muro eje A (M1) mide 10 m²"), f"título no es la pregunta concreta: {titulo!r}"
+        autoriza = control(w, "txtAutoriza").get_value()
+        assert "No apruebas el presupuesto ni su entrega" in autoriza and "paso posterior y separado" in autoriza, f"«Qué estás autorizando» no separa confirmar cantidad de aprobar entrega: {autoriza!r}"
+        si_no = control(w, "txtSiRechaza").get_value()
+        assert "se mantiene" in si_no, f"«Si no apruebas» no aclara que una confirmación vigente se conserva: {si_no!r}"
         si, no, chk = control(w, "btnAutorizar"), control(w, "btnNoAutorizar"), control(w, "chkRevisado")
         assert "Confirmar 10 m²" in si.window_text() and "No confirmar" in no.window_text(), (si.window_text(), no.window_text())
         for c in (si, no, chk):
@@ -275,12 +282,13 @@ def c_scroll(escala):
 def c_entrega():
     proc, js = lanzar("entrega")
     w = ventana()
-    assert "Verificar cantidad de M1" in textos(w)
+    t1 = textos(w)
+    assert "¿Confirmas que Muro eje A (M1) mide 10 m²" in t1, f"primera ventana no es la verificación de M1: {t1[:300]!r}"
     control(w, "chkRevisado").click_input(); time.sleep(0.3); control(w, "btnAutorizar").click_input()
     assert esperar_sin_ventana(30)
     w2 = ventana(120)
     t2 = textos(w2)
-    for e in ["Aprobar la entrega", "Revisión de datos: R", "TOTAL $109.480", "Neto $92.000", "IVA 19% $17.480", "origen no acreditado", "Presupuesto R", "Memoria R", "Advertencias que permanecen", "sin trazabilidad geométrica"]:
+    for e in ["¿Apruebas este presupuesto y su memoria para entregarlos?", "Revisión de datos: R", "TOTAL (alcance no declarado): $109.480", "Neto $92.000", "IVA 19 % $17.480", "origen no acreditado", "Presupuesto R", "Memoria R", "Advertencias que permanecen", "sin trazabilidad geométrica", "Si no apruebas", "esta aprobación deja de valer"]:
         assert e in t2, f"ventana de entrega sin «{e}»"
     img = captura(w2, "ventana_aprobacion_entrega")
     control(w2, "chkRevisado").click_input(); time.sleep(0.3); control(w2, "btnAutorizar").click_input()

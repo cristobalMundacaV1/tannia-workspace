@@ -11,6 +11,7 @@
   },
   "esquemas_cambiados": {
     "tannia_proyecto_avanzar": "A-01: aprobado_por y confirmo_revision_profesional se conservan por compatibilidad pero ya no tienen efecto (descripción cambiada); la aprobación la da la persona en la ventana",
-    "tannia_partida_verificar": "A-01: verificada_por pasa a opcional y sin efecto; resolucion_needs_review acotada a 500 caracteres"
+    "tannia_partida_verificar": "A-01: verificada_por pasa a opcional y sin efecto; resolucion_needs_review acotada a 500 caracteres",
+    "tannia_presupuesto_config": "Auditoría integral 2026-11-17 (UAT-02): se AGREGAN campos opcionales alcance (completo|parcial), alcance_descripcion y fecha_referencia_precios; un presupuesto parcial no se presenta como costo total y los precios con más de 12 meses se advierten. Los campos previos no cambian."
   }
 }

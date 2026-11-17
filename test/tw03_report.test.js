@@ -18,7 +18,7 @@ test('memoria PDF: válida, reabrible, con acentos, trazabilidad, advertencias y
   assert.equal(buf.subarray(0, 5).toString(), '%PDF-');
   const { t, pages } = await textOf(buf);
   assert.ok(pages >= 2, 'paginación');
-  for (const s of ['Casa Peñalolén', 'ñandú', 'BORRADOR', 'aaaaaaaaaa', 'NEEDS_REVIEW', 'TOTAL PARCIAL', 'Unidad no confirmada', 'no es un documento final', 'Suma de áreas']) assert.ok(t.includes(s), s);
+  for (const s of ['Casa Peñalolén', 'ñandú', 'BORRADOR', 'aaaaaaaaaa', 'NEEDS_REVIEW', 'TOTAL INCOMPLETO', 'Unidad no confirmada', 'no es un documento final', 'Suma de áreas']) assert.ok(t.includes(s), s);
   assert.ok(/página 1 de/.test(t));
   const info = await inspectPdf(buf); assert.equal(info.paginas, pages);
 });
