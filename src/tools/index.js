@@ -170,7 +170,8 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     const ventana = contenidoVentana({
       pregunta: '¿Apruebas este presupuesto y su memoria para entregarlos?',
       porque: `Todas las cantidades ya están confirmadas y los archivos están listos. Antes de entregarlos, una persona debe aprobarlos: Claude no puede hacerlo por ti.${aviso ? ` ATENCIÓN: ${aviso}` : ''}`,
-      revisar: [`TOTAL${B.parcial ? ' PARCIAL' : ''} ${clp(B.total)} (costo directo ${clp(B.costo_directo)}; gastos generales ${B.config.gastos_generales_pct} %; utilidades ${B.config.utilidades_pct} %; IVA ${B.config.iva_pct} %)`, `${partidas.length} partida(s), todas con cantidad confirmada por una persona`, 'Los precios y porcentajes los indicaste en la conversación; no provienen de una fuente verificada', ...(adv.length ? ['Advertencias que permanecen (no impiden aprobar):', ...adv.map((a) => `   ${a}`)] : ['Sin advertencias.'])],
+      // Resumen económico COMPLETO y visible (no plegado): etiqueta única de alcance/cálculo, montos, revisión, origen y advertencias.
+      revisar: [`${B.etiqueta_total}: ${clp(B.total)}`, `Costo directo ${clp(B.costo_directo)} · Gastos generales ${B.config.gastos_generales_pct} % ${clp(B.gastos_generales)} · Utilidades ${B.config.utilidades_pct} % ${clp(B.utilidades)}`, `Neto ${clp(B.neto)} · IVA ${B.config.iva_pct} % ${clp(B.iva)}`, `Revisión de datos: ${revision.id} · ${partidas.length} partida(s), todas con cantidad confirmada por una persona`, 'Precios y porcentajes: origen no acreditado (los indicaste en la conversación; no provienen de una fuente verificada).', ...(B.advertencias || []).map((a) => `Advertencia del presupuesto: ${a}`), ...(adv.length ? ['Advertencias que permanecen (no impiden aprobar):', ...adv.map((a) => `   ${a}`)] : ['Sin advertencias de partidas.'])],
       autoriza: 'Que estos archivos, tal como están ahora, se entreguen como la versión aprobada del proyecto.',
       si_acepta: 'Podrás exportar los archivos a la carpeta «07 Entregables». Si después cambia una cantidad, un precio, un porcentaje o un plano original, esta aprobación deja de valer y habrá que aprobar de nuevo.',
       si_rechaza: 'No se entrega nada ni se borra nada. Puedes pedir correcciones y volver a solicitar la aprobación.',
@@ -322,7 +323,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     const ventana = contenidoVentana({
       pregunta: `¿Confirmas que ${p.descripcion} (${p.codigo}) mide ${cant}?`,
       porque: 'Esta cantidad se usará en el presupuesto. Solo una persona puede confirmar que es correcta.',
-      revisar: lineas, autoriza: `Que ${cant} es la cantidad correcta de esta partida.`,
+      revisar: lineas, autoriza: `Solo que ${cant} es la cantidad correcta de esta partida. No apruebas el presupuesto ni su entrega: la aprobación de la entrega es un paso posterior y separado.`,
       si_acepta: 'La partida queda confirmada y puede entrar al presupuesto. Si después cambian las medidas, los vanos, la cantidad o el método, tendrás que confirmarla de nuevo (un cambio de precio no la anula).',
       si_rechaza: 'La partida queda sin confirmar y no se puede aprobar la entrega todavía. Si ya tenía una confirmación vigente, esa se mantiene.',
       afecta: ['Presupuesto (Excel)', 'Memoria de cálculo (PDF)'],
@@ -387,7 +388,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     const rel = path.relative(pr.root, abs).split(path.sep).join('/');
     const art = registrarArtefacto(pr, { tipo: 'presupuesto_xlsx', rel, datos: { total: budget.total, estado_final_posible: budget.estado_final_posible, estado_documento: budget.estado_final_posible ? 'candidato' : 'borrador' } });
     pr.audit('presupuesto_generado', { archivo: rel, final_posible: budget.estado_final_posible, revision: art.revision_id });
-    return ok(budget.estado_final_posible ? `Presupuesto generado (revisión ${art.revision_id}).` : `Presupuesto generado como BORRADOR (revisión ${art.revision_id}): hay pendientes.`, { archivo: rel, sha256: art.sha256, revision: art.revision_id, total: budget.total, parcial: budget.parcial, estado_final_posible: budget.estado_final_posible, pendientes: budget.bloqueos });
+    return ok(budget.estado_final_posible ? `Presupuesto generado (revisión ${art.revision_id}). ${budget.etiqueta_total}: $${Number(budget.total).toLocaleString('es-CL')}.` : `Presupuesto generado como BORRADOR (revisión ${art.revision_id}): hay pendientes.`, { archivo: rel, sha256: art.sha256, revision: art.revision_id, total: budget.total, etiqueta_total: budget.etiqueta_total, alcance: budget.alcance, alcance_descripcion: budget.alcance_descripcion, calculo_incompleto: budget.calculo_incompleto, advertencias_presupuesto: budget.advertencias, estado_final_posible: budget.estado_final_posible, pendientes: budget.bloqueos });
   });
 
   reg('tannia_informe_generar', {

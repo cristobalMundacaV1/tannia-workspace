@@ -30,7 +30,9 @@ test('túnel UAT-02 con fortificación: 5 láminas, pernos y malla dibujados y c
   const P = 2 * 2.5 + Math.PI * 2.75; assert.equal(Math.ceil(P / 1.5), 10);
   assert.equal(pernos.cantidad, 1010); assert.ok(Math.abs(pernos.longitud_total_m - 1010 * 2.4) < 1e-9);
   const malla = filas.find((f) => f.partida === 'Malla de acero');
-  assert.ok(Math.abs(malla.cantidad - P * 150 * 1.1) < 1e-6);
+  // La malla se cubica sobre la MALLA dibujada (radio r − 0,03 m): desarrollo 2·2,5 + π·2,72 (oráculo a mano).
+  const Pm = 2 * 2.5 + Math.PI * 2.72; assert.ok(Math.abs(malla.cantidad - Pm * 150 * 1.1) < 1e-6, `${malla.cantidad} vs ${Pm * 150 * 1.1}`);
+  assert.match(pernos.naturaleza, /esquemático académico.*NO es una disposición geotécnica/);
   assert.equal((dxf.match(/\nPERNOS\n/g) || []).length >= 10, true, 'los pernos son entidades del DXF en su capa');
   assert.match(dxf, /elemento=pernos/);
   // Cada perno sale perpendicular al contorno y mide exactamente la longitud declarada.
@@ -83,4 +85,24 @@ test('MCP: «generar» con especificación de edificación entrega PDF/DXF/CSV c
     assert.equal(r.structuredContent.entrega.modo, 'archivo_guardado_localmente');
     const fs = await import('node:fs'); for (const a of r.structuredContent.entrega.archivos) assert.ok(fs.existsSync(a.ruta), a.ruta);
   } finally { await cli.close?.(); }
+});
+
+test('fortificación con valores NO múltiplos: anillos en ambos extremos, espaciamiento real ≤ declarado, conteo y longitudes reproducibles', async () => {
+  // L = 137,3 m, s_l = 1,4 m → anillos = ceil(98,07) + 1 = 100, paso real = 137,3/99 = 1,3869 m ≤ 1,4.
+  // Sección: ancho 5,5 (r = 2,75), hastial 2,5 → P = 5 + 2,75π = 13,6394 m; s_t = 1,7 → n = ceil(8,023) = 9, paso 1,5155 m ≤ 1,7.
+  const F2 = { perno_longitud: 2.35, espaciamiento_transversal: 1.7, espaciamiento_longitudinal: 1.4, malla: true, traslapo_malla_pct: 7.5 };
+  const m = tunnelModel({ length: 137.3, fortificacion: F2 });
+  assert.ok(verifyDimensions(m).ok); const { dxf } = await gates(m);
+  assert.match(dxf, /\nDIMENSION\n/, 'cotas nativas DIMENSION (no texto suelto)');
+  const filas = cantidadesFortificacion(m); const pernos = filas.find((f) => f.partida === 'Pernos de anclaje');
+  const P = 2 * 2.5 + Math.PI * 2.75; const n = Math.ceil(P / 1.7); const anillos = Math.ceil(137.3 / 1.4) + 1;
+  assert.equal(n, 9); assert.equal(anillos, 100);
+  assert.equal(pernos.cantidad, n * anillos); assert.ok(Math.abs(pernos.longitud_total_m - n * anillos * 2.35) < 1e-9);
+  assert.ok(pernos.distribucion.espaciamiento_longitudinal_real_m <= 1.4 + 1e-12); assert.ok(Math.abs(pernos.distribucion.espaciamiento_longitudinal_real_m - 137.3 / 99) < 1e-12);
+  const v = m.views.find((x) => x.id === 'fortificacion'); const lineas = v.entities.filter((e) => e.layer === 'PERNOS');
+  assert.equal(lineas.length, n, 'el dibujo tiene exactamente los pernos cubicados por anillo');
+  for (const e of lineas) assert.ok(Math.abs(Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]) - 2.35) < 1e-9, 'cada perno mide la longitud declarada');
+  const malla = filas.find((f) => f.partida === 'Malla de acero'); const Pm = 2 * 2.5 + Math.PI * 2.72;
+  assert.ok(Math.abs(malla.cantidad - Pm * 137.3 * 1.075) < 1e-6);
+  assert.ok(Math.abs(cantidadesFortificacion(tunnelModel({ length: 137.3, fortificacion: F2 })).find((f) => f.partida === 'Pernos de anclaje').cantidad - pernos.cantidad) === 0, 'reproducible');
 });

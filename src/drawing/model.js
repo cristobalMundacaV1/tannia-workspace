@@ -79,10 +79,13 @@ export function fortificacionVista({ r, wall, length, f }) {
 export function cantidadesFortificacion(model) {
   const v = model.views.find((x) => x.id === 'fortificacion'); if (!v) return null; const f = model.fortificacion;
   const largo = (e) => (e.kind === 'line' ? Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]) : e.radius * (e.end - e.start) * Math.PI / 180);
-  const pernos = v.entities.filter((e) => e.layer === 'PERNOS'); const desarrollo = v.entities.filter((e) => e.element === 'contorno-fortificado').reduce((s, e) => s + largo(e), 0);
+  // La malla se cubica sobre la MALLA dibujada (antes: sobre el contorno de excavación, que no es lo dibujado como malla).
+  const pernos = v.entities.filter((e) => e.layer === 'PERNOS'); const desarrollo = v.entities.filter((e) => e.layer === 'MALLA').reduce((s, e) => s + largo(e), 0);
   const L = model.length_m; const anillos = Math.ceil(L / f.espaciamiento_longitudinal - 1e-9) + 1; const porAnillo = pernos.length;
-  const filas = [{ partida: 'Pernos de anclaje', unidad: 'u', cantidad: porAnillo * anillos, formula: `${porAnillo} pernos/anillo (contados en la sección dibujada) × ${anillos} anillos = ceil(${L} / ${f.espaciamiento_longitudinal}) + 1`, longitud_total_m: pernos.reduce((s, e) => s + largo(e), 0) * anillos }];
-  if (f.malla) filas.push({ partida: 'Malla de acero', unidad: 'm2', cantidad: desarrollo * L * (1 + f.traslapo_malla_pct / 100), formula: `desarrollo ${desarrollo.toFixed(4)} m (hastiales + bóveda dibujados) × ${L} m × (1 + ${f.traslapo_malla_pct} %)` });
+  const ESQUEMA = 'Patrón esquemático académico a partir de espaciamientos declarados: NO es una disposición geotécnica validada ni una exigencia de construcción.';
+  const distribucion = { anillos, espaciamiento_longitudinal_real_m: anillos > 1 ? L / (anillos - 1) : null, por_anillo: porAnillo, extremos: 'un anillo en cada extremo (0 m y L)' };
+  const filas = [{ partida: 'Pernos de anclaje', unidad: 'u', cantidad: porAnillo * anillos, formula: `${porAnillo} pernos/anillo (contados en la sección dibujada) × ${anillos} anillos = ceil(${L} / ${f.espaciamiento_longitudinal}) + 1 (anillos en ambos extremos; espaciamiento real ${(L / (anillos - 1)).toFixed(3)} m ≤ ${f.espaciamiento_longitudinal} m)`, naturaleza: ESQUEMA, distribucion, longitud_total_m: pernos.reduce((s, e) => s + largo(e), 0) * anillos }];
+  if (f.malla) filas.push({ partida: 'Malla de acero', unidad: 'm2', cantidad: desarrollo * L * (1 + f.traslapo_malla_pct / 100), formula: `desarrollo ${desarrollo.toFixed(4)} m (malla dibujada: hastiales + bóveda) × ${L} m × (1 + ${f.traslapo_malla_pct} % de traslapo)`, naturaleza: ESQUEMA, desarrollo_m: desarrollo });
   return filas;
 }
 

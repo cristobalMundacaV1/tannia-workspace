@@ -1,5 +1,6 @@
 import { SecurityError } from '../security/sandbox.js';
 import { DxfError } from '../dxf/reader.js';
+import fs from 'node:fs';
 import nodePath from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -79,11 +80,20 @@ const QUE_ES = { pdf: 'PDF', xlsx: 'planilla Excel', docx: 'documento Word', dxf
  * Los datos técnicos (huellas) quedan en structuredContent; la conversación recibe nombres comprensibles.
  */
 export function conArchivos(result, { raiz, carpeta, archivos }) {
-  const items = archivos.map((rel) => { const abs = nodePath.resolve(raiz, rel); const nombre = nodePath.basename(abs); const ext = nombre.split('.').pop().toLowerCase(); return { abs, nombre, ext }; });
+  // Contención (revisión PR #30): cada archivo debe ser un archivo REGULAR, sin enlaces, cuya ruta real quede dentro de la
+  // carpeta del proyecto. Una ruta que escape (.., absoluta, enlace/junction) no se publica como vínculo: se rechaza.
+  const raizReal = fs.realpathSync.native(raiz);
+  const items = archivos.map((rel) => {
+    const abs = nodePath.resolve(raiz, rel);
+    const dentro = (r, base) => { const x = nodePath.relative(base, r); return x !== '' && !x.startsWith('..') && !nodePath.isAbsolute(x); };
+    let st; try { st = fs.lstatSync(abs); } catch { throw new UserError('ENTREGA_ARCHIVO_INEXISTENTE', `El archivo «${nodePath.basename(abs)}» no existe; no se informa como entregado.`); }
+    if (!dentro(abs, raiz) || st.isSymbolicLink() || !st.isFile() || !dentro(fs.realpathSync.native(abs), raizReal)) throw new UserError('ENTREGA_FUERA_DEL_PROYECTO', `«${nodePath.basename(abs)}» no es un archivo del proyecto; no se publica como vínculo.`);
+    const nombre = nodePath.basename(abs); const ext = nombre.split('.').pop().toLowerCase(); return { abs, nombre, ext, size: st.size };
+  });
   const carpetaAbs = nodePath.resolve(raiz, carpeta);
   const lista = items.map((i) => `• ${i.nombre} — ${QUE_ES[i.ext] || 'archivo'}`).join('\n');
   result.content.unshift({ type: 'text', text: `Archivos listos (guardados en tu equipo):\n${lista}\n\nCarpeta: ${carpetaAbs}\nPara abrirlos: abre esa carpeta en el Explorador de Windows y haz doble clic en el archivo.` });
-  for (const i of items) result.content.push({ type: 'resource_link', uri: pathToFileURL(i.abs).href, name: i.nombre, mimeType: MIME[i.ext] || 'application/octet-stream', description: QUE_ES[i.ext] || 'archivo' });
+  for (const i of items) result.content.push({ type: 'resource_link', uri: pathToFileURL(i.abs).href, name: i.nombre, mimeType: MIME[i.ext] || 'application/octet-stream', description: QUE_ES[i.ext] || 'archivo', size: i.size });
   result.structuredContent = { ...result.structuredContent, entrega: { modo: 'archivo_guardado_localmente', carpeta: carpetaAbs, archivos: items.map((i) => ({ nombre: i.nombre, ruta: i.abs, tipo: QUE_ES[i.ext] || 'archivo' })), vinculos_mcp: 'resource_link file:// (visualización como adjunto en el cliente: NO VERIFICADA)' } };
   return result;
 }

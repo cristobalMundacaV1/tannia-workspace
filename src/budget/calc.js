@@ -96,7 +96,10 @@ export function computeBudget({ partidas, apus, config }) {
   // Alcance y vigencia (UAT-02): un presupuesto de una parte de la obra no es el costo total; un precio antiguo no es vigente.
   const alcance = ['completo', 'parcial'].includes(config?.alcance) ? config.alcance : 'no_declarado';
   const alcanceTxt = typeof config?.alcance_descripcion === 'string' && config.alcance_descripcion.trim() ? config.alcance_descripcion.trim().slice(0, 200) : null;
-  const etiqueta_total = alcance === 'parcial' ? `PRESUPUESTO PARCIAL${alcanceTxt ? ` (${alcanceTxt})` : ''}: no es el costo total de la obra` : 'TOTAL';
+  // Dos ejes DISTINTOS (revisión PR #30): `alcance` = qué parte de la obra cubre; `calculo_incompleto` = faltan precios/datos.
+  // Una sola etiqueta para ventana, XLSX, PDF, manifiesto y respuesta, derivada de ambos.
+  const calculoIncompleto = incompleto || noDefinidos.length > 0;
+  const etiqueta_total = [alcance === 'parcial' ? `PRESUPUESTO PARCIAL${alcanceTxt ? ` (${alcanceTxt})` : ''}: no es el costo total de la obra` : alcance === 'completo' ? 'TOTAL DE LA OBRA' : 'TOTAL (alcance no declarado)', ...(calculoIncompleto ? ['TOTAL INCOMPLETO: excluye partidas pendientes'] : [])].join(' — ');
   const advertencias = [];
   if (alcance === 'no_declarado') advertencias.push('Alcance del presupuesto no declarado: indique si cubre la obra completa o solo una parte.');
   const ref = Date.parse(config?.fecha_referencia_precios || '') || Date.now(); const MESES = 12;
@@ -111,7 +114,9 @@ export function computeBudget({ partidas, apus, config }) {
     config: cfg, lineas, costo_directo: directo, gastos_generales: gg, utilidades: ut, neto, iva, total,
     moneda: 'CLP', redondeo: POLITICA_REDONDEO,
     alcance, alcance_descripcion: alcanceTxt, etiqueta_total, advertencias: [...new Set(advertencias)],
-    parametros_no_definidos: noDefinidos, parcial: incompleto || noDefinidos.length > 0, bloqueos: [...new Set(bloqueos)],
+    parametros_no_definidos: noDefinidos, calculo_incompleto: calculoIncompleto,
+    /** @deprecated usar `calculo_incompleto` (cálculo) o `alcance` (cobertura); se mantiene solo por compatibilidad de lectura. */
+    parcial: calculoIncompleto, bloqueos: [...new Set(bloqueos)],
     estado_final_posible: bloqueos.length === 0 && partidas.length > 0,
   };
 }

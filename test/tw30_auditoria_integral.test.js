@@ -78,8 +78,8 @@ test('UAT-02: un presupuesto parcial se rotula como tal y los precios con más d
   assert.ok(parcial.advertencias.some((a) => /2019-01-15.*7 año\(s\).*No es un precio vigente/.test(a)), parcial.advertencias.join(' | '));
   assert.equal(parcial.total, 34_554_625); // oráculo: 1010×25.000=25.250.000; +10 %+5 % = 29.037.500; IVA 19 % = 5.517.125
   const sinAlcance = computeBudget({ partidas, apus: [{ ...apus[0], insumos: [{ ...apus[0].insumos[0], fecha_precio: '2026-10-01' }] }], config: cfg });
-  assert.equal(sinAlcance.alcance, 'no_declarado'); assert.equal(sinAlcance.etiqueta_total, 'TOTAL');
+  assert.equal(sinAlcance.alcance, 'no_declarado'); assert.equal(sinAlcance.etiqueta_total, 'TOTAL (alcance no declarado)'); // revisión PR #30: el alcance desconocido se rotula, no se presenta como total de obra
   assert.ok(sinAlcance.advertencias.some((a) => /Alcance del presupuesto no declarado/.test(a)));
   assert.ok(!sinAlcance.advertencias.some((a) => /vigente/.test(a)));
-  assert.equal(computeBudget({ partidas, apus, config: { ...cfg, alcance: 'completo' } }).etiqueta_total, 'TOTAL');
+  assert.equal(computeBudget({ partidas, apus, config: { ...cfg, alcance: 'completo' } }).etiqueta_total, 'TOTAL DE LA OBRA');
 });

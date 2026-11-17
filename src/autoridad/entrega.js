@@ -12,7 +12,7 @@ import { copiarDentro, verificarContencion } from '../project/store.js';
 import { unzipSync, strFromU8 } from 'fflate';
 
 // Frases EXACTAS que emiten los generadores (mayúsculas): un nombre de proyecto como «R7 borrador» no es una marca.
-const MARCAS_NO_FINALES = /BORRADOR [—\x97-]|BORRADOR DESACTUALIZADO|NO FINAL|TOTAL PARCIAL|DESACTUALIZADA/;
+const MARCAS_NO_FINALES = /BORRADOR [—\x97-]|BORRADOR DESACTUALIZADO|NO FINAL|TOTAL PARCIAL|TOTAL INCOMPLETO|DESACTUALIZADA/;
 /** Revisa el CONTENIDO real del archivo (no solo metadatos): un documento que se declara borrador no puede ser entrega final. */
 export function marcasNoFinales(abs) {
   const b = fs.readFileSync(abs);
@@ -83,7 +83,7 @@ export function prepararManifiesto(pr, { presupuesto, integridad, partidas, bloq
     schema: 'tw.delivery_manifest/1', id: idAleatorio('ent'), proyecto: pr.name, proyecto_id: pr.meta()?.id || null,
     revision: rev.n, revision_id: rev.id, snapshot: rev.snapshot,
     archivos: Object.entries(elegido).map(([rol, a]) => ({ rol, rel: a.rel, sha256: a.sha256, bytes: a.bytes, artefacto: a.id })),
-    resumen: { total: presupuesto.total, costo_directo: presupuesto.costo_directo, moneda: presupuesto.moneda, politica_economica: presupuesto.config, partidas: partidas.map((p) => ({ codigo: p.codigo, cantidad: p.cantidad, unidad: p.unidad, recibo_verificacion: p.verificacion?.recibo || null })) },
+    resumen: { total: presupuesto.total, etiqueta_total: presupuesto.etiqueta_total, alcance: presupuesto.alcance, alcance_descripcion: presupuesto.alcance_descripcion, costo_directo: presupuesto.costo_directo, moneda: presupuesto.moneda, politica_economica: presupuesto.config, partidas: partidas.map((p) => ({ codigo: p.codigo, cantidad: p.cantidad, unidad: p.unidad, recibo_verificacion: p.verificacion?.recibo || null })) },
     modalidad, proteccion_originales, advertencias: aviso ? [aviso] : [],
     originales: { estado: proteccion_originales === 'no_aplica_sin_originales' ? 'no_aplica_sin_originales' : integridad.estado, verificados: integridad.verificados },
     creado: new Date().toISOString(),

@@ -51,6 +51,15 @@ Hallazgos del expediente B: TW-PRO-01 ya estaba resuelto en la base (recibos HMA
 - `rc:verificar` sobre `Tannia-Workspace-0.2.0-rc.2-windows-x64.zip`: **11/11 OK** (instalación en un perfil limpio simulado, MCP, flujo E2E, recuperación, actualización y desinstalación).
 - CI de Windows/Ubuntu: lo ejecuta el PR; ver su estado allí.
 
+## 4b. Revisión técnica del PR #30 (cierre)
+
+| Hallazgo | Corrección | Prueba |
+|---|---|---|
+| `gui-windows` (run 44173057442): 4 ventanas de verificación no explicaban que confirmar una cantidad no aprueba la entrega; la ventana de entrega no mostraba neto, IVA, revisión ni origen | Texto «Qué estás autorizando» corregido; resumen económico completo en la ventana de entrega | `tools/gui/prueba_ventana_wpf.py`, con aserciones por sección (más exigentes que la búsqueda en todo el texto) |
+| `B.parcial` (faltan datos) se mezclaba con el alcance parcial de la obra | Dos ejes: `alcance` y `calculo_incompleto`; una sola `etiqueta_total` en respuesta, ventana, Excel, PDF y manifiesto; `parcial` queda obsoleto | `test/rc_alcance_presupuesto.test.js` |
+| `resource_link` sin contención | Solo archivos regulares dentro del proyecto; sin `..`, rutas absolutas externas ni enlaces simbólicos; incluye `size` | `test/rc_resource_link.test.js` |
+| La malla se cubicaba con el radio teórico y no con la dibujada; los pernos no decían que son un patrón académico | Cubicación desde la capa MALLA; `naturaleza` y `distribucion` (anillos, paso real, extremos) | `test/tw31_motor_planos.test.js` (incluye L = 137,3 m y s = 1,4/1,7 m, que no son múltiplos) |
+
 ## 5. NO VERIFICADO (requiere hardware o uso real)
 
 - AutoCAD 2027: apertura e importación de DXF, guardado DWG, cierre y reapertura, conservación de layouts y cotas (gate de TW-PRO-02).
