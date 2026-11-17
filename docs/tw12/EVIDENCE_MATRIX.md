@@ -75,3 +75,11 @@ Los paquetes se verifican como cliente MCP desde el bundle desempaquetado.
 - Un único `Documents.Open`; si AutoCAD lanza, se hace UNA comprobación de si el archivo quedó abierto (`recuperado_tras_error`), nunca un segundo `Open`. `abrir_copia` no está en `REINTENTO_SEGURO`.
 **Pruebas:** `test/tw12_cad_open.test.js` (contrato del script, Dibujo1 sin guardar, fallo con detalle sin rutas, 11 clasificaciones con una sola llamada, DXF inválido sin invocar AutoCAD, originales protegidos, recuperación abrir → DXF→DWG una sola vez e idempotente, y los tres rechazos previos al guardado).
 **Límite de la validación:** los scripts PowerShell no se ejecutaron aquí; el runner simula las respuestas. Que `abrir_copia` y `exportar_dwg` funcionen con AutoCAD 2027 real, y cuál era la causa, **sigue PENDIENTE_EXTERNO**: repetir con la prueba real y adjuntar `structuredContent.detalle`.
+
+### Candidato con CAD-OPEN-01 (código 8ff5f95) — reemplaza a 6dc6f6a
+Suite local: 425 pruebas, 408 pasan, 0 fallan, 17 omitidas. Paquetes con destino win32-x64; 85 y 72 herramientas por cliente MCP.
+| Paquete | SHA-256 del .mcpb |
+|---|---|
+| BASE (72) | ccbcda6bb3f29a0e380bb6362c99544f4d637928bf18375780edda47e0eba472 |
+| INGENIERIA-WINDOWS (85, platforms win32) | ec019c1247c459a439d680a072843bec419772e1131930631dcbe5b65887b43a |
+ZIP de entrega: 3abc666b3ca0be865384ef36316cbdadc511d5869c1f33063e004652271de843. Hashes del contenido en HASHES_CONTENIDO.txt del ZIP.
