@@ -69,8 +69,9 @@ function Seccion($id, $icono, $heading, $value) {
 if ($data.layout -eq 'pregunta') {
   # Ventana orientada a la decisión (§6.7): pregunta concreta arriba y las seis respuestas, sin jerga; lo técnico va plegado.
   $h1 = New-Object Windows.Controls.TextBlock; $h1.Text = [string]$data.action; $h1.FontSize = 21; $h1.FontWeight = 'SemiBold'; $h1.Foreground = '#163A5F'; $h1.TextWrapping = 'Wrap'; $h1.Margin = '0,0,0,6'; [Windows.Automation.AutomationProperties]::SetAutomationId($h1, 'txtTitulo'); try { [Windows.Automation.AutomationProperties]::SetHeadingLevel($h1, 'Level1') } catch { }; $null = $body.Children.Add($h1)
-  Seccion 'txtPorQue' ([char]0x2139) 'Por qué ves esta ventana' $data.why
+  # Lo que se revisa va inmediatamente bajo la pregunta: debe caber sin desplazar incluso al 150 % de escala.
   Seccion 'txtResumen' ([char]0x2714) 'Qué debes revisar' $data.check
+  Seccion 'txtPorQue' ([char]0x2139) 'Por qué ves esta ventana' $data.why
   Seccion 'txtAutoriza' ([char]0x270D) 'Qué estás autorizando' $data.grants
   Seccion 'txtSiAcepta' ([char]0x2192) 'Si apruebas' $data.ifYes
   Seccion 'txtSiRechaza' ([char]0x2190) 'Si no apruebas' $data.ifNo
