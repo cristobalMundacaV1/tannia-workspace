@@ -1,7 +1,6 @@
 // Revisiones del expediente (E04/E11): número monótono + huella de contenido. Cualquier cambio de partidas, APU, parámetros
 // económicos, calibraciones, originales registrados, bytes de archivos de origen o verificaciones crea una revisión NUEVA.
 // Volver a un contenido anterior (A → B → A) también crea un número nuevo: nada de B ni de la primera A se reutiliza por coincidir.
-import fs from 'node:fs';
 import { huella } from './canonico.js';
 import { sha256File } from '../security/sandbox.js';
 import { Recibos } from './recibos.js';
@@ -56,7 +55,7 @@ export function contenidoRevision(pr) {
 export function revisionVigente(pr, motivo = 'Cambio detectado en los datos o en los archivos de origen.') {
   const f = pr.p('.tannia', 'revision.json');
   const snapshot = huella(contenidoRevision(pr));
-  let st = null; try { st = JSON.parse(fs.readFileSync(f, 'utf8')); } catch { st = null; }
+  let st = null; try { st = pr.leer(f, null); } catch (e) { if (String(e?.code || '').startsWith('DESTINO_')) throw e; st = null; } // lectura con contención (sin seguir enlaces fuera del proyecto)
   if (st && st.snapshot === snapshot && Number.isInteger(st.n)) return { n: st.n, snapshot, id: `R${st.n}` };
   const n = (Number.isInteger(st?.n) ? st.n : 0) + 1;
   const historial = [...(Array.isArray(st?.historial) ? st.historial : []), { n, snapshot, motivo: st ? motivo : 'Primera revisión registrada (incluye proyectos creados con versiones anteriores).', t: new Date().toISOString() }].slice(-300);

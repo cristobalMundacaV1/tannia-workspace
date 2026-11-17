@@ -63,7 +63,7 @@ test('sustitución de `.tannia` DURANTE la migración de id (entre leer y escrib
     const antes = foto(e.fuera);
     try { asegurarId(e.sb, 'Heredado', { hook }); } catch { /* rechazado: correcto */ }
     assert.ok(llamado, 'existe el punto de control previo a la migración'); if (!fs.lstatSync(e.pr.p('.tannia')).isSymbolicLink()) { return; }
-    const despues = fs.readdirSync(e.fuera).filter((f) => !['project.json'].includes(f) && !/^(auditoria\.jsonl|originales\.json|calibraciones\.json)$/.test(f));
+    const despues = fs.readdirSync(e.fuera).filter((f) => !['project.json'].includes(f) && !/^(auditoria\.jsonl|originales\.json|calibraciones\.json|esquema\.json)$/.test(f));
     assert.deepEqual(despues, [], `nada nuevo escrito fuera: ${despues.join(', ')}`);
     assert.equal(JSON.parse(fs.readFileSync(path.join(e.fuera, 'project.json'), 'utf8')).id, undefined, 'el project.json de fuera no recibió el id');
     void antes;

@@ -11,7 +11,7 @@ export const ESQUEMA_ACTUAL = 2;
 const ARCHIVOS = [['.tannia', 'project.json'], [FOLDERS.cubicaciones, 'partidas.json'], [FOLDERS.presupuestos, 'apus.json'], [FOLDERS.presupuestos, 'config.json'], ['.tannia', 'originales.json'], ['.tannia', 'calibraciones.json']];
 const archivoEsquema = (pr) => pr.p('.tannia', 'esquema.json');
 
-export function leerEsquema(pr) { try { return JSON.parse(fs.readFileSync(archivoEsquema(pr), 'utf8')); } catch { return null; } }
+export function leerEsquema(pr) { try { return pr.leer(archivoEsquema(pr), null); } catch (e) { if (String(e?.code || '').startsWith('DESTINO_')) throw e; return null; } }
 
 /** Aplica la migración si hace falta. Devuelve null si ya estaba al día. */
 export function asegurarMigracion(pr) {
