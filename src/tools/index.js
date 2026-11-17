@@ -21,6 +21,8 @@ import { inspectPdf, openPdf, extractPaths, calibrate, polyMeasure } from '../pd
 import { consultarNormativa } from '../normativa/index.js';
 import { conVerificacion, huellaPartida, revisionVigente } from '../autoridad/revision.js';
 import { Recibos } from '../autoridad/recibos.js';
+import { TARJETAS, CALCULAR, ORIGENES } from '../metodos/tarjetas.js';
+import { asegurarMigracion, leerEsquema, revertirMigracion } from '../autoridad/migracion.js';
 import { pedirAutorizacionHumana, TEXTO_SIN_CANAL } from '../autoridad/autorizacion.js';
 import { registrarArtefacto, estadoArtefactos, prepararManifiesto, aprobacionVigente, exportarEntrega, errorDeArchivo, ROLES_ENTREGA } from '../autoridad/entrega.js';
 
@@ -64,7 +66,8 @@ function leerModeloAutorizado(absDxf) {
 export function registerTools(server, { sandbox, log, g, cad, config, detectar }) {
   void log;
   const reg = (name, def, fn) => { TOOL_NAMES.push(name); server.registerTool(name, def, g(fn)); };
-  const P = (name) => new Project(sandbox, name);
+  // Toda herramienta de proyecto pasa por la migración segura (idempotente; respalda antes de tocar nada).
+  const P = (name) => { const pr = new Project(sandbox, name); asegurarMigracion(pr); return pr; };
   const srcHash = (proj, rel) => { const { abs } = sandbox.resolve(proj.name, rel); return { abs, sha: sha256File(abs) }; };
 
   // ---------- Sistema y proyectos ----------
@@ -87,6 +90,13 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
       carpeta_escribible: escritura, proyectos: listProjects(sandbox).length,
       autocad_registro: (detectar || detectarAutoCad)(),
       privacidad: 'Los archivos se procesan localmente, pero lo que Claude lee de ellos pasa al servicio de Claude.',
+      autorizacion_humana: (() => {
+        const elic = !!server?.server?.getClientCapabilities?.()?.elicitation;
+        const sinDlg = !!process.env.CI || process.env.TANNIA_SIN_DIALOGO === '1';
+        const dlg = sinDlg ? 'desactivado en esta ejecución' : process.platform === 'win32' ? 'disponible (ventana de Windows)' : process.platform === 'darwin' ? 'disponible (macOS)' : 'solo si existe zenity';
+        return { ventana_del_cliente: elic, dialogo_del_sistema: dlg, puede_aprobar: elic || (!sinDlg && ['win32', 'darwin'].includes(process.platform)), nota: 'Verificar cantidades y aprobar entregas requiere que una persona responda una de estas ventanas; Claude no puede hacerlo.' };
+      })(),
+      esquema_de_proyectos: 2,
     };
     return ok(escritura ? 'Todo en orden.' : 'PROBLEMA: no se puede escribir en la carpeta de Tannia Workspace.', data);
   });
@@ -157,6 +167,17 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     const rec = new Recibos(sandbox).emitir(pr, { accion: 'aprobar_entrega', objetivo: manifiesto.id, objetivo_hash: hm, revision: revision.n, snapshot: revision.snapshot, artefactos: manifiesto.archivos, canal: d.por, declarado_por: d.nombre, resumen: { total: B.total, moneda: B.moneda } });
     pr.setEstado('aprobado', `Aprobado por una persona (${d.por}${d.nombre ? `: ${d.nombre}` : ''}); recibo ${rec.id}; revisión ${revision.id}`);
     return ok(`Entrega aprobada por una persona (${d.por === 'human_dialog' ? 'ventana del sistema' : 'confirmación del cliente'}). Ya puede exportarla con tannia_entregable_exportar.`, { estado: 'aprobado', revision: revision.id, recibo: rec.id, manifiesto: manifiesto.id, archivos: manifiesto.archivos.map((a) => ({ archivo: a.rel, sha256: a.sha256 })) });
+  });
+
+  reg('tannia_proyecto_migracion', {
+    title: 'Actualización de un proyecto antiguo (ver o revertir)',
+    description: 'accion "estado": muestra si el proyecto se actualizó desde una versión anterior, qué cambió (aprobaciones o verificaciones antiguas que deben repetirse, parámetros que ya no se suponen) y dónde está el respaldo. accion "revertir": restaura los datos exactos previos a la actualización (solo para volver a una versión anterior del programa; pregunte antes a la usuaria).',
+    inputSchema: { proyecto, accion: z.enum(['estado', 'revertir']) }, annotations: RW,
+  }, async ({ proyecto: n, accion }) => {
+    const pr = new Project(sandbox, n);
+    if (accion === 'revertir') { const r = revertirMigracion(pr); return ok(`Datos restaurados (${r.restaurados.length} archivo(s)).`, r); }
+    const m = asegurarMigracion(pr) || leerEsquema(pr);
+    return ok(m?.desde ? `Proyecto actualizado desde el esquema ${m.desde}.` : 'El proyecto ya usa el esquema actual.', m || {});
   });
 
   // ---------- Originales ----------
@@ -276,6 +297,23 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     pr.cambio(`Partida ${codigo} verificada por una persona.`); pr.invalidateApproval(`Se verificó la partida ${codigo}.`);
     pr.audit('partida_verificada', { codigo, recibo: rec.id, canal: d.por });
     return ok('Partida verificada por la usuaria.', { codigo, recibo: rec.id, canal: d.por, verificada_por: d.nombre || null });
+  });
+
+  reg('tannia_metodo', {
+    title: 'Métodos de cubicación (MethodCards): muros/vanos, losas, conteo de objetos físicos',
+    description: `accion "listar": métodos disponibles con fórmula, supuestos, exclusiones y oráculos. accion "calcular": aplica un método con datos cuyo ORIGEN se declara (${ORIGENES.join(' | ')}); con guardar_como crea la partida trazable (queda sin verificar). Ejemplo MC01: {tramos:[{longitud_m:5,origen:"medido"}], altura:{valor_m:2.4,origen:"declarado_usuaria"}, vanos:[{ancho_m:1,alto_m:2,tramo:0,origen:"declarado_usuaria"}], politica_descuento:{tipo:"descontar_todos",origen:"decision_profesional"}}. Nunca invente alturas, espesores ni políticas: pregúntelas. Un dato "supuesto" deja la partida en needs_review. No son normas chilenas.`,
+    inputSchema: { proyecto: proyecto.optional(), accion: z.enum(['listar', 'calcular']), metodo: z.enum(Object.keys(TARJETAS)).optional(), datos: z.record(z.string(), z.any()).optional(), archivo_origen: z.string().optional().describe('Archivo del que salen las medidas (para detectar si cambia)'), guardar_como: z.object({ codigo: z.string().min(1), descripcion: z.string().min(1), apu: z.string().optional() }).optional() }, annotations: RW,
+  }, async (a) => {
+    if (a.accion === 'listar') return ok(`${Object.keys(TARJETAS).length} método(s) disponibles (propuestos, no normativos).`, { metodos: Object.values(TARJETAS) });
+    if (!a.metodo || !a.datos) throw new UserError('FALTA_DATO', 'Indique metodo y datos.');
+    const r = CALCULAR[a.metodo](a.datos);
+    if (a.guardar_como) {
+      if (!a.proyecto) throw new UserError('FALTA_DATO', 'Indique el proyecto para guardar la partida.');
+      const pr = P(a.proyecto); let fuente = null;
+      if (a.archivo_origen) { const { sha } = srcHash(pr, a.archivo_origen); fuente = { archivo: a.archivo_origen, sha256: sha, capas: [] }; }
+      upsert(pr, { codigo: a.guardar_como.codigo, descripcion: a.guardar_como.descripcion, apu: a.guardar_como.apu, unidad: r.unidad, cantidad: r.cantidad, regla: `metodo:${r.metodo.id}@${r.metodo.version}`, formula: r.sustitucion, metodo: r.metodo, entradas: r.entradas, fuente, supuestos: r.supuestos, exclusiones: r.exclusiones, advertencias: r.advertencias, estado_revision: r.estado_revision, cantidad_verificada: false, creada: new Date().toISOString() });
+    }
+    return ok(`${r.metodo.id}: ${r.cantidad} ${r.unidad}${r.estado_revision === 'needs_review' ? ' (needs_review: hay supuestos o símbolos sin identidad)' : ''}${a.guardar_como ? ` · guardada como partida ${a.guardar_como.codigo} (sin verificar)` : ''}.`, r);
   });
 
   // ---------- APU y presupuesto ----------

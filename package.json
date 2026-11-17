@@ -14,7 +14,10 @@
     "build": "node scripts/build.mjs",
     "pack": "node scripts/pack.mjs",
     "docs": "node scripts/gen-docs.mjs",
-    "fixtures": "python3 tools/gen_fixtures.py"
+    "fixtures": "python3 tools/gen_fixtures.py",
+    "skills": "node scripts/gen-skills.mjs",
+    "rc:zip": "node scripts/rc-zip.mjs",
+    "rc:verificar": "node scripts/rc-verificar-zip.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

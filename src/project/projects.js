@@ -23,6 +23,8 @@ export function createProject(sandbox, name, meta = {}) {
   const now = new Date().toISOString();
   const project = { id: crypto.randomUUID(), nombre: n, creado: now, version_app: VERSION, estado: 'nuevo', historial: [{ estado: 'nuevo', fecha: now }], ...meta };
   fs.writeFileSync(path.join(root, '.tannia', 'project.json'), JSON.stringify(project, null, 2));
+  // Proyecto nuevo: ya nace con el esquema vigente (revisiones, recibos y manifiestos); no necesita migración.
+  fs.writeFileSync(path.join(root, '.tannia', 'esquema.json'), JSON.stringify({ schema: 'tw.project_schema/1', version: 2, desde: null, creado: now }, null, 2));
   return { nombre: n, carpetas: Object.values(FOLDERS), ruta_local: root };
 }
 

@@ -1,3 +1,4 @@
+import { referenciasDe, VERIFICACION } from './referencias.js';
 // Índice ORIENTATIVO de fuentes oficiales chilenas. No contiene texto de normas ni declara cumplimiento.
 // `acceso_verificado`: la URL respondió HTTP 200 desde el entorno de desarrollo el 2026-11-15; false = no comprobado.
 export const FECHA_INDICE = '2026-11-15';
@@ -17,6 +18,8 @@ const TEMAS = [
   { id: 'accesibilidad', claves: ['accesib', 'discapacidad', 'rampa', 'universal'], titulo: 'Accesibilidad universal', fuentes: ['minvu', 'bcn'], sugerencia: 'Revise el capítulo correspondiente de la OGUC y su versión vigente.' },
   { id: 'incendio', claves: ['incendio', 'fuego', 'resistencia al fuego', 'evacuación', 'evacuacion', 'extintor'], titulo: 'Seguridad contra incendio', fuentes: ['minvu', 'bcn'], sugerencia: 'La OGUC regula condiciones de seguridad contra incendio; verifique el artículo y versión vigentes.' },
   { id: 'obras_publicas', claves: ['mop', 'vialidad', 'obra pública', 'obra publica', 'bases administrativas', 'especificaciones técnicas mop'], titulo: 'Obras públicas', fuentes: ['mop', 'bcn'], sugerencia: 'Use los manuales y bases vigentes del MOP.' },
+  { id: 'cubicacion', claves: ['cubica', 'cubicación', 'cubicacion', 'medición de obra', 'medicion de obra', 'nch353', 'nch 353', 'itemizado', 'partida', 'especificaciones técnicas', 'eett'], titulo: 'Cubicación y especificaciones (NCh353, NCh1156)', fuentes: ['inn'], sugerencia: 'Use el método que fije el contrato; las NCh de cubicación son de pago y Tannia no reproduce sus reglas.' },
+  { id: 'privacidad', claves: ['datos personales', 'privacidad', '21.719', '19.628'], titulo: 'Datos personales', fuentes: ['bcn'], sugerencia: 'Revise la vigencia y la transición de la Ley 21.719 con asesoría jurídica.' },
   { id: 'general', claves: [], titulo: 'Consulta general', fuentes: ['bcn', 'minvu'], sugerencia: 'Identifique la norma exacta y confirme su vigencia en LeyChile.' },
 ];
 
@@ -26,7 +29,8 @@ export function consultarNormativa(consulta) {
   const temas = hits.length ? hits : [TEMAS[TEMAS.length - 1]];
   return {
     consulta, fecha_indice: FECHA_INDICE,
-    resultados: temas.map((t) => ({ tema: t.titulo, que_hacer: t.sugerencia, fuentes_oficiales: t.fuentes.map((f) => FUENTES[f]) })),
+    resultados: temas.map((t) => ({ tema: t.titulo, que_hacer: t.sugerencia, fuentes_oficiales: t.fuentes.map((f) => FUENTES[f]), referencias: referenciasDe([t.id]) })),
+    verificacion_referencias: VERIFICACION,
     limites: [
       'Orientación de dónde buscar: este índice NO contiene artículos ni interpreta normas.',
       'No indica ni certifica cumplimiento normativo. La conformidad la determina un profesional competente y la autoridad.',
