@@ -19,3 +19,10 @@ Resultado esperado hoy: **NO EJECUTADO**. Hasta registrar estas pruebas no se af
 4. Con un DXF corrupto: esperar `DXF_INVALIDO` sin que AutoCAD sea invocado.
 5. Tras una apertura válida, `tannia_planos exportar_dwg`: un único DWG, sin sobrescritura; repetir la misma operación no duplica el guardado.
 6. Si vuelve a fallar con `APERTURA_FALLIDA` o `AUTOCAD_COM_FALLO`, enviar el `detalle` completo: es la evidencia que confirma o descarta la hipótesis de la matriz.
+
+## Anexo CAD-OPEN-01 (2.ª incidencia: tiempo agotado)
+1. Repetir `tannia_cad_abrir_copia` con `Dibujo1` sin guardar. Si vuelve a agotar el tiempo, copiar el **texto visible** completo y `structuredContent.detalle` (etapa, estado_etapa, duracion_ms, etapas[], reconciliacion).
+2. La última etapa con estado `inicio` y sin `ok` es el punto de bloqueo (p. ej. `abrir_documento` = `Documents.Open` no retornó; `consulta_ocupacion` = AutoCAD no responde a COM; `enumerar_documentos` = bloqueo al leer `Documents`).
+3. Comprobar en AutoCAD si el DXF quedó abierto: `reconciliacion.estado` debe coincidir (`abierto` → `apertura_tardia:true`).
+4. Repetir la llamada: con estado incierto debe responder `OPERACION_PENDIENTE_INCIERTA` o reconciliar, sin abrir otra ventana.
+5. Con la copia abierta, `tannia_planos exportar_dwg`: un único DWG, layouts/viewports verificados; anotar que sigue sin acreditar validación de dibujo en AutoCAD real hasta contrastarlo visualmente.

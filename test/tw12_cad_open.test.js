@@ -97,8 +97,8 @@ test('CAD-OPEN-01 recuperación: apertura válida (con Dibujo1 sin guardar) → 
   const dwgRel = '03 Trabajo/CAD/planos.dwg'; fs.mkdirSync(path.join(e.root, '03 Trabajo', 'CAD'), { recursive: true }); const dwgAbs = path.join(e.root, dwgRel);
   const seq = [];
   const c = cad(e.sb, async (script, input) => {
-    if (/Documents\.Open\(/.test(script) && /BuscarAbierto/.test(script)) { seq.push('abrir_copia'); return JSON.stringify({ ok: true, data: { documento: 'copia.dxf', ruta: e.abs, reutilizado: false, guardado: true, sin_guardar: ['Dibujo1.dwg'] } }); }
-    if (/SaveAs/.test(script)) { seq.push('laminas_a_dwg'); fs.writeFileSync(dwgAbs, 'AC1032 synthetic'); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true } }); }
+    if (input.dwg) { seq.push('laminas_a_dwg'); fs.writeFileSync(dwgAbs, 'AC1032 synthetic'); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true } }); }
+    if (input.ruta && !input.ruta_esperada) { seq.push('abrir_copia'); return JSON.stringify({ ok: true, data: { documento: 'copia.dxf', ruta: e.abs, reutilizado: false, guardado: true, sin_guardar: ['Dibujo1.dwg'] } }); }
     seq.push('inspeccionar'); const layouts = exp.map(l => ({ nombre: l.name, viewports: l.viewports.map(v => ({ centro_papel: [...v.paperCenter], ancho: v.width, alto: v.height, escala: v.scale, bloqueado: true, centro_vista: [...v.modelCenter] })) }));
     return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true, unidades: 6, layouts } });
   });
@@ -106,13 +106,13 @@ test('CAD-OPEN-01 recuperación: apertura válida (con Dibujo1 sin guardar) → 
   const r1 = await c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: 'open01', composition: c0 });
   assert.equal(r1.dwg_validado_autocad_real, false); assert.equal(r1.verificacion_layouts.ok, true);
   const r2 = await c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: 'open01', composition: c0 });
-  assert.equal(r2.reused, true); assert.deepEqual(seq, ['abrir_copia', 'laminas_a_dwg', 'inspeccionar'], 'ni segunda apertura ni segundo guardado');
+  assert.equal(r2.reused, true); assert.deepEqual(seq, ['abrir_copia', 'abrir_copia', 'laminas_a_dwg', 'inspeccionar'], 'la 2.ª exportación (verificada) no toca AutoCAD: ni apertura ni guardado repetidos');
 });
 
 test('CAD-OPEN-01 exportar_dwg: documento abierto con cambios / solo lectura / otra ruta se distinguen, sin escribir', async () => {
   const e = entorno(); const c0 = compose(tunnelModel({})); const dwgRel = '03 Trabajo/CAD/out.dwg'; fs.mkdirSync(path.join(e.root, '03 Trabajo', 'CAD'), { recursive: true });
   for (const [codigo, code] of [['CAMBIOS_SIN_GUARDAR', 'CAMBIOS_SIN_GUARDAR'], ['DOCUMENTO_SOLO_LECTURA', 'DOCUMENTO_SOLO_LECTURA'], ['DOCUMENTO_CAMBIO', 'DOCUMENTO_CAMBIO']]) {
-    let n = 0; const c = cad(e.sb, async script => { n++; assert.match(script, /SaveAs/); return JSON.stringify({ ok: false, etapa: 'verificar_documento', codigo, diag: { documento: 'copia.dxf', solo_lectura: false, guardado: false } }); });
+    let n = 0; const c = cad(e.sb, async (script, input) => { if (!input.dwg) return JSON.stringify({ ok: true, data: { documento: 'copia.dxf', ruta: e.abs } }); n++; assert.match(script, /SaveAs/); return JSON.stringify({ ok: false, etapa: 'verificar_documento', codigo, diag: { documento: 'copia.dxf', solo_lectura: false, guardado: false } }); });
     await assert.rejects(c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: `neg-${codigo}`, composition: c0 }), err => err.code === code && err.detalle.diagnostico.documento === 'copia.dxf');
     assert.equal(n, 1); assert.ok(!fs.existsSync(path.join(e.root, dwgRel)));
   }

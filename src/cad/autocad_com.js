@@ -19,9 +19,13 @@ import { compararLecturas, coherenciaInterna, firmasDesdeDxf, firmasDesdeCom, co
 import { parseDxf } from '../dxf/reader.js';
 import { dxfDecode } from '../design/salidas.js';
 import { sha256File } from '../security/sandbox.js';
+import crypto from 'node:crypto';
+import { verificarContencion } from '../project/store.js';
+const sha256Text = (t) => crypto.createHash('sha256').update(t).digest('hex');
 import { CadOperations } from './operations.js';
 import { expectedLayouts, verifyLayouts } from '../drawing/layouts_check.js';
 
+const digestRuta = (p) => sha256Text(String(p).toLowerCase()).slice(0, 16);
 /** Diagnóstico del script: solo nombres de documentos y banderas; las rutas absolutas se sanean. */
 function sanitizarDiag(d, nivel = 0) {
   if (d === null || typeof d === 'boolean' || typeof d === 'number') return d;
@@ -55,6 +59,16 @@ function Emit($o) {
 function Inner($ex) { while ($null -ne $ex.InnerException) { $ex = $ex.InnerException }; return $ex }
 function HR($ex) { try { return ('0x{0:X8}' -f [int]$ex.HResult) } catch { return '' } }
 $global:Etapa = $null; $global:Diag = $null
+$global:Reloj = [Diagnostics.Stopwatch]::StartNew()
+# Progreso verificable: una línea por etapa, escrita y vaciada de inmediato. Si PowerShell agota su tiempo, Node conserva la última.
+function Progreso($etapa, $estado, $extra) {
+  $global:Etapa = $etapa
+  $o = @{ e = [string]$etapa; s = [string]$estado; t = [int]$global:Reloj.ElapsedMilliseconds }
+  if ($null -ne $extra) { $o.x = $extra }
+  $json = ConvertTo-Json -InputObject $o -Depth 4 -Compress
+  [Console]::Out.WriteLine('TANNIA_ETAPA:' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json)))
+  [Console]::Out.Flush()
+}
 function Fail($etapa, $err) {
   $ex = Inner $err.Exception
   $et = if ($global:Etapa) { [string]$global:Etapa } else { $etapa }
@@ -62,9 +76,11 @@ function Fail($etapa, $err) {
 }
 # Ocupación de AutoCAD (solo lectura): CMDACTIVE es una máscara (1 comando, 2 transparente, 4 script, 8 cuadro de diálogo, 16 DDE, 32 LISP, 64 ARX).
 function Ocupacion() {
+  Progreso 'consulta_ocupacion' 'inicio'
   $r = @{ quiescente = $null; cmdactive = $null; error_estado = $null }
   try { $r.quiescente = [bool]$acad.GetAcadState().IsQuiescent } catch { $r.error_estado = (HR (Inner $_.Exception)) }
   try { $r.cmdactive = [int]$acad.ActiveDocument.GetVariable('CMDACTIVE') } catch { if (-not $r.error_estado) { $r.error_estado = (HR (Inner $_.Exception)) } }
+  Progreso 'consulta_ocupacion' 'ok' @{ quiescente = $r.quiescente; cmdactive = $r.cmdactive; error_estado = $r.error_estado }
   return $r
 }
 # Normaliza una ruta sin lanzar excepciones: un dibujo nuevo sin guardar (Dibujo1) no tiene ruta en disco.
@@ -101,7 +117,8 @@ $in = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($raw)) | Conve
 
 // Conexión: prueba el ProgID sin versión y luego los versionados (AutoCAD.Application.<release>), porque el sin versión
 // puede apuntar a otra versión instalada distinta de la que está abierta.
-export const PS_CONNECT = `$acad = $null; $usado = $null; $intentos = @()
+export const PS_CONNECT = `Progreso 'conexion_com' 'inicio'
+$acad = $null; $usado = $null; $intentos = @()
 $progids = @('AutoCAD.Application')
 foreach ($v in 40..20) { $progids += ('AutoCAD.Application.' + $v) }
 foreach ($p in $progids) {
@@ -109,6 +126,7 @@ foreach ($p in $progids) {
   catch { $intentos += ($p + '=' + (HR (Inner $_.Exception))) }
 }
 if ($null -eq $acad) { Emit @{ ok = $false; etapa = 'conectar'; codigo = 'AUTOCAD_NO_ABIERTO'; intentos = @($intentos | Select-Object -First 4) }; exit 0 }
+Progreso 'conexion_com' 'ok' @{ progid = [string]$usado }
 $doc = $null
 `;
 // Resolución del documento de trabajo: por RUTA esperada cuando se indica (no depende de cuál esté activo) y, si no, el activo.
@@ -125,25 +143,66 @@ if ($in.ruta_esperada) {
   if ($null -eq $doc) { Emit @{ ok = $false; etapa = 'documento_activo'; codigo = 'SIN_DOCUMENTO' }; exit 0 }
 }
 `;
-export const SIN_DOCUMENTO_PREVIO = new Set(['construir_3d', 'abrir_copia', 'dxf_a_dwg', 'estado', 'laminas_a_dwg']);
+export const SIN_DOCUMENTO_PREVIO = new Set(['construir_3d', 'abrir_copia', 'dxf_a_dwg', 'estado', 'laminas_a_dwg', 'reconciliar_apertura']);
 // Solo las lecturas pueden reintentarse si AutoCAD está ocupado: una escritura repetida podría duplicar o alterar el dibujo.
 export const REINTENTO_SEGURO = new Set(['estado', 'listar', 'medir', 'leer_lote', 'enumerar', 'resumen']);
 
+// ÚNICA lógica de apertura (abrir_copia, laminas_a_dwg, dxf_a_dwg): mismos controles y mismas etapas de progreso.
+// Reutiliza el documento abierto por ruta, nunca lanza otra instancia y hace como máximo UN Documents.Open.
+const PS_ABRIR = `function AbrirPorRuta($rutaPedida) {
+  $global:Diag = @{}
+  $oc = Ocupacion; $global:Diag.ocupacion = $oc
+  if ($null -ne $oc.cmdactive -and ($oc.cmdactive -band 8)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_CUADRO_MODAL'; diag = $global:Diag }; exit 0 }
+  if ($null -ne $oc.cmdactive -and ($oc.cmdactive -band 7)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_COMANDO_ACTIVO'; diag = $global:Diag }; exit 0 }
+  if ($oc.quiescente -eq $false) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_OCUPADO'; diag = $global:Diag }; exit 0 }
+  $destino = RutaSegura $rutaPedida
+  if ($null -eq $destino) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'RUTA_NO_VALIDA' }; exit 0 }
+  function BuscarAbierto() {
+    $docs = @(); $hallado = $null; $n = [int]$acad.Documents.Count
+    for ($i = 0; $i -lt $n; $i++) {
+      $nombre = $null; $ruta = $null; $guardado = $null
+      try { $c = $acad.Documents.Item($i); $nombre = [string]$c.Name; $ruta = RutaSegura $c.FullName; $guardado = [bool]$c.Saved
+        if ($null -ne $ruta -and $ruta -ieq $destino) { $hallado = $c } } catch { $nombre = if ($nombre) { $nombre } else { '(ilegible)' } }
+      $docs += @{ nombre = $nombre; con_ruta_en_disco = ($null -ne $ruta); guardado = $guardado }
+    }
+    return @{ doc = $hallado; lista = $docs }
+  }
+  Progreso 'enumerar_documentos' 'inicio'
+  $b = BuscarAbierto; $global:Diag.documentos = $b.lista; $global:Diag.sin_guardar = @($b.lista | Where-Object { $_.guardado -eq $false } | ForEach-Object { $_.nombre })
+  Progreso 'enumerar_documentos' 'ok' @{ abiertos = @($b.lista).Count; ya_abierto = ($null -ne $b.doc) }
+  $d = $b.doc; $reutilizado = ($null -ne $d); $recuperado = $false
+  if ($null -eq $d) {
+    Progreso 'abrir_documento' 'inicio'
+    try { $d = $acad.Documents.Open([string]$rutaPedida, $false); Progreso 'abrir_documento' 'ok' }
+    catch {
+      $err = $_; Progreso 'abrir_documento' 'error' @{ hresult = (HR (Inner $err.Exception)) }
+      # Una sola comprobación (nunca un segundo Open): AutoCAD a veces lanza tras haber abierto el archivo.
+      $b2 = BuscarAbierto
+      if ($null -ne $b2.doc) { $d = $b2.doc; $recuperado = $true } else { $global:Diag.documentos_tras_error = $b2.lista; throw $err }
+    }
+  }
+  $global:Etapa = 'verificar_apertura'
+  if ((RutaSegura $d.FullName) -ine $destino) { Emit @{ ok = $false; etapa = 'verificar_apertura'; codigo = 'DOCUMENTO_CAMBIO'; diag = $global:Diag }; exit 0 }
+  Progreso 'activar_documento' 'inicio'
+  if ($reutilizado -or $recuperado) { $d.Activate() }
+  Progreso 'activar_documento' 'ok'
+  return @{ doc = $d; reutilizado = $reutilizado; recuperado = $recuperado }
+}
+`;
+
 // Cuerpos estáticos: los datos del usuario viajan SOLO en $in, nunca interpolados en el script.
 export const SCRIPTS = {
-  laminas_a_dwg: `if (Test-Path -LiteralPath $in.dwg) { Emit @{ ok = $false; codigo = 'DESTINO_EXISTE' }; exit 0 }
+  laminas_a_dwg: `${PS_ABRIR}
+if (Test-Path -LiteralPath $in.dwg) { Emit @{ ok = $false; codigo = 'DESTINO_EXISTE' }; exit 0 }
 if ((Get-FileHash -LiteralPath $in.dxf -Algorithm SHA256).Hash -ine $in.sha256_dxf) { Emit @{ ok = $false; codigo = 'DOCUMENTO_MODIFICADO_EXTERNAMENTE' }; exit 0 }
-$d = $null
-for ($i = 0; $i -lt [int]$acad.Documents.Count; $i++) { $candidate = $acad.Documents.Item($i); if ($candidate.FullName -ieq $in.dxf) { $d = $candidate; break } }
-$global:Etapa = 'abrir_documento'
-if ($null -eq $d) { $d = $acad.Documents.Open([string]$in.dxf, $false) }
-$global:Diag = @{ documento = [string]$d.Name; ruta_documento = [string]$d.FullName; solo_lectura = [bool]$d.ReadOnly; guardado = [bool]$d.Saved }
-if ($d.FullName -ine $in.dxf) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_CAMBIO'; diag = $global:Diag }; exit 0 }
+$r = AbrirPorRuta $in.dxf; $d = $r.doc
+$global:Diag.documento = [string]$d.Name; $global:Diag.solo_lectura = [bool]$d.ReadOnly; $global:Diag.guardado = [bool]$d.Saved
 if ($d.ReadOnly) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_SOLO_LECTURA'; diag = $global:Diag }; exit 0 }
 if (-not $d.Saved) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'CAMBIOS_SIN_GUARDAR'; diag = $global:Diag }; exit 0 }
-$global:Etapa = 'guardar_como_dwg'
+Progreso 'guardar_como_dwg' 'inicio'
 $d.SetVariable('INSUNITS', 6)
 $d.SaveAs([string]$in.dwg, 64)
+Progreso 'guardar_como_dwg' 'ok'
 if ($d.FullName -ine $in.dwg -or -not $d.Saved) { Emit @{ ok = $false; codigo = 'GUARDADO_FALLO' }; exit 0 }
 Emit @{ ok = $true; data = @{ ruta = [string]$d.FullName; guardado = [bool]$d.Saved } }`,
   inspeccionar_laminas: `$layouts = @()
@@ -182,40 +241,21 @@ if ($null -ne $o['radio']) { $o['Radius'] = $o['radio'] }
 $tt = DNum $e.TotalAngle; if ($null -ne $tt) { $o['TotalAngle'] = $tt }
 if ($e.ObjectName -eq 'AcDb3dSolid' -or $e.ObjectName -eq 'AcDbRegion') { $vv = DNum $e.Volume; if ($null -ne $vv) { $o['Volume'] = $vv }; $o['Centroid'] = DArr $e.Centroid; $aa = DNum $e.Area; if ($null -ne $aa) { $o['Area'] = $aa } }
 Emit @{ ok = $true; data = $o }`,
-  abrir_copia: `$global:Etapa = 'preparar'; $global:Diag = @{}
-$oc = Ocupacion; $global:Diag.ocupacion = $oc
-if ($null -ne $oc.cmdactive -and ($oc.cmdactive -band 8)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_CUADRO_MODAL'; diag = $global:Diag }; exit 0 }
-if ($null -ne $oc.cmdactive -and ($oc.cmdactive -band 7)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_COMANDO_ACTIVO'; diag = $global:Diag }; exit 0 }
-if ($oc.quiescente -eq $false) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_OCUPADO'; diag = $global:Diag }; exit 0 }
-$destino = RutaSegura $in.ruta
+  abrir_copia: `${PS_ABRIR}
+$r = AbrirPorRuta $in.ruta; $d = $r.doc
+Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; reutilizado = $r.reutilizado; recuperado_tras_error = $r.recuperado; guardado = [bool]$d.Saved; documentos_abiertos = [int]$acad.Documents.Count; sin_guardar = $global:Diag.sin_guardar } }`,
+  reconciliar_apertura: `$global:Diag = @{}
+$oc = Ocupacion; $destino = RutaSegura $in.ruta
 if ($null -eq $destino) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'RUTA_NO_VALIDA' }; exit 0 }
-function BuscarAbierto() {
-  $docs = @(); $hallado = $null; $n = [int]$acad.Documents.Count
-  for ($i = 0; $i -lt $n; $i++) {
-    $nombre = $null; $ruta = $null; $guardado = $null
-    try { $c = $acad.Documents.Item($i); $nombre = [string]$c.Name; $ruta = RutaSegura $c.FullName; $guardado = [bool]$c.Saved
-      if ($null -ne $ruta -and $ruta -ieq $destino) { $hallado = $c } } catch { $nombre = if ($nombre) { $nombre } else { '(ilegible)' } }
-    $docs += @{ nombre = $nombre; con_ruta_en_disco = ($null -ne $ruta); guardado = $guardado }
-  }
-  return @{ doc = $hallado; lista = $docs }
+Progreso 'enumerar_documentos' 'inicio'
+$docs = @(); $abierto = $false; $n = [int]$acad.Documents.Count
+for ($i = 0; $i -lt $n; $i++) {
+  $nombre = $null; $ruta = $null; $guardado = $null
+  try { $c = $acad.Documents.Item($i); $nombre = [string]$c.Name; $ruta = RutaSegura $c.FullName; $guardado = [bool]$c.Saved; if ($null -ne $ruta -and $ruta -ieq $destino) { $abierto = $true } } catch { $nombre = if ($nombre) { $nombre } else { '(ilegible)' } }
+  $docs += @{ nombre = $nombre; con_ruta_en_disco = ($null -ne $ruta); guardado = $guardado }
 }
-$global:Etapa = 'enumerar_documentos'
-$b = BuscarAbierto; $global:Diag.documentos = $b.lista; $global:Diag.sin_guardar = @($b.lista | Where-Object { $_.guardado -eq $false } | ForEach-Object { $_.nombre })
-$d = $b.doc; $reutilizado = ($null -ne $d); $recuperado = $false
-if ($null -eq $d) {
-  $global:Etapa = 'abrir_documento'
-  try { $d = $acad.Documents.Open([string]$in.ruta, $false) }
-  catch {
-    # Una sola comprobación (nunca un segundo Open): AutoCAD a veces lanza tras haber abierto el archivo.
-    $err = $_; $b2 = BuscarAbierto
-    if ($null -ne $b2.doc) { $d = $b2.doc; $recuperado = $true } else { $global:Diag.documentos_tras_error = $b2.lista; throw $err }
-  }
-}
-$global:Etapa = 'verificar_apertura'
-if ((RutaSegura $d.FullName) -ine $destino) { Emit @{ ok = $false; etapa = 'verificar_apertura'; codigo = 'DOCUMENTO_CAMBIO'; diag = $global:Diag }; exit 0 }
-$global:Etapa = 'activar_documento'
-if ($reutilizado -or $recuperado) { $d.Activate() }
-Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; reutilizado = $reutilizado; recuperado_tras_error = $recuperado; guardado = [bool]$d.Saved; documentos_abiertos = [int]$acad.Documents.Count; sin_guardar = $global:Diag.sin_guardar } }`,
+Progreso 'enumerar_documentos' 'ok' @{ abiertos = $n; ya_abierto = $abierto }
+Emit @{ ok = $true; data = @{ abierto = $abierto; documentos = $docs; ocupacion = $oc; procesos = @(Get-Process -Name acad -ErrorAction SilentlyContinue | ForEach-Object { $_.Id }) } }`,
   sesion: `$processes = @(Get-Process -Name acad -ErrorAction SilentlyContinue)
 $busy = -not [bool]$acad.GetAcadState().IsQuiescent
 Emit @{ ok = $true; data = @{ ruta = [string]$doc.FullName; documento = [string]$doc.Name; version = [string]$acad.Version; guardado = [bool]$doc.Saved; solo_lectura = [bool]$doc.ReadOnly; ocupado = $busy; procesos = @($processes | ForEach-Object { $_.Id }); ventana = [string]$acad.HWND; activa = [string]$acad.ActiveDocument.FullName } }`,
@@ -256,7 +296,8 @@ $esperadas = 0; if ($null -ne $in.esperadas) { $esperadas = [int]$in.esperadas }
 $inicial = [int]$nuevo.ModelSpace.Count; $final = $inicial; $espera = 0
 while ($final -ne $esperadas -and $espera -lt 6000) { Start-Sleep -Milliseconds 300; $espera += 300; $final = [int]$nuevo.ModelSpace.Count }
 Emit @{ ok = $true; data = @{ documento = [string]$nuevo.Name; ruta = [string]$nuevo.FullName; guardado = [bool]$nuevo.Saved; entidades = $final; conteo_inicial_tras_abrir = $inicial; espera_ms = $espera; unidades_insunits = $nuevo.GetVariable('INSUNITS') } }`,
-  dxf_a_dwg: `$d = $acad.Documents.Open([string]$in.dxf, $false)
+  dxf_a_dwg: `${PS_ABRIR}
+$r = AbrirPorRuta $in.dxf; $d = $r.doc
 try { $d.SetVariable('INSUNITS', 4) } catch { }
 # Normaliza textos: si AutoCAD dejó secuencias \\U+XXXX sin decodificar, se sustituyen por el carácter real (ñ, Ñ, tildes)
 $norm = 0; $nm = [int]$d.ModelSpace.Count
@@ -414,6 +455,14 @@ const PS_STRICT = `if ($in.estricto) {
 }`;
 
 const MARCA = /TANNIA_OUT:([A-Za-z0-9+/=]+)/g;
+/** Líneas de progreso emitidas por el script (TANNIA_ETAPA:<base64 JSON>); sobreviven al agotamiento del tiempo. */
+export function parseEtapas(stdout) {
+  const etapas = [];
+  for (const m of String(stdout).matchAll(/TANNIA_ETAPA:([A-Za-z0-9+/=]+)/g)) {
+    try { const o = JSON.parse(Buffer.from(m[1], 'base64').toString('utf8')); if (typeof o.e === 'string') etapas.push({ etapa: o.e.slice(0, 40), estado: String(o.s || '').slice(0, 12), t_ms: Number(o.t) || 0, ...(o.x ? { dato: o.x } : {}) }); } catch { /* línea truncada por el cierre del proceso */ }
+  }
+  return etapas.slice(-60);
+}
 
 /** Ejecuta PowerShell y devuelve el JSON (texto) emitido por el script. Errores con `clase` segura y diagnóstico saneado. */
 // Límites de Windows: la línea de comandos admite ~32 767 caracteres y cada variable de entorno también. Los scripts 3D y las entradas
@@ -429,7 +478,7 @@ export function prepararLlamada(script, input) {
   if (entradaB64.length > LIMITE_ENTRADA_ENV) { env.TANNIA_IN_STDIN = '1'; stdin = entradaB64; } else env.TANNIA_IN = entradaB64;
   return { comando, env, stdin };
 }
-export function runPowerShell(script, input, { exe = 'powershell.exe', env = {}, timeoutMs = 30000 } = {}) {
+export function runPowerShell(script, input, { exe = 'powershell.exe', env = {}, timeoutMs = 30000, trazas = null } = {}) {
   return new Promise((resolve, reject) => {
     const llamada = prepararLlamada(script, input);
     let child;
@@ -440,22 +489,26 @@ export function runPowerShell(script, input, { exe = 'powershell.exe', env = {},
       });
       if (llamada.stdin) { child.stdin.on('error', () => { /* el proceso pudo terminar antes de leer */ }); child.stdin.end(llamada.stdin); }
     } catch (e) { reject(Object.assign(new Error('spawn'), { clase: 'powershell_no_encontrado' })); return; }
-    const out = []; const err = []; let done = false; let timedOut = false;
-    const timer = setTimeout(() => { timedOut = true; try { child.kill(); } catch { /* */ } }, timeoutMs);
+    const out = []; const err = []; let done = false; let timedOut = false; const t0 = Date.now();
+    // Tras el kill NO se espera indefinidamente el cierre de las tuberías (un proceso hijo podría retenerlas): se entrega lo capturado.
+    let gracia = null;
+    const timer = setTimeout(() => { timedOut = true; try { child.kill(); } catch { /* */ } gracia = setTimeout(() => { try { child.stdout.destroy(); child.stderr.destroy(); } catch { /* */ } finalizar(null); }, 1500); }, timeoutMs);
     child.stdout.on('data', (d) => out.push(d)); child.stderr.on('data', (d) => err.push(d));
     child.on('error', (e) => { if (done) return; done = true; clearTimeout(timer); reject(Object.assign(new Error('spawn'), { clase: e.code === 'ENOENT' ? 'powershell_no_encontrado' : 'powershell_no_inicia' })); });
-    child.on('close', (code) => {
-      if (done) return; done = true; clearTimeout(timer);
+    child.on('close', (code) => finalizar(code));
+    function finalizar(code) {
+      if (done) return; done = true; clearTimeout(timer); if (gracia) clearTimeout(gracia);
       const stdout = Buffer.concat(out).toString('latin1'); // base64 es ASCII: latin1 no altera nada
       const stderr = sanitizar(Buffer.concat(err).toString('utf8'), 200);
+      const etapas = parseEtapas(stdout); if (Array.isArray(trazas)) trazas.push(...etapas);
       const marcas = [...stdout.matchAll(MARCA)];
       if (marcas.length) { resolve(Buffer.from(marcas[marcas.length - 1][1], 'base64').toString('utf8')); return; }
       let clase = timedOut ? 'tiempo_agotado' : code !== 0 ? 'powershell_fallo' : 'sin_respuesta';
       if (/execution ?policy|PSSecurityException|no está firmado|is not digitally signed/i.test(stderr)) clase = 'politica_ejecucion';
       else if (/ConstrainedLanguage|Constrained Language/i.test(stderr)) clase = 'modo_lenguaje_restringido';
       else if (/AMSI|malicious|virus|bloquead/i.test(stderr)) clase = 'bloqueado_antivirus';
-      reject(Object.assign(new Error('powershell'), { clase, codigo_salida: code, stderr }));
-    });
+      reject(Object.assign(new Error('powershell'), { clase, codigo_salida: code, stderr, etapas, duracion_ms: Date.now() - t0, timeout_ms: timeoutMs }));
+    }
   });
 }
 
@@ -538,17 +591,17 @@ export class AutoCadCom {
     if (this.platform !== 'win32') throw new UserError('AUTOCAD_NO_DISPONIBLE', 'La conexión con AutoCAD solo existe en Windows con AutoCAD completo.', 'Use la exportación DXF para medir sin AutoCAD.');
     const script = buildScript(name, this.connect ? { connect: this.connect } : undefined);
     for (let intento = 0; ; intento++) {
-      let out;
-      try { out = await this.runner(script, input, opts); }
-      catch (e) { throw this.#errorProceso(e); }
+      let out; const trazas = [];
+      try { out = await this.runner(script, input, { ...opts, trazas }); }
+      catch (e) { throw this.#errorProceso(e, name, trazas); }
       let r; try { r = JSON.parse(String(out).trim()); } catch { throw new UserError('AUTOCAD_RESPUESTA_INVALIDA', 'AutoCAD respondió de forma inesperada.', 'Reintente; si persiste, ejecute el diagnóstico.', { etapa: 'interpretar_respuesta' }); }
       if (r.ok) return r.data;
       if (BUSY.has(String(r.hresult).toUpperCase().replace(/^0X/, '0x')) && intento < 2 && REINTENTO_SEGURO.has(name)) { await this.sleep(700 * (intento + 1)); continue; }
-      throw this.#errorScript(r, name);
+      throw this.#errorScript(r, name, trazas);
     }
   }
 
-  #errorProceso(e) {
+  #errorProceso(e, name = null, trazasExternas = []) {
     const clase = (e && e.clase) || 'desconocida';
     const hints = {
       powershell_no_encontrado: 'No se encontró Windows PowerShell (powershell.exe).',
@@ -560,12 +613,19 @@ export class AutoCadCom {
       powershell_fallo: 'PowerShell terminó con error antes de contactar a AutoCAD.',
       sin_respuesta: 'PowerShell terminó sin entregar respuesta.',
     };
+    const etapas = (Array.isArray(e?.etapas) && e.etapas.length ? e.etapas : trazasExternas || []).slice(-60);
+    if (clase === 'tiempo_agotado') {
+      const ultima = etapas[etapas.length - 1]; const seg = Math.round((e?.timeout_ms ?? 30000) / 1000); const dur = e?.duracion_ms ?? null;
+      const donde = ultima ? `${ultima.etapa} (${ultima.estado === 'inicio' ? 'iniciada, SIN terminar' : ultima.estado === 'ok' ? 'terminada; la siguiente no registró inicio' : ultima.estado}, a los ${ultima.t_ms} ms)` : 'ninguna (PowerShell no llegó a registrar progreso)';
+      const msg = `AutoCAD no respondió en ${seg} s${name ? ` en «${name}»` : ''}. Última etapa alcanzada: ${donde}. Duración: ${dur === null ? 'n/d' : `${(dur / 1000).toFixed(1)} s`}. Resultado INCIERTO: no se sabe si la operación llegó a aplicarse.`;
+      return new UserError('AUTOCAD_ERROR', msg, `${hints[clase]} No se repite automáticamente: se reconcilia el estado real antes de otra operación.`, { etapa: ultima?.etapa ?? null, estado_etapa: ultima?.estado ?? null, operacion: name, clase, estado_incierto: true, duracion_ms: dur, timeout_ms: e?.timeout_ms ?? null, etapas: etapas.map(x => ({ etapa: x.etapa, estado: x.estado, t_ms: x.t_ms, ...(x.dato ? { dato: sanitizarDiag(x.dato) } : {}) })), codigo_salida: e?.codigo_salida ?? null, stderr: e?.stderr ? sanitizar(e.stderr) : null });
+    }
     return new UserError('AUTOCAD_ERROR', 'No se pudo comunicar con AutoCAD.', hints[clase] || 'Reintente y ejecute el diagnóstico.', { etapa: 'ejecutar_powershell', clase, codigo_salida: e?.codigo_salida ?? null, stderr: e?.stderr ? sanitizar(e.stderr) : null });
   }
 
-  #errorScript(r, name) {
+  #errorScript(r, name, trazas = []) {
     const hr = r.hresult ? String(r.hresult) : null;
-    const detalle = { etapa: r.etapa || null, operacion: name, hresult: hr, tipo_excepcion: r.tipo || null, mensaje: r.msg ? sanitizar(r.msg) : null, ...(r.diag ? { diagnostico: sanitizarDiag(r.diag) } : {}) };
+    const detalle = { etapa: r.etapa || null, operacion: name, hresult: hr, tipo_excepcion: r.tipo || null, mensaje: r.msg ? sanitizar(r.msg) : null, ...(r.diag ? { diagnostico: sanitizarDiag(r.diag) } : {}), ...(trazas.length ? { etapas: trazas.slice(-30).map(x => ({ etapa: x.etapa, estado: x.estado, t_ms: x.t_ms })) } : {}) };
     if (r.codigo === 'AUTOCAD_CUADRO_MODAL') return new UserError('AUTOCAD_CUADRO_MODAL', 'AutoCAD tiene un cuadro de diálogo abierto; no se abrió nada.', 'Cierre el cuadro de diálogo en AutoCAD y repita.', detalle);
     if (r.codigo === 'AUTOCAD_COMANDO_ACTIVO') return new UserError('AUTOCAD_COMANDO_ACTIVO', 'AutoCAD tiene un comando en curso; no se abrió nada.', 'Pulse Esc en AutoCAD y repita.', detalle);
     if (r.codigo === 'RUTA_NO_VALIDA') return new UserError('RUTA_NO_VALIDA', 'La ruta de la copia no es válida para AutoCAD.', 'Use una copia dentro de 03 Trabajo.', detalle);
@@ -601,7 +661,10 @@ export class AutoCadCom {
     if (!isInside(path.join(target.root, FOLDERS.trabajo), target.abs) || !/\.dwg$/i.test(target.abs)) throw new UserError('DESTINO_INVALIDO', 'El DWG debe estar en la zona de trabajo CAD.');
     const expected = expectedLayouts(composition);
     const hash = sha256File(input);
-    return new CadOperations(target.root).run({
+    const journal = new CadOperations(target.root); const prior = journal.status(operacion);
+    // La apertura (potencialmente bloqueante) va ANTES del diario: un tiempo agotado al abrir no deja una escritura «incierta» que nunca se aplicó.
+    if (!prior || prior.state === 'prepared') { validarArchivoParaApertura(input); await this.#abrirReconciliando(project, input); }
+    return journal.run({
       id: operacion, intent: { tipo: 'laminas_dwg_v1', source: input, sha256: hash, target: target.abs, expected },
       preflight: async () => { if (fs.existsSync(target.abs)) throw new UserError('DESTINO_EXISTE', 'El DWG ya existe; no se sobrescribe.'); return { source_sha256: hash }; },
       apply: () => this.#exec('laminas_a_dwg', { dxf: input, dwg: target.abs, sha256_dxf: hash, estricto: true }),
@@ -718,7 +781,42 @@ export class AutoCadCom {
     const { abs } = this.sandbox.resolve(project, rel);
     const real = this.#assertWorkCopy(project, abs);
     validarArchivoParaApertura(real);
-    return this.#exec('abrir_copia', { ruta: real, estricto: true });
+    return this.#abrirReconciliando(project, real);
+  }
+
+  // --- Apertura con reconciliación (CAD-OPEN-01, 2.ª incidencia): tras un tiempo agotado NO se repite Documents.Open ---
+  #marcaPendiente(project, real) {
+    const root = this.sandbox.projectRoot(project); const dir = path.join(root, FOLDERS.trabajo, 'CAD', 'operaciones');
+    const file = path.join(dir, `apertura-${digestRuta(real)}.pendiente.json`); return { root, dir, file };
+  }
+  async #reconciliar(real) {
+    try {
+      const r = await this.#exec('reconciliar_apertura', { ruta: real, estricto: true }, { timeoutMs: 15000 });
+      const oc = r.ocupacion || {}; const libre = oc.quiescente === true && (oc.cmdactive === 0 || oc.cmdactive === null || oc.cmdactive === undefined);
+      return { estado: r.abierto ? 'abierto' : 'no_abierto', listo_para_operar: libre, ocupacion: sanitizarDiag(oc), documentos: sanitizarDiag(r.documentos || []), procesos_acad: Array.isArray(r.procesos) ? r.procesos.length : null };
+    } catch (e) {
+      return { estado: 'no_verificable', codigo: e?.code || 'ERROR', etapa: e?.detalle?.etapa ?? null, estado_incierto: e?.detalle?.estado_incierto === true };
+    }
+  }
+  async #abrirReconciliando(project, real) {
+    const m = this.#marcaPendiente(project, real); verificarContencion(m.root, m.dir);
+    const tardia = (rec) => ({ documento: path.basename(real), ruta: real, reutilizado: false, apertura_tardia: true, reconciliado: true, advertencia: 'AutoCAD abrió el archivo después del tiempo de espera; se verificó por COM y no se repitió la apertura.', reconciliacion: rec });
+    if (fs.existsSync(m.file)) {
+      const rec = await this.#reconciliar(real);
+      if (rec.estado === 'abierto') { fs.rmSync(m.file, { force: true }); return tardia(rec); }
+      if (rec.estado === 'no_abierto' && rec.listo_para_operar) fs.rmSync(m.file, { force: true }); // estado real comprobado y limpio: esta llamada explícita puede abrir
+      else throw new UserError('OPERACION_PENDIENTE_INCIERTA', 'Una apertura anterior terminó con tiempo agotado y su estado real no se pudo confirmar. No se inicia otra operación sobre AutoCAD.', 'Cierre cuadros de diálogo o comandos en AutoCAD y repita; primero se reconcilia el estado.', { etapa: 'reconciliar_apertura', estado_incierto: true, reconciliacion: rec });
+    }
+    try { return await this.#exec('abrir_copia', { ruta: real, estricto: true }); }
+    catch (e) {
+      if (!(e instanceof UserError) || e.code !== 'AUTOCAD_ERROR' || e.detalle?.clase !== 'tiempo_agotado') throw e;
+      fs.mkdirSync(m.dir, { recursive: true });
+      fs.writeFileSync(m.file, JSON.stringify({ schema: 'tw.cad.apertura_pendiente/1', operacion: 'abrir_copia', ultima_etapa: e.detalle.etapa, estado: 'incierto', creada: new Date().toISOString() }));
+      const rec = await this.#reconciliar(real);
+      if (rec.estado === 'abierto') { fs.rmSync(m.file, { force: true }); return tardia(rec); }
+      const txt = rec.estado === 'no_abierto' ? 'el archivo NO figura abierto' : 'no se pudo verificar el estado (AutoCAD sigue sin responder)';
+      e.detalle = { ...e.detalle, reconciliacion: rec }; e.message = `${e.message} Reconciliación: ${txt}.`; throw e;
+    }
   }
 
   async agregarLineas(project, { lineas, capa }) {
