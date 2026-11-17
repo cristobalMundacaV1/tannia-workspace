@@ -1,0 +1,14 @@
+{
+  "schema": "tw.tools_contract_delta/1",
+  "desde": "rc.3 (fixtures/tw11/tools_baseline.json, 72 herramientas)",
+  "version": "0.2.0-rc.1",
+  "nuevas": {
+    "tannia_entrega_estado": "E04/E17: estado de la entrega (revisión vigente, archivos vigentes/desactualizados, aprobación)",
+    "tannia_metodo": "E12–E14: MethodCards MC01/MC02/MC04",
+    "tannia_proyecto_migracion": "E27: ver o revertir la migración de un proyecto antiguo"
+  },
+  "esquemas_cambiados": {
+    "tannia_proyecto_avanzar": "A-01: aprobado_por y confirmo_revision_profesional se conservan por compatibilidad pero ya no tienen efecto (descripción cambiada); la aprobación la da la persona en la ventana",
+    "tannia_partida_verificar": "A-01: verificada_por pasa a opcional y sin efecto; resolucion_needs_review acotada a 500 caracteres"
+  }
+}

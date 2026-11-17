@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { identidadPaquete } from '../src/mcp/paquete.js';
 import { VERSION } from '../src/version.js';
 import { VERSION_MOTOR } from '../src/architect/version.js';
-import { tmpHome, startClient, call, data } from './helpers.js';
+import { tmpHome, startClient, call, data, NUEVAS_RC02, CONTRATO_RC02 } from './helpers.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const mk = (manifest) => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'Paquete ñ id ')); fs.mkdirSync(path.join(d, 'server')); fs.writeFileSync(path.join(d, 'server', 'index.js'), ''); if (manifest !== undefined) fs.writeFileSync(path.join(d, 'manifest.json'), typeof manifest === 'string' ? manifest : JSON.stringify(manifest)); return path.join(d, 'server', 'index.js'); };
@@ -40,5 +40,5 @@ test('diagnóstico (paquete real): informa id y versión del .mcpb instalado, di
 });
 
 test('compatibilidad: el MCP sigue anunciando el nombre/versión del servidor (no se reetiqueta TW-09) y hay 72 herramientas', async () => {
-  const cli = await startClient(tmpHome()); try { const i = cli.client.getServerVersion(); assert.equal(i.name, 'tannia-workspace'); assert.equal(i.version, VERSION); assert.equal((await cli.client.listTools()).tools.length, 72); } finally { await cli.close(); }
+  const cli = await startClient(tmpHome()); try { const i = cli.client.getServerVersion(); assert.equal(i.name, 'tannia-workspace'); assert.equal(i.version, VERSION); assert.equal((await cli.client.listTools()).tools.length, 72 + NUEVAS_RC02.length); } finally { await cli.close(); }
 });

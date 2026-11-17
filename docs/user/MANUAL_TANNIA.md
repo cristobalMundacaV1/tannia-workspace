@@ -23,10 +23,10 @@ Pide un resultado, no líneas: «Diseña una casa de un piso de ~80 m², 3 dormi
 ## Cómo leer los resultados
 - **needs_review**: hay algo dudoso (unidad, geometría abierta, duplicados…). No use esa cifra como final sin revisar.
 - **BORRADOR / PENDIENTE**: faltan precios o usted no ha verificado las cantidades.
-- Solo usted puede marcar una cantidad como **verificada** y **aprobar** el proyecto; Claude debe pedirle confirmación.
+- Solo usted puede marcar una cantidad como **verificada** y **aprobar** la entrega: aparece una **ventana** con el detalle y usted decide. Claude no puede hacerlo por usted. Si después cambia un dato, la aprobación deja de valer y hay que regenerar presupuesto y memoria.
 
 ## Dónde quedan sus archivos
-`03 Trabajo` (copias) · `04 Cubicaciones` · `05 Presupuestos` (Excel) · `06 Informes` (PDF) · `07 Entregables` (solo tras aprobar).
+`03 Trabajo` (copias) · `04 Cubicaciones` · `05 Presupuestos` (Excel) · `06 Informes` (PDF) · `07 Entregables` (solo tras aprobar; cada entrega en su carpeta `Entrega R<n> <fecha>` con manifiesto y huellas).
 
 ## Si algo no funciona
 «Haz un diagnóstico» · «Repara el proyecto <nombre>» · ver `INSTALACION.md`. Los resultados son **apoyo profesional**: revise cantidades, precios y normativa antes de entregar.

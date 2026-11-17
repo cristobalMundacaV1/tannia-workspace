@@ -36,3 +36,7 @@ export async function startClientConPersona(home, entry = path.join(ROOT, 'src',
   return { client, vistos, respuestas, close: () => client.close() };
 }
 export const PERSONA_SI = (nombre = 'Tannia') => ({ action: 'accept', content: { aprobar: true, nombre } });
+
+/** Delta de contrato de herramientas 0.2.0-rc.1 respecto de rc.3: nuevas y esquemas cambiados A PROPÓSITO (fixtures/rc). */
+export const CONTRATO_RC02 = JSON.parse(fs.readFileSync(path.join(FIX, 'rc', 'contrato_herramientas_0.2.json'), 'utf8'));
+export const NUEVAS_RC02 = Object.keys(CONTRATO_RC02.nuevas);

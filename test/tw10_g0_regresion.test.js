@@ -1,7 +1,7 @@
 // TW10-00-02: regresión de contratos TW-09 (herramientas y esquemas) y de la tubería v1; no escribe en proyectos reales.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startClient } from './helpers.js';
+import { startClient, NUEVAS_RC02, CONTRATO_RC02 } from './helpers.js';
 import { generarModelo } from '../src/design/generador.js';
 import { derivar } from '../src/design/derivar.js';
 
@@ -9,7 +9,7 @@ test('TW-09 intacto: 61 herramientas con esquemas sin arreglos tipo tupla', asyn
   const c = await startClient();
   try {
     const { tools } = await c.client.listTools();
-    const base = tools.filter((t) => !t.name.startsWith('tannia_arq_'));
+    const base = tools.filter((t) => !t.name.startsWith('tannia_arq_') && !NUEVAS_RC02.includes(t.name)); // 0.2: las nuevas se declaran en fixtures/rc
     assert.equal(base.length, 61, `herramientas TW-09: ${base.length}`);
     const sinTupla = (n, ruta) => { if (!n || typeof n !== 'object') return; if (Array.isArray(n.items)) assert.fail(`items como arreglo en ${ruta}`); for (const [k, v] of Object.entries(n)) sinTupla(v, `${ruta}.${k}`); };
     for (const t of tools) sinTupla(t.inputSchema, t.name);
