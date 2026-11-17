@@ -20,12 +20,21 @@ export function explicarPartida(p) {
   if (p.metodo?.id === 'MC01-muro-area-neta' && d) {
     const caras = d.caras ?? 1; const L = d.tramos.reduce((s, t) => s + t.longitud_m, 0); const bruto = L * d.altura.valor_m;
     calculo.push(`Superficie del muro: ${d.tramos.map((t) => n(t.longitud_m)).join(' m + ')} m × ${n(d.altura.valor_m)} m = ${n(bruto)} m²${caras === 2 ? ' por cara' : ''}.`);
-    const vanos = d.vanos || []; const desc = p.desglose?.vanos_descontados ?? vanos.length;
-    for (const v of vanos) calculo.push(`Descuento por ${v.descripcion || 'vano'}: ${n(v.ancho_m)} m × ${n(v.alto_m)} m = ${n(v.ancho_m * v.alto_m)} m².`);
+    const vanos = d.vanos || [];
+    const politica = d.politica_descuento || {};
+    // La explicación debe respetar la MISMA política que el kernel MC01: un vano informado
+    // no es necesariamente un vano descontado (no_descontar / descontar_mayores_a).
+    const descontado = (v) => politica.tipo === 'descontar_todos'
+      || (politica.tipo === 'descontar_mayores_a' && v.ancho_m * v.alto_m > politica.umbral_m2 + 1e-9);
+    const desc = p.desglose?.vanos_descontados ?? vanos.filter(descontado).length;
+    for (const v of vanos) {
+      const formula = `${n(v.ancho_m)} m × ${n(v.alto_m)} m = ${n(v.ancho_m * v.alto_m)} m².`;
+      calculo.push(`${descontado(v) ? 'Descuento por' : 'Vano informado NO descontado por la política:'} ${v.descripcion || 'vano'}: ${formula}`);
+    }
     const ded = p.desglose?.deducciones_por_cara_m2 ?? 0;
     calculo.push(`Superficie neta: ${caras === 2 ? '2 × (' : ''}${n(bruto)} − ${n(ded)}${caras === 2 ? ')' : ''} = ${n(p.cantidad)} m².`);
     alcance = vanos.length
-      ? `Se descontaron ${desc === vanos.length ? 'los vanos informados' : `${desc} de ${vanos.length} vanos informados (según la política de descuento)`}. No se comprobó en el plano si existen otros vanos.`
+      ? `${desc === 0 ? 'No se descontó ningún vano informado' : desc === vanos.length ? 'Se descontaron los vanos informados' : `Se descontaron ${desc} de ${vanos.length} vanos informados`} (según la política de descuento). No se comprobó en el plano si existen otros vanos.`
       : 'No se informaron vanos; no se comprobó en el plano si existen.';
   } else if (p.metodo && p.formula) calculo.push(`Cálculo: ${p.formula}`);
   else if (tipo === 'manual') calculo.push(`Cantidad ingresada: ${n(p.cantidad)} ${p.unidad}.`);
