@@ -58,7 +58,9 @@ function cota(c, vista, i) {
 /**
  * especificacion: { codigo, especialidad, proyecto, revision?, fecha?, autor?, institucion?, etapa?, origen?, advertencias?[],
  *   capas: {NOMBRE: {color, grosor, leyenda, trazo?}}, vistas: [{id, titulo, tipo, escala, escala_vertical?, elementos[], cotas?[], textos?[], notas?[]}],
- *   laminas: [{id, titulo, vistas: [ids]}], elementos_fisicos?: [{id, tipo, unidad, vistas}] }
+ *   laminas: [{id, titulo, vistas: [ids]}], elementos_fisicos?: [{id, tipo, unidad, vistas}],
+ *   mediciones?: [{id, partida?, descripcion?, metodo: longitud|area|conteo, fuentes: ['vista/elemento'], unidad?, signo?: -1}],
+ *   cantidades_declaradas?: [{partida, descripcion?, cantidad, unidad, origen}] }  (NO se admite «cantidades» ya calculadas) }
  */
 export function modeloDesdeEspecificacion(e) {
   if (!e || typeof e !== 'object') throw err('ESPECIFICACION_INVALIDA', 'Falta la especificación del plano.');
@@ -69,6 +71,7 @@ export function modeloDesdeEspecificacion(e) {
     if (['PAPEL', 'MODEL_DIMS'].includes(name)) throw err('CAPA_RESERVADA', `La capa «${name}» está reservada.`);
     const color = Number.isInteger(c?.color) && c.color >= 1 && c.color <= 255 ? c.color : 7;
     const weight = num(c?.grosor) && c.grosor >= 0.09 && c.grosor <= 2.11 ? c.grosor : 0.25;
+    if (c?.trazo !== undefined && (!Array.isArray(c.trazo) || !c.trazo.length || c.trazo.length % 2 || !c.trazo.every((x) => num(x) && x > 0 && x <= 50))) throw err('TRAZO_INVALIDO', `Capa ${name}: el trazo es una lista par de longitudes en mm de papel (trazo, hueco, …), todas > 0.`);
     layers[name] = { color, weight, legend: txt(c?.leyenda || name, `leyenda de ${name}`, 60), ...(Array.isArray(c?.trazo) ? { dash: c.trazo } : {}) };
   }
   const capasValidas = new Set([...Object.keys(LAYERS), ...Object.keys(layers)]);
@@ -86,6 +89,7 @@ export function modeloDesdeEspecificacion(e) {
     const dimensions = (v.cotas || []).map((c, i) => cota(c, id, i));
     const labels = (v.textos || []).map((t, i) => ({ at: pt(t.en, `Vista ${id}, texto ${i + 1}`), dy: num(t.dy) ? t.dy : 0, text: txt(t.texto, `Vista ${id}, texto ${i + 1}`, 40) }));
     const notes = (v.notas || []).map((n, i) => txt(n, `Vista ${id}, nota ${i + 1}`, 140));
+    if (v.escala_vertical && v.escala_vertical !== v.escala && (ents.some((e) => e.kind === 'arc') || dimensions.some((d) => d.kind === 'radial'))) throw err('GEOMETRIA_NO_SOPORTADA', `Vista ${id}: con escala vertical distinta no se admiten arcos, círculos ni cotas radiales (se deformarían en elipses). Use una vista sin exageración.`);
     return { id, title: txt(v.titulo, `Vista ${id}: título`, 60), type: v.tipo, scale: v.escala, ...(v.escala_vertical ? { verticalScale: v.escala_vertical } : {}), entities: ents, dimensions, labels, notes };
   });
   if (!Array.isArray(e.laminas) || !e.laminas.length) throw err('ESPECIFICACION_INVALIDA', 'La especificación necesita al menos una lámina.');
@@ -107,8 +111,58 @@ export function modeloDesdeEspecificacion(e) {
     schema: 'tw.drawing/1', unit: 'm', layers, elements: fisicos.map((f) => ({ id: idOk(f.id, 'elemento físico'), tipo: f.tipo || 'elemento', unidad: 'm', fuente: (f.fuentes || [])[0] || null, magnitudes: f.magnitudes || {}, vistas: [...new Set((f.fuentes || []).map((r) => r.split('/')[0]))] })),
     provenance: e.origen ? txt(e.origen, 'origen', 140) : 'Especificación explícita aportada en la conversación',
     metadata: { project: P(e.proyecto), revision: P(e.revision), date: P(e.fecha), institution: P(e.institucion), author: P(e.autor), reviewer: 'PENDIENTE', approval: 'PENDIENTE', stage: e.etapa ? txt(e.etapa, 'etapa', 40) : 'REVISIÓN', source: 'Especificación de planos', coordinateSystem: 'NO CONFIRMADO', code, specialty: especialidad },
-    quantities: e.cantidades || [], views, sheets, warnings,
+    quantities: cantidadesDeEspecificacion(e, views), views, sheets, warnings,
   };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// G3 / PL-02 (issue #32): las cantidades NO se copian de la especificación. Se MIDEN sobre las entidades del modelo con un método
+// versionado (TW-MED/1), o se aceptan como DECLARADAS con origen explícito y rotuladas como no medidas desde el plano.
+export const METODO_MEDICION = 'TW-MED/1';
+const UNIDAD_METODO = { longitud: 'm', area: 'm2', conteo: 'u' };
+const largoEnt = (x) => (x.kind === 'line' ? Math.hypot(x.b[0] - x.a[0], x.b[1] - x.a[1]) : (x.radius * Math.PI * (x.end - x.start)) / 180);
+/** Área de un contorno cerrado formado por segmentos encadenados (o de un círculo completo). */
+function areaContorno(ents, ctx) {
+  if (ents.length === 1 && ents[0].kind === 'arc' && ents[0].end - ents[0].start >= 360) return { valor: Math.PI * ents[0].radius ** 2, formula: `π·r² (r = ${ents[0].radius})` };
+  if (ents.some((x) => x.kind !== 'line')) throw err('MEDICION_NO_SOPORTADA', `${ctx}: el área solo se mide sobre polilíneas/rectángulos cerrados o círculos completos.`);
+  const ps = [ents[0].a]; for (const x of ents) { const u = ps[ps.length - 1]; if (Math.hypot(x.a[0] - u[0], x.a[1] - u[1]) > 1e-9) throw err('CONTORNO_ABIERTO', `${ctx}: los segmentos no están encadenados (${x.id}).`); ps.push(x.b); }
+  const f = ps[ps.length - 1]; if (Math.hypot(f[0] - ps[0][0], f[1] - ps[0][1]) > 1e-9) throw err('CONTORNO_ABIERTO', `${ctx}: el contorno no está cerrado.`);
+  return { valor: areaPoligono(ps.slice(0, -1)), formula: `fórmula del área de Gauss sobre ${ps.length - 1} vértices dibujados` };
+}
+export function cantidadesDeEspecificacion(e, views) {
+  if (e.cantidades !== undefined) throw err('CANTIDADES_NO_DERIVADAS', 'La especificación no puede traer cantidades ya calculadas.', 'Use «mediciones» (se miden sobre la geometría dibujada) o «cantidades_declaradas» con su origen (quedan rotuladas como no medidas desde el plano).');
+  const porRef = new Map(); for (const v of views) for (const x of v.entities) porRef.set(x.ref, x);
+  const resolver = (f, ctx) => { const exacta = porRef.get(f); if (exacta) return [exacta]; const pref = [...porRef.keys()].filter((r) => r.startsWith(`${f}-`)); if (!pref.length) throw err('FUENTE_INEXISTENTE', `${ctx}: «${f}» no es una entidad dibujada.`); return pref.map((r) => porRef.get(r)); };
+  const filas = []; const usadas = new Map();
+  for (const [i, m] of (e.mediciones || []).entries()) {
+    const ctx = `Medición ${m.id || i + 1}`; const id = idOk(m.id || `m${i + 1}`, ctx);
+    if (!UNIDAD_METODO[m.metodo]) throw err('METODO_INVALIDO', `${ctx}: método «${m.metodo}» no soportado (longitud, area, conteo).`);
+    if (m.unidad !== undefined && m.unidad !== UNIDAD_METODO[m.metodo]) throw err('UNIDAD_INCOMPATIBLE', `${ctx}: el método ${m.metodo} mide en ${UNIDAD_METODO[m.metodo]}, no en ${m.unidad}.`);
+    if (!Array.isArray(m.fuentes) || !m.fuentes.length) throw err('FUENTE_INEXISTENTE', `${ctx}: indique las entidades dibujadas que mide.`);
+    const signo = m.signo === -1 ? -1 : 1; const partida = m.partida ? txt(m.partida, `${ctx}: partida`, 60) : id;
+    const grupos = m.fuentes.map((f) => resolver(f, ctx)); const ents = grupos.flat();
+    for (const x of ents) { const k = `${partida}|${x.ref}`; if (usadas.has(k)) throw err('MEDICION_DUPLICADA', `${ctx}: la entidad ${x.ref} ya se midió en «${usadas.get(k)}» para la misma partida.`); usadas.set(k, id); }
+    let valor; let formula;
+    if (m.metodo === 'longitud') { valor = ents.reduce((t, x) => t + largoEnt(x), 0); formula = `suma de ${ents.length} longitudes dibujadas`; }
+    else if (m.metodo === 'area') { const r = grupos.map((g2) => areaContorno(g2, ctx)); valor = r.reduce((t, x) => t + x.valor, 0); formula = r.map((x) => x.formula).join(' + '); }
+    else { valor = grupos.length; formula = `conteo de ${grupos.length} elemento(s) dibujado(s)`; }
+    if (!(valor > 0)) throw err('MEDICION_INVALIDA', `${ctx}: la magnitud medida es nula.`);
+    filas.push({ id, partida, descripcion: m.descripcion ? txt(m.descripcion, `${ctx}: descripción`, 80) : partida, metodo: `${METODO_MEDICION}/${m.metodo}`, unidad: UNIDAD_METODO[m.metodo], valor: signo * valor, formula: `${signo < 0 ? 'DESCUENTO: ' : ''}${formula}`, fuentes: ents.map((x) => x.ref).join(' '), naturaleza: 'MEDIDA sobre la geometría del modelo' });
+  }
+  for (const [i, d] of (e.cantidades_declaradas || []).entries()) {
+    const ctx = `Cantidad declarada ${i + 1}`;
+    if (!num(d.cantidad) || !d.unidad || !d.origen) throw err('DATOS_INVALIDOS', `${ctx}: requiere cantidad numérica, unidad y origen (quién/qué documento la aporta).`);
+    filas.push({ id: `d${i + 1}`, partida: txt(d.partida || d.descripcion || `declarada-${i + 1}`, ctx, 60), descripcion: d.descripcion ? txt(d.descripcion, ctx, 80) : '', metodo: 'DECLARADA', unidad: txt(d.unidad, ctx, 10), valor: d.cantidad, formula: '—', fuentes: '', naturaleza: `DECLARADA (no medida desde el plano). Origen: ${txt(d.origen, ctx, 100)}` });
+  }
+  // Totales por partida medida (con descuentos explícitos). Una partida mezcla de medido y declarado no se suma.
+  const partidas = [...new Set(filas.filter((f) => f.metodo !== 'DECLARADA').map((f) => f.partida))];
+  for (const p of partidas) {
+    const fs2 = filas.filter((f) => f.partida === p); if (fs2.some((f) => f.metodo === 'DECLARADA')) throw err('ORIGEN_MEZCLADO', `Partida «${p}»: no se suman cantidades medidas y declaradas.`);
+    const u = [...new Set(fs2.map((f) => f.unidad))]; if (u.length > 1) throw err('UNIDAD_INCOMPATIBLE', `Partida «${p}»: mezcla unidades ${u.join(', ')}.`);
+    const total = fs2.reduce((t, f) => t + f.valor, 0); if (!(total > 0)) throw err('MEDICION_INVALIDA', `Partida «${p}»: los descuentos superan la cantidad medida.`);
+    if (fs2.length > 1) filas.push({ id: `total-${p}`, partida: p, descripcion: `TOTAL ${p}`, metodo: METODO_MEDICION, unidad: u[0], valor: total, formula: fs2.map((f) => f.id).join(' + '), fuentes: '', naturaleza: 'MEDIDA (suma de mediciones y descuentos)' });
+  }
+  return filas;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------

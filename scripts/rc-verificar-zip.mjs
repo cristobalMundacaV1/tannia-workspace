@@ -89,6 +89,29 @@ try {
     afirmar(path.resolve(d.carpeta_tannia) === path.resolve(datos), 'carpeta de datos distinta de la configurada');
     return { servidor: cliente.getServerVersion(), herramientas: tools.length, procedimientos: prompts, ventana_del_cliente: d.autorizacion_humana.ventana_del_cliente };
   });
+  // G0 / PL-01 (issue #32): el PAQUETE distribuido (no el servidor de desarrollo) expone el motor de planos con la configuración del manifiesto.
+  await paso('5b. motor de planos del paquete: tannia_planos expuesto y 5 láminas del túnel generadas (DXF AC1024 + PDF)', async () => {
+    afirmar(manifest.server.mcp_config.env?.TANNIA_ENGINEERING === 'on', 'el manifiesto no declara TANNIA_ENGINEERING=on (configuración de producción)');
+    afirmar(manifest.tools.some((t) => t.name === 'tannia_planos'), 'el manifiesto no declara tannia_planos');
+    const tools = (await cliente.listTools()).tools.map((t) => t.name); afirmar(tools.includes('tannia_planos'), 'el servidor instalado no publica tannia_planos');
+    const P = 'Túnel UAT-02 (verificador G0)'; await T('tannia_proyecto_crear', { nombre: P });
+    // El ZIP es para Windows x64: en otro sistema el componente gráfico nativo no carga. Ahí se exige un error CLARO (no interno);
+    // la generación completa de las 5 láminas se exige en el job rc-zip-windows, con el mismo ZIP.
+    const mismoSistema = process.platform === 'win32' && process.arch === 'x64';
+    if (!mismoSistema) {
+      const r = await cliente.callTool({ name: 'tannia_planos', arguments: { proyecto: P, accion: 'generar_tunel', datos: { length: 150, width: 5.5, wall: 2.5, selected: 0.06 } } });
+      afirmar(r.isError && r.structuredContent?.error === 'COMPONENTE_GRAFICO_NO_DISPONIBLE', `fuera de Windows x64 se esperaba COMPONENTE_GRAFICO_NO_DISPONIBLE: ${r.content?.[0]?.text?.slice(0, 200)}`);
+      return { tannia_planos: true, generacion_5_laminas: `NO EJECUTADA en ${process.platform}-${process.arch} (binario nativo win32-x64); se exige en rc-zip-windows`, error_claro: true };
+    }
+    const F = { perno_longitud: 2.4, espaciamiento_transversal: 1.5, espaciamiento_longitudinal: 1.5, malla: true, traslapo_malla_pct: 10 };
+    const g = await T('tannia_planos', { proyecto: P, accion: 'generar_tunel', datos: { length: 150, width: 5.5, wall: 2.5, selected: 0.06, fortificacion: F } });
+    const laminas = g.files.filter((f) => /lamina-.*\.pdf$/.test(f)); afirmar(laminas.length === 5, `láminas PDF: ${laminas.length} ≠ 5`);
+    const dxfs = g.files.filter((f) => /\.dxf$/i.test(f)); afirmar(dxfs.length >= 1, 'sin DXF');
+    const raiz = path.join(datos, 'Proyectos', P, g.folder);
+    for (const f of dxfs) { const t = fs.readFileSync(fs.existsSync(path.join(raiz, f)) ? path.join(raiz, f) : path.join(datos, 'Proyectos', P, f), 'latin1'); afirmar(/\$ACADVER\r?\n\s*1\r?\n\s*AC1024/.test(t), `${f}: no es AC1024`); afirmar(/\nDIMENSION\r?\n/.test(t), `${f}: sin cotas nativas`); }
+    afirmar(g.fortificacion?.some((x) => x.partida === 'Pernos de anclaje'), 'sin cubicación de fortificación');
+    return { tannia_planos: true, laminas: laminas.length, dxf: dxfs, revision: g.revision };
+  });
   let aprob1;
   await paso('6. flujo profesional de extremo a extremo (plano → cubicación → APU → verificación → presupuesto/memoria → aprobación → entrega)', async () => {
     await T('tannia_proyecto_crear', { nombre: PROY });

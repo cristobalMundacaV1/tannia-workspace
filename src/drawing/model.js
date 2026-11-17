@@ -17,6 +17,12 @@ export const LAYERS = {
 };
 /** Capas efectivas de un modelo: las base más las que declara el propio modelo (motor genérico). */
 export const capasDe = (model) => ({ ...LAYERS, ...(model?.layers || {}) });
+/** PL-06: definición ÚNICA del tipo de línea de una capa (mm de papel, trazo/hueco alternados). PDF y DXF usan esta misma función. */
+export function patronLinea(nombre, capa) {
+  const d = capa?.dash; if (!Array.isArray(d) || !d.length) return { nombre: 'CONTINUOUS', elementos: [] };
+  if (d.length % 2 || !d.every((x) => Number.isFinite(x) && x > 0)) throw new Error(`Patrón de línea inválido en la capa ${nombre}`);
+  return { nombre: `TW_${String(nombre).replace(/[^A-Za-z0-9_]/g, '_')}`, elementos: d.map((x, i) => (i % 2 ? -x : x)) };
+}
 /** Prefijo de código de lámina/layout: por modelo (p. ej. «TW12», «REC»). */
 export const prefijoDe = (model) => model?.metadata?.code || 'TW12';
 const line = (id, layer, a, b) => ({ id, kind: 'line', layer, a, b });

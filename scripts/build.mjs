@@ -56,6 +56,8 @@ const [a, b] = InMemoryTransport.createLinkedPair();
 const client = new Client({ name: 'build', version: '1' });
 await Promise.all([server.connect(a), client.connect(b)]);
 const tools = (await client.listTools()).tools.map((t) => ({ name: t.name, description: t.description }));
+// PL-01: un build sin el motor de planos no es un candidato válido (prueba negativa en test/rc_pl01_habilitacion.test.js).
+if (!tools.some((t) => t.name === 'tannia_planos')) { console.error('build: el catálogo no incluye tannia_planos'); process.exit(1); }
 await client.close(); fs.rmSync(tmp, { recursive: true, force: true });
 
 const manifest = {
@@ -70,7 +72,7 @@ const manifest = {
   server: {
     type: 'node',
     entry_point: 'server/index.js',
-    mcp_config: { command: 'node', args: ['${__dirname}/server/index.js'], env: { TANNIA_HOME: '${user_config.carpeta_tannia}' } },
+    mcp_config: { command: 'node', args: ['${__dirname}/server/index.js'], env: { TANNIA_HOME: '${user_config.carpeta_tannia}', TANNIA_ENGINEERING: 'on' } },
   },
   tools,
   tools_generated: false,
