@@ -1,5 +1,18 @@
 # Changelog
 
+
+## 0.2.0-rc.2 — 2026-11-17 (candidato; no aceptado)
+- Moneda como dimensión tipada; conversión de divisas solo con tasa, fuente y fecha (antes CLP→USD 1:1).
+- Una sola política de redondeo para el CIC, el presupuesto y el Excel (antes diferían con precios decimales).
+- Memoria PDF sin página final vacía.
+- Motor genérico de planos (planta, corte, elevación, perfil, sección y detalle) y segundo dominio de edificación.
+- Túnel: lámina de fortificación con pernos y malla dibujados y cubicados por el mismo motor.
+- Presupuesto con alcance completo o parcial y advertencia de precios no vigentes.
+- Ventanas de autorización como pregunta con seis respuestas; detalles técnicos plegados.
+- Archivos entregados como vínculos MCP, con nombres y carpeta comprensibles.
+- Procedimiento «Desarrollar un proyecto completo».
+- Limitaciones: AutoCAD real, WPF en Windows y presentación de archivos en Claude Desktop NO VERIFICADOS. Ver docs/auditoria-integral-2026-11-17.
+
 ## 0.2.0-rc.1 (candidato NO validado — remodelación Astra: autoridad, entrega y paquete)
 - **A-01 cerrado (N1):** verificar cantidades y aprobar entregas exige una ventana respondida por una persona (formulario del cliente o diálogo del SO); el modelo no puede hacerlo con nombres ni booleanos. Recibos HMAC ligados a acción, objeto, versión, huella y revisión. Canal de archivo desactivado para estas acciones.
 - **A-02 cerrado (N1):** revisiones monótonas del expediente; artefactos ligados a la revisión; la aprobación cubre un manifiesto exacto y se consume al exportar; exportación transaccional a `07 Entregables/Entrega R<n> …` con manifiesto y huellas. Nunca «el último archivo».
