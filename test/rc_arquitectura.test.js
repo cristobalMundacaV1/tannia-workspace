@@ -101,7 +101,7 @@ test('MethodCard por MCP: la partida guarda método, entradas con origen y fórm
 test('procedimientos Desktop (prompts MCP), referencias normativas y diagnóstico de canales humanos', { timeout: 60000 }, async () => {
   const home = tmpHome('rc prompts ñ '); const c = await startClient(home, undefined, { TANNIA_SIN_DIALOGO: '1' }); const h = H(c);
   try {
-    const ps = (await c.client.listPrompts()).prompts; assert.equal(ps.length, 5); assert.ok(ps.every((p) => p.title && p.description));
+    const ps = (await c.client.listPrompts()).prompts; assert.equal(ps.length, 6); // +tw-desarrollar-proyecto (auditoría integral 2026-11-17, §6.8) assert.ok(ps.every((p) => p.title && p.description));
     const tools = new Set((await c.client.listTools()).tools.map((t) => t.name));
     for (const p of ps) {
       const g = await c.client.getPrompt({ name: p.name, arguments: { proyecto: 'Casa Ñuñoa' } });
