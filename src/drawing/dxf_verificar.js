@@ -28,23 +28,31 @@ const r6 = (x) => (Math.abs(x) < 5e-7 ? 0 : Math.round(x * 1e6) / 1e6).toFixed(6
 const ang = (a) => r6(((a % 360) + 360) % 360);
 
 /** Firmas esperadas a partir del modelo (colocación documentada: vista i en y = i·1000, Y × exageración). */
+const transformador = (model) => { const T = new Map(); model.views.forEach((v, i) => { const ex = v.verticalScale ? v.scale / v.verticalScale : 1; T.set(v.id, (p) => [p[0], p[1] * ex + i * 1000]); }); return T; };
+// Identidad (XDATA TANNIA_TRACE): forma parte de la firma; geometría idéntica con ref/elemento/vista/rol alterados NO coincide.
+const trazaModelo = (e, vista) => (e.ref ? `|elemento=${e.element}|vista=${vista}|rol=${e.role}|ref=${e.ref}` : '');
+function trazaDxf(e) {
+  const i = e.codigos.findIndex(([c, v]) => c === 1001 && v === 'TANNIA_TRACE'); if (i < 0) return '';
+  const vals = []; for (let k = i + 1; k < e.codigos.length && e.codigos[k][0] === 1000; k++) vals.push(e.codigos[k][1]); return vals.length ? `|${vals.join('|')}` : '';
+}
 function esperadas(model) {
-  const out = [];
-  model.views.forEach((v, i) => {
-    const ex = v.verticalScale ? v.scale / v.verticalScale : 1; const P = (p) => [p[0], p[1] * ex + i * 1000];
+  const out = []; const T = transformador(model);
+  for (const v of model.views) {
+    const P = T.get(v.id);
     for (const e of v.entities) {
-      if (e.kind === 'line') { const a = P(e.a); const b = P(e.b); out.push(`LINE|${e.layer}|${r6(a[0])},${r6(a[1])}|${r6(b[0])},${r6(b[1])}`); }
-      else if (e.end - e.start >= 360) { const c = P(e.center); out.push(`CIRCLE|${e.layer}|${r6(c[0])},${r6(c[1])}|${r6(e.radius)}`); }
-      else { const c = P(e.center); out.push(`ARC|${e.layer}|${r6(c[0])},${r6(c[1])}|${r6(e.radius)}|${ang(e.start)}|${ang(e.end)}`); }
+      const t = trazaModelo(e, v.id);
+      if (e.kind === 'line') { const a = P(e.a); const b = P(e.b); out.push(`LINE|${e.layer}|${r6(a[0])},${r6(a[1])}|${r6(b[0])},${r6(b[1])}${t}`); }
+      else if (e.end - e.start >= 360) { const c = P(e.center); out.push(`CIRCLE|${e.layer}|${r6(c[0])},${r6(c[1])}|${r6(e.radius)}${t}`); }
+      else { const c = P(e.center); out.push(`ARC|${e.layer}|${r6(c[0])},${r6(c[1])}|${r6(e.radius)}|${ang(e.start)}|${ang(e.end)}${t}`); }
     }
-  });
+  }
   return out;
 }
 function firmaDxf(e) {
-  const capa = g(e, 8);
-  if (e.tipo === 'LINE') return `LINE|${capa}|${r6(n(e, 10))},${r6(n(e, 20))}|${r6(n(e, 11))},${r6(n(e, 21))}`;
-  if (e.tipo === 'CIRCLE') return `CIRCLE|${capa}|${r6(n(e, 10))},${r6(n(e, 20))}|${r6(n(e, 40))}`;
-  if (e.tipo === 'ARC') return `ARC|${capa}|${r6(n(e, 10))},${r6(n(e, 20))}|${r6(n(e, 40))}|${ang(n(e, 50))}|${ang(n(e, 51))}`;
+  const capa = g(e, 8); const t = trazaDxf(e);
+  if (e.tipo === 'LINE') return `LINE|${capa}|${r6(n(e, 10))},${r6(n(e, 20))}|${r6(n(e, 11))},${r6(n(e, 21))}${t}`;
+  if (e.tipo === 'CIRCLE') return `CIRCLE|${capa}|${r6(n(e, 10))},${r6(n(e, 20))}|${r6(n(e, 40))}${t}`;
+  if (e.tipo === 'ARC') return `ARC|${capa}|${r6(n(e, 10))},${r6(n(e, 20))}|${r6(n(e, 40))}|${ang(n(e, 50))}|${ang(n(e, 51))}${t}`;
   return null;
 }
 const multiset = (xs) => xs.reduce((m, x) => m.set(x, (m.get(x) || 0) + 1), new Map());
@@ -61,9 +69,14 @@ export function verificarDxfContraModelo(dxf, composition) {
   // 2) Cotas: una DIMENSION por cota del modelo; valor físico = distancia dibujada × DIMLFAC.
   const dims = ents.filter((e) => e.tipo === 'DIMENSION'); const nDims = model.views.reduce((t, v) => t + v.dimensions.length, 0);
   if (dims.length !== nDims) problemas.push(`cotas nativas ${dims.length} ≠ cotas del modelo ${nDims}`);
-  let k = 0;
+  let k = 0; const T = transformador(model);
+  const cerca = (e, cx, cy, p) => Math.abs(n(e, cx) - p[0]) <= TOL && Math.abs(n(e, cy) - p[1]) <= TOL;
   model.views.forEach((v) => v.dimensions.forEach((d) => {
-    const e = dims[k++]; if (!e) return;
+    const e = dims[k++]; if (!e) return; const P = T.get(v.id);
+    // Anclajes: cada cota se asocia a su vista/orden y sus puntos de definición deben ser los del modelo transformados.
+    if (d.kind === 'linear' && (!cerca(e, 13, 23, P(d.a)) || !cerca(e, 14, 24, P(d.b)))) problemas.push(`cota ${v.id}/${d.id ?? k}: anclajes (${n(e, 13)}, ${n(e, 23)})–(${n(e, 14)}, ${n(e, 24)}) ≠ modelo ${P(d.a)}–${P(d.b)}`);
+    if (d.kind === 'radial' && !cerca(e, 10, 20, P(d.center))) problemas.push(`cota radial ${v.id}/${d.id ?? k}: centro (${n(e, 10)}, ${n(e, 20)}) ≠ modelo ${P(d.center)}`);
+    if (d.kind === 'radial') { const a = (d.angle * Math.PI) / 180; const c = P(d.center); const tip = [c[0] + d.radius * Math.cos(a), c[1] + d.radius * Math.sin(a)]; if (!cerca(e, 15, 25, tip)) problemas.push(`cota radial ${v.id}/${d.id ?? k}: punto en el arco ≠ modelo`); }
     const lfacIdx = e.codigos.findIndex(([c, x]) => c === 1070 && Number(x) === 144); const lfac = lfacIdx >= 0 ? Number(e.codigos[lfacIdx + 1][1]) : 1;
     if (d.kind === 'linear') {
       const geom = Math.hypot(n(e, 14) - n(e, 13), n(e, 24) - n(e, 23));

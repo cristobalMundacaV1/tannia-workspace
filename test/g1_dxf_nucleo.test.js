@@ -77,3 +77,16 @@ test('mutaciones deliberadas (escala, entidad, cota, tipo de línea, duplicado, 
   const comoArco = dc.replace('\n0\nCIRCLE\n', '\n0\nARC\n').replace('\n40\n0.4\n', '\n40\n0.4\n100\nAcDbArc\n50\n0\n51\n360\n'); assert.notEqual(comoArco, dc);
   assert.equal(verificarDxfContraModelo(comoArco, cs).ok, false, 'no detectó el círculo como ARC');
 });
+
+test('revisión #33 ítems 2 y 3: XDATA de identidad alterada y cota trasladada completa (mismo vector) son detectadas', () => {
+  const c = tunel(); const dxf = buildDrawingDxf(c); assert.equal(verificarDxfContraModelo(dxf, c).ok, true);
+  const i = dxf.indexOf('\nENTITIES\n'); const ent = dxf.slice(i);
+  const refAlterada = dxf.slice(0, i) + ent.replace(/\n1000\nref=([^\n]+)/, (_, r) => `\n1000\nref=${r}X`); assert.notEqual(refAlterada, dxf);
+  assert.equal(verificarDxfContraModelo(refAlterada, c).ok, false, 'ref alterado con geometría idéntica');
+  const rolAlterado = dxf.slice(0, i) + ent.replace(/\n1000\nrol=([^\n]+)/, '\n1000\nrol=otro'); assert.equal(verificarDxfContraModelo(rolAlterado, c).ok, false, 'rol alterado');
+  const sinTraza = dxf.slice(0, i) + ent.replace(/\n1001\nTANNIA_TRACE(\n1000\n[^\n]+)+/, ''); assert.equal(verificarDxfContraModelo(sinTraza, c).ok, false, 'traza eliminada');
+  // Traslación conjunta de ambos anclajes (13/23 y 14/24) + 0,5 m: la distancia se conserva, pero los puntos ya no son los del modelo.
+  const trasl = dxf.slice(0, i) + ent.replace(/(\nDIMENSION\n(?:[^\n]*\n)*?13\n)([-\d.]+)(\n23\n)([-\d.]+)(\n33\n[-\d.]+\n14\n)([-\d.]+)(\n24\n)([-\d.]+)/, (_, a, x1, b, y1, m, x2, d, y2) => `${a}${Number(x1) + 0.5}${b}${Number(y1) + 0.5}${m}${Number(x2) + 0.5}${d}${Number(y2) + 0.5}`);
+  assert.notEqual(trasl, dxf, 'la mutación de anclajes aplicó');
+  const r = verificarDxfContraModelo(trasl, c); assert.equal(r.ok, false); assert.ok(r.problemas.some((p) => /anclajes/.test(p)), r.problemas.join(' | '));
+});

@@ -23,16 +23,19 @@ const base = (L = 6, H = 2.4, extra = {}) => ({
 });
 
 test('muro con vanos: área neta medida = L·H − 0,9·2,0 − 1,2·1,0 (oráculo a mano) y conteo de vanos', () => {
-  const m = modeloDesdeEspecificacion(base()); const t = m.quantities.find((q) => q.id === 'total-Muro M1');
+  const m = modeloDesdeEspecificacion(base()); const t = m.quantity_totals.find((q) => q.id === 'total-Muro M1');
   assert.ok(Math.abs(t.valor - (6 * 2.4 - 0.9 * 2.0 - 1.2 * 1.0)) < 1e-9, String(t.valor)); assert.equal(t.unidad, 'm2');
   assert.match(m.quantities.find((q) => q.id === 'vano-p').formula, /^DESCUENTO/);
   assert.equal(m.quantities.find((q) => q.id === 'vanos').valor, 2);
-  assert.ok(m.quantities.every((q) => /MEDIDA/.test(q.naturaleza) && /TW-MED\/1/.test(q.metodo)));
+  assert.ok(m.quantities.every((q) => /MEDIDA/.test(q.naturaleza) && /TW-MED\/1/.test(q.metodo) && q.fila === 'detalle'));
+  // Ítem 5 de la revisión: el detalle y los totales están SEPARADOS; sumar el detalle de una partida reproduce su total.
+  assert.ok(!m.quantities.some((q) => q.fila === 'total') && m.quantity_totals.every((q) => q.fila === 'total'));
+  assert.ok(Math.abs(m.quantities.filter((q) => q.partida === 'Muro M1').reduce((a, q) => a + q.valor, 0) - t.valor) < 1e-12);
 });
 
 test('cambio geométrico (L 6 → 6,35 m) cambia la cantidad y la huella del modelo', () => {
   const a = modeloDesdeEspecificacion(base()); const b = modeloDesdeEspecificacion(base(6.35));
-  const t = (m) => m.quantities.find((q) => q.id === 'total-Muro M1').valor;
+  const t = (m) => m.quantity_totals.find((q) => q.id === 'total-Muro M1').valor;
   assert.ok(Math.abs(t(b) - t(a) - 0.35 * 2.4) < 1e-9); assert.notEqual(digest(a), digest(b));
 });
 
@@ -49,4 +52,36 @@ test('cantidad declarada: exige origen y queda rotulada como NO medida desde el 
   const m = modeloDesdeEspecificacion(base(6, 2.4, { cantidades_declaradas: [{ partida: 'Excavación', cantidad: 12, unidad: 'm3', origen: 'EETT del mandante, partida 2.1' }] }));
   const d = m.quantities.find((q) => q.partida === 'Excavación'); assert.equal(d.metodo, 'DECLARADA'); assert.match(d.naturaleza, /no medida desde el plano.*EETT/);
   assert.equal(code(() => modeloDesdeEspecificacion(base(6, 2.4, { cantidades_declaradas: [{ partida: 'Muro M1', cantidad: 1, unidad: 'm2', origen: 'x' }] }))), 'ORIGEN_MEZCLADO');
+});
+
+// ---- Regresiones de la revisión independiente de PR #33 ----
+const conElemento = (mediciones) => base(6, 2.4, {
+  vistas: [
+    { id: 'planta', titulo: 'Planta', tipo: 'planta', escala: 50, elementos: [{ id: 'muro', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 0], ancho: 6, alto: 0.2 }] },
+    { id: 'elev', titulo: 'Elevación', tipo: 'elevacion', escala: 50, elementos: [{ id: 'muro', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 0], ancho: 6, alto: 2.4 }] },
+  ],
+  laminas: [{ id: '01', titulo: 'Planta', vistas: ['planta'] }, { id: '02', titulo: 'Elevación', vistas: ['elev'] }],
+  elementos_fisicos: [{ id: 'M1', tipo: 'muro', fuentes: ['elev/muro'], representaciones: ['planta/muro'] }], mediciones,
+});
+
+test('ítem 1: el mismo muro dibujado en planta y elevación no se mide dos veces (identidad física y rol fuente)', () => {
+  assert.equal(code(() => modeloDesdeEspecificacion(conElemento([{ id: 'a', partida: 'Muro', metodo: 'area', fuentes: ['elev/muro'] }, { id: 'b', partida: 'Muro', metodo: 'area', fuentes: ['planta/muro'] }]))), 'MEDICION_NO_AUTORIZADA');
+  const dos = conElemento([{ id: 'a', partida: 'Muro', metodo: 'area', fuentes: ['elev/muro'] }]);
+  dos.elementos_fisicos = [{ id: 'M1', tipo: 'muro', fuentes: ['elev/muro', 'planta/muro'] }];
+  dos.mediciones = [{ id: 'a', partida: 'Muro', metodo: 'area', fuentes: ['elev/muro'] }, { id: 'b', partida: 'Muro', metodo: 'area', fuentes: ['planta/muro'] }];
+  assert.equal(code(() => modeloDesdeEspecificacion(dos)), 'MEDICION_DUPLICADA');
+  dos.mediciones = [{ id: 'a', partida: 'Muro', metodo: 'area', fuentes: ['elev/muro', 'planta/muro'] }];
+  assert.equal(code(() => modeloDesdeEspecificacion(dos)), 'MEDICION_DUPLICADA', 'una sola medición tampoco puede sumar dos vistas del mismo elemento');
+  const ok = modeloDesdeEspecificacion(conElemento([{ id: 'a', partida: 'Muro', metodo: 'area', fuentes: ['elev/muro'] }]));
+  assert.ok(Math.abs(ok.quantities[0].valor - 6 * 2.4) < 1e-12);
+});
+
+test('ítem 4: contornos autointersectantes, con retroceso, degenerados o con vértices repetidos no son superficie física', () => {
+  const poli = (puntos) => base(6, 2.4, { vistas: [{ id: 'v', titulo: 'V', tipo: 'planta', escala: 50, elementos: [{ id: 'p', tipo: 'polilinea', capa: 'MUROS', puntos, cerrada: true }] }], laminas: [{ id: '01', titulo: 'V', vistas: ['v'] }], mediciones: [{ id: 'a', metodo: 'area', fuentes: ['v/p'] }] });
+  assert.equal(code(() => modeloDesdeEspecificacion(poli([[0, 0], [4, 4], [4, 0], [0, 4]]))), 'CONTORNO_NO_SIMPLE', 'pajarita (Gauss daría 0 pero también caso general)');
+  assert.equal(code(() => modeloDesdeEspecificacion(poli([[0, 0], [6, 0], [6, 3], [2, -1], [0, 3]]))), 'CONTORNO_NO_SIMPLE', 'autointersección con área de Gauss positiva');
+  assert.equal(code(() => modeloDesdeEspecificacion(poli([[0, 0], [4, 0], [2, 0], [2, 3]]))), 'CONTORNO_NO_SIMPLE', 'retroceso colineal');
+  assert.equal(code(() => modeloDesdeEspecificacion(poli([[0, 0], [4, 0], [4, 3], [4, 0], [0, 3]]))), 'CONTORNO_NO_SIMPLE', 'vértice repetido');
+  assert.equal(code(() => modeloDesdeEspecificacion(poli([[0, 0], [2, 0], [4, 0]]))), 'CONTORNO_NO_SIMPLE', 'sin superficie');
+  const L = modeloDesdeEspecificacion(poli([[0, 0], [4, 0], [4, 1], [1, 1], [1, 3], [0, 3]])); assert.ok(Math.abs(L.quantities[0].valor - (4 * 1 + 1 * 2)) < 1e-12, 'polígono en L (no convexo, simple): área a mano');
 });

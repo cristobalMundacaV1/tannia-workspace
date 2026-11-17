@@ -41,6 +41,17 @@ Por eso, el CI aprobaba dos configuraciones, y ninguna era la que se distribuye.
 
 **Contrato de sección del túnel (G5):** `generar_tunel` solo dibuja una bóveda semicircular (radio = ancho/2) sobre hastiales verticales, con revestimiento de 0,06 o 0,08 m. La descripción de la herramienta y el procedimiento «Desarrollar un proyecto completo» lo dicen ahora de forma explícita. El asistente no debe ofrecer formas que la herramienta rechaza, y debe preguntar la altura de hastial y la fortificación cuando no están en los antecedentes.
 
+## 2b. Correcciones tras la revisión independiente de PR #33 (SHA `20a6566`)
+
+| Ítem | Corrección | Prueba |
+|---|---|---|
+| 1. Doble conteo entre vistas | `elementos_fisicos[].representaciones` declara las vistas que dibujan el mismo elemento. Una representación no se mide (`MEDICION_NO_AUTORIZADA`), y un elemento físico se mide una sola vez por partida y método (`MEDICION_DUPLICADA`), aunque tenga fuentes en varias vistas | `test/g3_cantidades_geometria.test.js` |
+| 2. Trazabilidad XDATA | La firma de cada entidad incluye `elemento/vista/rol/ref` de `TANNIA_TRACE`. Un ref o rol alterado, o una traza eliminada, con geometría idéntica, falla | `test/g1_dxf_nucleo.test.js` |
+| 3. Anclajes de cota | Los puntos 13/23 y 14/24 (lineal) y 10/20 y 15/25 (radial) se comparan con los del modelo transformados, por vista y orden. Una traslación conjunta que conserva la distancia falla | idem |
+| 4. Topología | El área exige un polígono simple: ≥ 3 vértices distintos, sin autointersección (`geo/geom.js::autoIntersecta`), sin retrocesos colineales y con superficie no nula (`CONTORNO_NO_SIMPLE`). Hay casos adversariales y un oráculo de polígono en L | `test/g3_cantidades_geometria.test.js` |
+| 5. Detalle frente a total | `model.quantities` contiene solo el detalle (`fila: detalle`). Los totales van en `model.quantity_totals` (`fila: total`) y en un CSV aparte (`cantidades-totales.csv`). Es la condición previa para conectar partidas y APU (PL-09, que sigue PENDIENTE) | idem |
+| 6. G2 | Sin cambios: sigue **PENDIENTE** de AutoCAD 2027 real | — |
+
 ## 3. Arquitectura y contratos
 
 - **Modelo canónico único:** `tw.drawing/1` (`src/drawing/model.js`, `especificacion.js`). El PDF (`pdf.js`), el DXF (`dxf.js`) y las cantidades leen las mismas entidades.
