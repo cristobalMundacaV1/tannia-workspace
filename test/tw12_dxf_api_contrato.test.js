@@ -145,8 +145,7 @@ test('el script mide VALORES de XDATA y los envía a Node (ref, elemento, vista,
 });
 
 test('puerta de fidelidad EXHAUSTIVA antes de SaveAs: layouts, viewports (centro/escala/bloqueo/región), cotas, textos, XDATA por valores', async () => {
-  const home = tmpHome('TW12 fid ñ '); const sb = new Sandbox(home); createProject(sb, 'Piloto'); const root = sb.projectRoot('Piloto');
-  const rel = '03 Trabajo/copia.dxf'; fs.writeFileSync(path.join(root, rel), dxf); const c0 = compose(tunnelModel({})); const dwgRel = '03 Trabajo/CAD/out.dwg'; fs.mkdirSync(path.join(root, '03 Trabajo', 'CAD'), { recursive: true });
+  const c0 = compose(tunnelModel({})); const dwgRel = '03 Trabajo/CAD/out.dwg'; const rel = '03 Trabajo/copia.dxf';
   const perdidas = {
     layout_perdido: (m) => { m.layouts.pop(); }, viewport_perdido: (m) => { m.layouts[2].viewports.pop(); },
     viewport_desplazado: (m) => { m.layouts[2].viewports[0].centro_papel[0] += 5; }, viewport_escala: (m) => { m.layouts[2].viewports[0].escala = 10; },
@@ -156,6 +155,8 @@ test('puerta de fidelidad EXHAUSTIVA antes de SaveAs: layouts, viewports (centro
     entidades_perdidas: (m) => { m.entidades_modelo -= 2; }, capa_perdida: (m) => { delete m.por_capa.EJE; },
   };
   for (const [nombre, mutar] of Object.entries(perdidas)) {
+    // entorno limpio por caso: una importación incompleta deja una marca persistente que bloquea la siguiente
+    const home = tmpHome('TW12 fid ñ '); const sb = new Sandbox(home); createProject(sb, 'Piloto'); const root = sb.projectRoot('Piloto'); fs.writeFileSync(path.join(root, rel), dxf); fs.mkdirSync(path.join(root, '03 Trabajo', 'CAD'), { recursive: true });
     const llamadas = []; const c = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async (script, input) => { llamadas.push(input.dwg ? 'SaveAs' : 'importar'); return JSON.stringify({ ok: true, data: input.dwg ? {} : dataImportado(dxf, { mutar }) }); } });
     await assert.rejects(c.guardarLaminas('Piloto', { dxf: rel, dwg: dwgRel, operacion: `fid-${nombre}`, composition: c0 }), (e) => e.code === 'IMPORTACION_DXF_INCOMPLETA' && e.detalle.issues.length > 0, nombre);
     assert.deepEqual(llamadas, ['importar'], `${nombre}: SaveAs nunca se despacha`); assert.ok(!fs.existsSync(path.join(root, dwgRel)));

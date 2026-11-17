@@ -124,9 +124,12 @@ test('CAD-OPEN-01 exportar_dwg: guardado negativo (solo lectura / documento aisl
     textos: m => { m.layouts[0].textos = m.layouts[0].textos.slice(1); }, entidades: m => { m.entidades_modelo -= 1; },
   };
   for (const [nombre, mutar] of Object.entries(perdidas)) {
-    let guardados = 0; const c = cad(e.sb, async (script, input) => { if (input.dwg) { guardados++; return JSON.stringify({ ok: true, data: {} }); } return JSON.stringify({ ok: true, data: dataImportado(e.dxf, { mutar }) }); });
-    await assert.rejects(c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: `perdida-${nombre}`, composition: c0 }), err => err.code === 'IMPORTACION_DXF_INCOMPLETA' && err.detalle.issues.length > 0, nombre);
-    assert.equal(guardados, 0, `${nombre}: no se guardó`); assert.ok(!fs.existsSync(path.join(e.root, dwgRel)));
+    // Un entorno limpio por caso: una importación incompleta deja una marca persistente que bloquea la siguiente (CAD-OPEN-02)
+    const f = entorno(); fs.mkdirSync(path.join(f.root, '03 Trabajo', 'CAD'), { recursive: true });
+    let guardados = 0; const c = cad(f.sb, async (script, input) => { if (input.dwg) { guardados++; return JSON.stringify({ ok: true, data: {} }); } return JSON.stringify({ ok: true, data: dataImportado(f.dxf, { mutar }) }); });
+    await assert.rejects(c.guardarLaminas('Piloto', { dxf: f.rel, dwg: dwgRel, operacion: `perdida-${nombre}`, composition: c0 }), err => err.code === 'IMPORTACION_DXF_INCOMPLETA' && err.detalle.issues.length > 0 && !!err.detalle.estado_parcial_registrado, nombre);
+    assert.equal(guardados, 0, `${nombre}: no se guardó`); assert.ok(!fs.existsSync(path.join(f.root, dwgRel)));
+    assert.equal(c.marcas('Piloto').filter((m) => m.tipo === 'importacion' && !m.resuelta).length, 1, `${nombre}: el documento aislado incompleto queda registrado`);
   }
   const s = SCRIPTS.laminas_a_dwg; assert.ok(s.indexOf('DOCUMENTO_SOLO_LECTURA') < s.indexOf('SaveAs')); assert.ok(s.indexOf('LocalizarAislado $in.nombre_aislado') < s.indexOf('SaveAs'));
 });

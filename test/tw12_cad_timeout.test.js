@@ -70,10 +70,10 @@ test('importación tardía/incompleta: tras el timeout se reconcilia; NO se repi
   assert.deepEqual(log, ['importar', 'reconciliar']); log.length = 0;
   const pend = () => fs.readdirSync(path.join(e.root, '03 Trabajo', 'CAD', 'operaciones')).filter(f => f.endsWith('.pendiente.json'));
   assert.equal(pend().length, 1, 'marca pendiente persistente');
-  await assert.rejects(c.abrirCopia('Piloto', e.rel), x => x.code === 'OPERACION_PENDIENTE_INCIERTA' && x.detalle.estado_incierto === true);
+  await assert.rejects(c.abrirCopia('Piloto', e.rel), x => x.code === 'IMPORTACION_PENDIENTE_SIN_RECONCILIAR' && x.detalle.estado_incierto === true);
   assert.deepEqual(log, ['reconciliar'], 'solo reconcilia: ninguna importación ni Documents.Open'); log.length = 0;
   estado = 'limpio'; const ok = await c.abrirCopia('Piloto', e.rel);
-  assert.deepEqual(log, ['reconciliar', 'importar'], 'con estado limpio comprobado, una única importación explícita'); assert.equal(ok.aislado, true); assert.equal(pend().length, 0);
+  assert.deepEqual(log, ['reconciliar', 'importar'], 'con estado limpio comprobado, una única importación explícita'); assert.equal(ok.aislado, true); assert.equal(pend().length, 1, 'la marca histórica NO se borra'); assert.equal(c.marcas('Piloto')[0].resuelta, true, 'queda resuelta por una entrada de solo-adición');
 });
 
 test('estado incierto no verificable: mientras no se pueda reconciliar no se inicia ninguna importación', async () => {
@@ -85,7 +85,7 @@ test('estado incierto no verificable: mientras no se pueda reconciliar no se ini
   } });
   await assert.rejects(c.abrirCopia('Piloto', e.rel), x => x.code === 'AUTOCAD_ERROR' && x.detalle.reconciliacion.estado === 'no_verificable' && /no se pudo verificar/.test(x.message));
   assert.deepEqual(log, ['importar', 'reconciliar']); log.length = 0;
-  await assert.rejects(c.abrirCopia('Piloto', e.rel), x => x.code === 'OPERACION_PENDIENTE_INCIERTA');
+  await assert.rejects(c.abrirCopia('Piloto', e.rel), x => x.code === 'IMPORTACION_PENDIENTE_SIN_RECONCILIAR');
   assert.deepEqual(log, ['reconciliar']);
 });
 

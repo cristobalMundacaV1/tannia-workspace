@@ -26,6 +26,8 @@ import { verificarContencion } from '../project/store.js';
 const sha256Text = (t) => crypto.createHash('sha256').update(t).digest('hex');
 import { CadOperations } from './operations.js';
 import { expectedLayouts, verifyLayouts } from '../drawing/layouts_check.js';
+import { listarMarcas, escribirMarca, resolverMarca, dirOperaciones } from './marcas.js';
+const real0 = (p) => p;
 import { viaApertura, esperadoDesdeDxf, verificarImportacion } from './dxf_api.js';
 
 const digestRuta = (p) => sha256Text(String(p).toLowerCase()).slice(0, 16);
@@ -146,7 +148,7 @@ if ($in.ruta_esperada) {
   if ($null -eq $doc) { Emit @{ ok = $false; etapa = 'documento_activo'; codigo = 'SIN_DOCUMENTO' }; exit 0 }
 }
 `;
-export const SIN_DOCUMENTO_PREVIO = new Set(['construir_3d', 'abrir_copia', 'dxf_a_dwg', 'estado', 'laminas_a_dwg', 'reconciliar_apertura', 'importar_dxf_aislado', 'reconciliar_importacion']);
+export const SIN_DOCUMENTO_PREVIO = new Set(['construir_3d', 'abrir_copia', 'dxf_a_dwg', 'estado', 'laminas_a_dwg', 'reconciliar_apertura', 'importar_dxf_aislado', 'reconciliar_importacion', 'inspeccionar_aislado']);
 // Solo las lecturas pueden reintentarse si AutoCAD está ocupado: una escritura repetida podría duplicar o alterar el dibujo.
 export const REINTENTO_SEGURO = new Set(['estado', 'listar', 'medir', 'leer_lote', 'enumerar', 'resumen']);
 
@@ -174,7 +176,7 @@ function ListaDocs() {
 `;
 
 // Vía DXF: SOLO la incluye importar_dxf_aislado (Documents.Add + Import + medición). Ningún otro script crea ni importa documentos.
-const PS_IMPORT = `function MedirDocumento($d) {
+const PS_MEDIR = `function MedirDocumento($d) {
   Progreso 'medir_importado' 'inicio'
   $global:Etapa = 'medir_importado'
   $porCapa = @{}; $dims = 0; $traza = 0; $ilegibles = 0; $trazas = @(); $n = [int]$d.ModelSpace.Count
@@ -210,7 +212,9 @@ const PS_IMPORT = `function MedirDocumento($d) {
   Progreso 'medir_importado' 'ok' @{ entidades = $n; layouts = @($layouts).Count }
   return @{ entidades_modelo = $n; por_capa = $porCapa; dimensiones = $dims; con_traza = $traza; trazas = $trazas; layouts = $layouts; ilegibles = $ilegibles }
 }
-function ImportarDxfAislado($rutaDxf, $insunits) {
+`;
+// Importación (SOLO la incluye importar_dxf_aislado): Documents.Add + Import. Todo fallo posterior a la creación del documento deja diagnóstico en $global:Diag.
+const PS_IMPORT = `function ImportarDxfAislado($rutaDxf, $insunits) {
   if ([string]$rutaDxf -notmatch '(?i)[.]dxf$') { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'TIPO_NO_PERMITIDO'; diag = @{ motivo = 'Se esperaba un .dxf' } }; exit 0 }
   Preflight
   if ($null -eq (RutaSegura $rutaDxf)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'RUTA_NO_VALIDA' }; exit 0 }
@@ -224,13 +228,20 @@ function ImportarDxfAislado($rutaDxf, $insunits) {
   $nuevo = $acad.Documents.Add()
   $global:Diag.documento_aislado = [string]$nuevo.Name
   Progreso 'crear_documento_aislado' 'ok' @{ nombre = [string]$nuevo.Name }
-  if ($null -ne $insunits) { $nuevo.SetVariable('INSUNITS', [int]$insunits) }
-  $global:Etapa = 'importar_dxf'
-  Progreso 'importar_dxf' 'inicio'
-  $pt = New-Object 'double[]' 3; $pt[0] = 0.0; $pt[1] = 0.0; $pt[2] = 0.0
-  $nuevo.Import([string]$rutaDxf, $pt, 1.0)
-  Progreso 'importar_dxf' 'ok'
-  $m = MedirDocumento $nuevo
+  try {
+    if ($null -ne $insunits) { Progreso 'configurar_unidades' 'inicio'; $nuevo.SetVariable('INSUNITS', [int]$insunits); Progreso 'configurar_unidades' 'ok' }
+    $global:Etapa = 'importar_dxf'
+    Progreso 'importar_dxf' 'inicio'
+    $pt = New-Object 'double[]' 3; $pt[0] = 0.0; $pt[1] = 0.0; $pt[2] = 0.0
+    $nuevo.Import([string]$rutaDxf, $pt, 1.0)
+    Progreso 'importar_dxf' 'ok'
+    $m = MedirDocumento $nuevo
+  } catch {
+    # Estado parcial: el documento propio queda abierto (NO se cierra ni se guarda). Se deja constancia de qué contiene para diagnosticar.
+    $errP = $_; $global:Diag.error_import = [string](Inner $errP.Exception).Message
+    try { $global:Diag.entidades_aislado_tras_error = [int]$nuevo.ModelSpace.Count } catch { $global:Diag.entidades_aislado_tras_error = $null }
+    throw $errP
+  }
   return @{ doc = $nuevo; medido = $m; previos = $previos }
 }
 `;
@@ -301,7 +312,7 @@ $d.SaveAs([string]$in.dwg, 64)
 Progreso 'guardar_como_dwg' 'ok'
 if ($d.FullName -ine $in.dwg -or -not $d.Saved) { Emit @{ ok = $false; codigo = 'GUARDADO_FALLO' }; exit 0 }
 Emit @{ ok = $true; data = @{ ruta = [string]$d.FullName; guardado = [bool]$d.Saved } }`,
-  importar_dxf_aislado: `${PS_ABRIR}${PS_IMPORT}
+  importar_dxf_aislado: `${PS_ABRIR}${PS_MEDIR}${PS_IMPORT}
 if ($in.sha256_dxf -and (Get-FileHash -LiteralPath $in.dxf -Algorithm SHA256).Hash -ine $in.sha256_dxf) { Emit @{ ok = $false; codigo = 'DOCUMENTO_MODIFICADO_EXTERNAMENTE' }; exit 0 }
 $r = ImportarDxfAislado $in.dxf $in.insunits; $d = $r.doc
 Emit @{ ok = $true; data = @{ documento = [string]$d.Name; nombre_aislado = [string]$d.Name; ruta = [string]$d.FullName; guardado = [bool]$d.Saved; aislado = $true; via = 'Documents.Add+Import'; documentos_abiertos = [int]$acad.Documents.Count; sin_guardar = $global:Diag.sin_guardar; medido = $r.medido } }`,
@@ -356,6 +367,17 @@ for ($i = 0; $i -lt $n; $i++) {
 }
 Progreso 'enumerar_documentos' 'ok' @{ abiertos = $n; ya_abierto = $abierto }
 Emit @{ ok = $true; data = @{ abierto = $abierto; documentos = $docs; ocupacion = $oc; procesos = @(Get-Process -Name acad -ErrorAction SilentlyContinue | ForEach-Object { $_.Id }) } }`,
+  // INSPECCIÓN DE SOLO LECTURA del documento aislado (por nombre, sin ruta en disco, único): entidades, layouts, viewports. No activa, no modifica, no guarda, no cierra.
+  inspeccionar_aislado: `${PS_ABRIR}${PS_MEDIR}
+$global:Diag = @{}
+Progreso 'inspeccion_aislado' 'inicio'
+$oc = Ocupacion; $docs = ListaDocs; $hallados = @(); $n0 = [int]$acad.Documents.Count
+for ($i0 = 0; $i0 -lt $n0; $i0++) { try { $c0 = $acad.Documents.Item($i0); if ([string]$c0.Name -ceq [string]$in.nombre -and [string]$c0.FullName -ceq [string]$c0.Name) { $hallados += $c0 } } catch { } }
+if ($hallados.Count -ne 1) { Progreso 'inspeccion_aislado' 'ok' @{ encontrado = $false; coincidencias = $hallados.Count }; Emit @{ ok = $true; data = @{ encontrado = $false; coincidencias = $hallados.Count; documentos = $docs; ocupacion = $oc; procesos = @(Get-Process -Name acad -ErrorAction SilentlyContinue | ForEach-Object { $_.Id }) } }; exit 0 }
+$d0 = $hallados[0]; $m0 = MedirDocumento $d0; $tipos = @{}; $nt = [int]$d0.ModelSpace.Count; if ($nt -gt 2000) { $nt = 2000 }
+for ($k0 = 0; $k0 -lt $nt; $k0++) { try { $t0 = [string]$d0.ModelSpace.Item($k0).ObjectName; if ($tipos.ContainsKey($t0)) { $tipos[$t0] = $tipos[$t0] + 1 } else { $tipos[$t0] = 1 } } catch { } }
+Progreso 'inspeccion_aislado' 'ok' @{ encontrado = $true; entidades = $m0.entidades_modelo }
+Emit @{ ok = $true; data = @{ encontrado = $true; documento = [string]$d0.Name; guardado = [bool]$d0.Saved; solo_lectura_inspeccion = $true; medido = $m0; tipos_entidad = $tipos; documentos = $docs; ocupacion = $oc; procesos = @(Get-Process -Name acad -ErrorAction SilentlyContinue | ForEach-Object { $_.Id }) } }`,
   // Solo lectura: ¿sigue presente el documento aislado (sin ruta en disco) y cuántas entidades tiene? No abre, no importa, no guarda.
   reconciliar_importacion: `${PS_ABRIR}
 $global:Diag = @{}
@@ -911,11 +933,8 @@ export class AutoCadCom {
     return { ...r, verificacion_importacion: verificacion, importacion_conforme: verificacion.ok, advertencia: verificacion.ok ? undefined : 'El DXF se importó en un documento NUEVO pero la medición no coincide con el DXF; revise verificacion_importacion. No se guardó ningún DWG.' };
   }
 
-  // --- Importación de DXF en documento aislado (Documents.Add + Import) con el mismo manejo de estado incierto que la apertura ---
-  #marcaImportacion(project, real) {
-    const root = this.sandbox.projectRoot(project); const dir = path.join(root, FOLDERS.trabajo, 'CAD', 'operaciones');
-    return { root, dir, file: path.join(dir, `importacion-${digestRuta(real)}.pendiente.json`) };
-  }
+  // --- Importación de DXF en documento aislado (Documents.Add + Import) con registro persistente de ejecuciones parciales (CAD-OPEN-02) ---
+  #dirOps(project) { const root = this.sandbox.projectRoot(project); const dir = dirOperaciones(root); verificarContencion(root, dir); return { root, dir }; }
   async #reconciliarImportacion(nombre) {
     try {
       const r = await this.#exec('reconciliar_importacion', { nombre_aislado: nombre || null, estricto: true }, { timeoutMs: 15000 });
@@ -925,69 +944,126 @@ export class AutoCadCom {
       return { estado: 'no_verificable', codigo: e?.code || 'ERROR', etapa: e?.detalle?.etapa ?? null, estado_incierto: e?.detalle?.estado_incierto === true };
     }
   }
-  /** UNA importación (Add + Import + medición). Tras tiempo agotado NO se repite: se reconcilia y se informa; nunca se cierra ni se guarda nada automáticamente. */
-  async #importarReconciliando(project, real, { insunits = null, sha256 = null } = {}) {
-    const m = this.#marcaImportacion(project, real); verificarContencion(m.root, m.dir);
-    if (fs.existsSync(m.file)) {
-      let previo = {}; try { previo = JSON.parse(fs.readFileSync(m.file, 'utf8')); } catch { /* marca ilegible: se trata como incierta */ }
-      const rec = await this.#reconciliarImportacion(previo.nombre_aislado);
-      if (rec.estado === 'aislado_ausente' && rec.listo_para_operar) fs.rmSync(m.file, { force: true }); // estado real comprobado y limpio: esta llamada explícita puede importar
-      else throw new UserError('OPERACION_PENDIENTE_INCIERTA', 'Una importación anterior terminó con tiempo agotado y su estado real no está limpio o no se pudo confirmar. No se inicia otra operación sobre AutoCAD.', 'En AutoCAD cierre SIN guardar el documento nuevo sin ruta que dejó la importación (y cualquier cuadro/comando abierto) y repita; primero se reconcilia el estado.', { etapa: 'reconciliar_importacion', estado_incierto: true, reconciliacion: rec });
+  /** Marcas de importación sin resolver. Si el documento aislado ya no existe y AutoCAD está libre, se resuelve (solo-adición); si no, bloquea. */
+  async #bloqueoPorImportacionPendiente(project) {
+    const { dir } = this.#dirOps(project); const pend = listarMarcas(dir).filter((m) => m.tipo === 'importacion' && !m.resuelta);
+    if (!pend.length) return;
+    const detalles = [];
+    for (const m of pend) {
+      const rec = await this.#reconciliarImportacion(m.nombre_aislado);
+      if (rec.estado === 'aislado_ausente' && rec.listo_para_operar && m.nombre_aislado) { resolverMarca(m, { estado: rec.estado, ocupacion: rec.ocupacion }); continue; }
+      detalles.push({ marca: m.id, nombre_aislado: m.nombre_aislado, tipo_fallo: m.tipo_fallo, ultima_etapa: m.ultima_etapa, codigo: m.codigo, reconciliacion: rec });
     }
+    if (detalles.length) throw new UserError('IMPORTACION_PENDIENTE_SIN_RECONCILIAR', `Hay ${detalles.length} importación(es) parcial(es) sin reconciliar${detalles[0].nombre_aislado ? ` (documento aislado «${detalles[0].nombre_aislado}»)` : ''}. No se inicia otra importación para no duplicar documentos ni operaciones.`, 'Inspeccione el documento aislado con tannia_planos (acción inspeccionar_aislado, solo lectura), ciérrelo usted en AutoCAD SIN guardar y luego ejecute la acción reconciliar_marcas. Tannia nunca cierra ni guarda documentos por usted.', { etapa: 'reconciliar_importacion', estado_incierto: true, marcas_pendientes: detalles.length, marcas: detalles.slice(0, 5) });
+  }
+  /** Registra la ejecución PARCIAL: se creó un documento aislado y luego ocurrió una excepción (de cualquier tipo, no solo tiempo agotado). */
+  #registrarParcial(project, real, e, { tipo_fallo, extra = {} } = {}) {
+    const { dir } = this.#dirOps(project); const det = e?.detalle || {};
+    const creada = (det.etapas || []).find((x) => x.etapa === 'crear_documento_aislado' && x.estado === 'ok');
+    const nombre = det.diagnostico?.documento_aislado ?? (typeof creada?.dato?.nombre === 'string' ? creada.dato.nombre : null) ?? extra.nombre_aislado ?? null;
+    if (!nombre && !creada) return null; // el documento nunca llegó a crearse: no hay estado parcial
+    const file = escribirMarca(dir, 'importacion', digestRuta(real), { operacion: 'importar_dxf_aislado', tipo_fallo, ultima_etapa: det.etapa ?? extra.ultima_etapa ?? null, codigo: e?.code ?? null, hresult: det.hresult ?? null, tipo_excepcion: det.tipo_excepcion ?? null, mensaje: det.mensaje ?? null, nombre_aislado: nombre, entidades_aislado_tras_error: det.diagnostico?.entidades_aislado_tras_error ?? null, error_import: det.diagnostico?.error_import ?? null, etapas: (det.etapas || []).slice(-12), estado: 'incierto', ...extra });
+    return path.basename(file);
+  }
+  /** UNA importación (Add + Import + medición). Nunca se repite ni se cierra/guarda nada: ante cualquier excepción posterior a la creación del documento se deja constancia persistente. */
+  async #importarReconciliando(project, real, { insunits = null, sha256 = null } = {}) {
+    await this.#bloqueoPorImportacionPendiente(project);
     try { return await this.#exec('importar_dxf_aislado', { dxf: real, insunits, sha256_dxf: sha256, estricto: true }, { timeoutMs: 120000 }); }
     catch (e) {
-      if (!(e instanceof UserError) || e.code !== 'AUTOCAD_ERROR' || e.detalle?.clase !== 'tiempo_agotado') throw e;
-      const creada = (e.detalle?.etapas || []).find((x) => x.etapa === 'crear_documento_aislado' && x.estado === 'ok');
-      const nombre = typeof creada?.dato?.nombre === 'string' ? creada.dato.nombre : null;
-      fs.mkdirSync(m.dir, { recursive: true });
-      fs.writeFileSync(m.file, JSON.stringify({ schema: 'tw.cad.importacion_pendiente/1', operacion: 'importar_dxf_aislado', ultima_etapa: e.detalle.etapa, nombre_aislado: nombre, estado: 'incierto', creada: new Date().toISOString() }));
+      if (!(e instanceof UserError)) throw e;
+      const timeout = e.code === 'AUTOCAD_ERROR' && e.detalle?.clase === 'tiempo_agotado';
+      const marca = this.#registrarParcial(project, real, e, { tipo_fallo: timeout ? 'tiempo_agotado' : 'excepcion' });
+      if (!marca) throw e; // fallo previo a la creación del documento aislado (p. ej. AutoCAD ocupado): nada parcial que registrar
+      const nombre = e.detalle?.diagnostico?.documento_aislado ?? ((e.detalle?.etapas || []).find((x) => x.etapa === 'crear_documento_aislado' && x.estado === 'ok')?.dato?.nombre ?? null);
       const rec = await this.#reconciliarImportacion(nombre);
-      e.detalle = { ...e.detalle, reconciliacion: rec, importacion_incierta: true };
-      e.message = `${e.message} Reconciliación: ${rec.estado === 'aislado_presente' ? 'el documento aislado figura abierto (importación posiblemente incompleta, NO verificada; ciérrelo sin guardar)' : rec.estado === 'aislado_ausente' ? 'no figura documento aislado' : 'no se pudo verificar el estado'}.`;
+      e.detalle = { ...e.detalle, reconciliacion: rec, importacion_incierta: true, estado_parcial_registrado: marca };
+      e.message = `${e.message} Reconciliación: ${rec.estado === 'aislado_presente' ? `el documento aislado figura abierto${rec.entidades_aislado !== null ? ` con ${rec.entidades_aislado} entidades` : ''} (importación NO verificada; ciérrelo sin guardar)` : rec.estado === 'aislado_ausente' ? 'no figura documento aislado' : 'no se pudo verificar el estado'}.`;
       throw e;
     }
   }
-  /** Importa y aplica la PUERTA: si la medición no coincide con el DXF no se guarda ningún DWG. */
+  /** Importa y aplica la PUERTA: si la medición no coincide con el DXF no se guarda ningún DWG. El documento aislado queda abierto: se registra como pendiente. */
   async #importarVerificado(project, input, { layoutsEsperados = null, insunits = 6, sha256 = null } = {}) {
     const esperado = esperadoDesdeDxf(fs.readFileSync(input, 'utf8'));
     const r = await this.#importarReconciliando(project, input, { insunits, sha256 });
     const verificacion = verificarImportacion(esperado, r.medido, { layoutsEsperados });
-    if (!verificacion.ok) throw new UserError('IMPORTACION_DXF_INCOMPLETA', 'AutoCAD importó el DXF en un documento nuevo, pero el resultado no conserva todo lo esperado (layouts, viewports, cotas, textos o XDATA). No se guardó ningún DWG.', 'Cierre sin guardar el documento nuevo; la vía Import no es suficiente para este DXF y requiere otra decisión (ver docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md).', { etapa: 'verificar_importacion', documento_aislado: r.nombre_aislado ?? null, issues: verificacion.issues.slice(0, 40), resumen: verificacion.resumen });
+    if (!verificacion.ok) {
+      const err = new UserError('IMPORTACION_DXF_INCOMPLETA', 'AutoCAD importó el DXF en un documento nuevo, pero el resultado no conserva todo lo esperado (layouts, viewports, cotas, textos o XDATA). No se guardó ningún DWG.', 'Cierre sin guardar el documento nuevo; la vía Import no es suficiente para este DXF y requiere otra decisión (ver docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md).', { etapa: 'verificar_importacion', issues: verificacion.issues.slice(0, 40), issues_total: verificacion.issues.length, resumen: verificacion.resumen, documento_aislado: r.nombre_aislado ?? null });
+      const marca = this.#registrarParcial(project, real0(input), err, { tipo_fallo: 'fidelidad', extra: { nombre_aislado: r.nombre_aislado ?? null, ultima_etapa: 'verificar_importacion', issues_total: verificacion.issues.length } });
+      if (marca) err.detalle = { ...err.detalle, estado_parcial_registrado: marca };
+      throw err;
+    }
     return { ...r, verificacion_importacion: verificacion };
   }
 
-  // --- Apertura con reconciliación (CAD-OPEN-01, 2.ª incidencia): tras un tiempo agotado NO se repite Documents.Open ---
-  #marcaPendiente(project, real) {
-    const root = this.sandbox.projectRoot(project); const dir = path.join(root, FOLDERS.trabajo, 'CAD', 'operaciones');
-    const file = path.join(dir, `apertura-${digestRuta(real)}.pendiente.json`); return { root, dir, file };
+  // --- Inspección y reconciliación (CAD-OPEN-02): solo lectura; nunca cierra, guarda ni borra ---
+  async inspeccionarAislado(project, { documento = null } = {}) {
+    const { dir } = this.#dirOps(project); const pend = listarMarcas(dir).filter((m) => m.tipo === 'importacion' && !m.resuelta && m.nombre_aislado);
+    const nombre = documento ?? (pend.length === 1 ? pend[0].nombre_aislado : null);
+    if (!nombre || !/^[\w .()-]{1,60}$/.test(nombre)) throw new UserError('FALTA_DOCUMENTO', 'Indique el nombre del documento aislado (p. ej. Dibujo2) o deje una única marca pendiente.', 'Use tannia_planos acción marcas para ver las marcas.', { marcas_pendientes: pend.length });
+    const r = await this.#exec('inspeccionar_aislado', { nombre, estricto: true }, { timeoutMs: 20000 });
+    const m = r.medido || {};
+    return { solo_lectura: true, documento: nombre, encontrado: r.encontrado === true, coincidencias: r.coincidencias ?? null, guardado: r.guardado ?? null,
+      entidades_modelo: m.entidades_modelo ?? null, por_capa: sanitizarDiag(m.por_capa ?? null), tipos_entidad: sanitizarDiag(r.tipos_entidad ?? null), cotas: m.dimensiones ?? null, trazas_xdata: m.con_traza ?? null, ilegibles: m.ilegibles ?? null,
+      layouts: Array.isArray(m.layouts) ? m.layouts.map((l) => ({ nombre: sanitizar(String(l.nombre), 40), viewports: Array.isArray(l.viewports) ? l.viewports.length : 0, textos: Array.isArray(l.textos) ? l.textos.length : 0 })) : null,
+      documentos: sanitizarDiag(r.documentos || []), ocupacion: sanitizarDiag(r.ocupacion || {}), procesos_acad: Array.isArray(r.procesos) ? r.procesos.length : null };
   }
+  /** Lista las marcas (importación y apertura) con su estado. No modifica nada. */
+  marcas(project) {
+    const { dir } = this.#dirOps(project);
+    return listarMarcas(dir).map(({ file, ...m }) => m);
+  }
+  /**
+   * Reconciliación SEGURA: solo lectura por COM. Una marca se resuelve (entrada de solo-adición; la marca original se conserva) cuando el estado real lo permite:
+   * importación → el documento aislado ya no existe y AutoCAD está libre; apertura (marcas históricas) → con `archivo`: el archivo figura abierto o AutoCAD está libre sin él.
+   */
+  async reconciliarMarcas(project, { archivo = null } = {}) {
+    const { dir } = this.#dirOps(project); const salida = [];
+    for (const m of listarMarcas(dir).filter((x) => !x.resuelta)) {
+      if (m.tipo === 'importacion') {
+        const rec = await this.#reconciliarImportacion(m.nombre_aislado);
+        const ok = rec.estado === 'aislado_ausente' && rec.listo_para_operar && !!m.nombre_aislado;
+        if (ok) resolverMarca(m, { estado: rec.estado, ocupacion: rec.ocupacion });
+        salida.push({ marca: m.id, tipo: 'importacion', resuelta: ok, estado: rec.estado, entidades_aislado: rec.entidades_aislado ?? null, que_hacer: ok ? null : rec.estado === 'aislado_presente' ? 'Cierre usted el documento aislado en AutoCAD SIN guardar y repita.' : 'No se pudo verificar: libere AutoCAD (diálogos/comandos) y repita.' });
+      } else if (archivo) {
+        const { abs } = this.sandbox.resolve(project, archivo); const real = this.#assertWorkCopy(project, abs);
+        if (digestRuta(real) !== m.hash) { salida.push({ marca: m.id, tipo: 'apertura', resuelta: false, estado: 'otra_ruta' }); continue; }
+        const rec = await this.#reconciliar(real); const ok = rec.estado === 'abierto' || (rec.estado === 'no_abierto' && rec.listo_para_operar);
+        if (ok) resolverMarca(m, { estado: rec.estado, ocupacion: rec.ocupacion });
+        salida.push({ marca: m.id, tipo: 'apertura', resuelta: ok, estado: rec.estado });
+      } else salida.push({ marca: m.id, tipo: 'apertura', resuelta: false, estado: 'requiere_archivo', que_hacer: 'Indique el archivo (ruta de la copia) para reconciliar esta marca histórica.' });
+    }
+    return { solo_lectura: true, marcas_originales_conservadas: true, resultados: salida, pendientes_restantes: listarMarcas(dir).filter((x) => !x.resuelta).length };
+  }
+
+  // --- Apertura con reconciliación (CAD-OPEN-01, 2.ª incidencia): tras un tiempo agotado NO se repite Documents.Open ---
+  #marcaPendiente(project, real) { const { root, dir } = this.#dirOps(project); return { root, dir, hash: digestRuta(real) }; }
   async #reconciliar(real) {
     try {
       const r = await this.#exec('reconciliar_apertura', { ruta: real, estricto: true }, { timeoutMs: 15000 });
       const oc = r.ocupacion || {}; const libre = oc.quiescente === true && (oc.cmdactive === 0 || oc.cmdactive === null || oc.cmdactive === undefined);
       return { estado: r.abierto ? 'abierto' : 'no_abierto', listo_para_operar: libre, ocupacion: sanitizarDiag(oc), documentos: sanitizarDiag(r.documentos || []), procesos_acad: Array.isArray(r.procesos) ? r.procesos.length : null };
     } catch (e) {
-      return { estado: 'no_verificable', codigo: e?.code || 'ERROR', etapa: e?.detalle?.etapa ?? null, estado_incierto: e?.detalle?.estado_incierto === true };
+      return { estado: 'no_verificable', codigo: e?.code || 'ERROR', etapa: e?.detalle?.estado ?? e?.detalle?.etapa ?? null, estado_incierto: e?.detalle?.estado_incierto === true };
     }
   }
   async #abrirReconciliando(project, real) {
-    const m = this.#marcaPendiente(project, real); verificarContencion(m.root, m.dir);
+    const m = this.#marcaPendiente(project, real);
     const tardia = (rec) => ({ documento: path.basename(real), ruta: real, reutilizado: false, apertura_tardia: true, reconciliado: true, advertencia: 'AutoCAD abrió el archivo después del tiempo de espera; se verificó por COM y no se repitió la apertura.', reconciliacion: rec });
-    if (fs.existsSync(m.file)) {
+    const pend = listarMarcas(m.dir).filter((x) => x.tipo === 'apertura' && x.hash === m.hash && !x.resuelta);
+    if (pend.length) {
       const rec = await this.#reconciliar(real);
-      if (rec.estado === 'abierto') { fs.rmSync(m.file, { force: true }); return tardia(rec); }
-      if (rec.estado === 'no_abierto' && rec.listo_para_operar) fs.rmSync(m.file, { force: true }); // estado real comprobado y limpio: esta llamada explícita puede abrir
+      if (rec.estado === 'abierto') { for (const x of pend) resolverMarca(x, { estado: rec.estado, ocupacion: rec.ocupacion }); return tardia(rec); }
+      if (rec.estado === 'no_abierto' && rec.listo_para_operar) { for (const x of pend) resolverMarca(x, { estado: rec.estado, ocupacion: rec.ocupacion }); } // estado real comprobado y limpio; la marca se CONSERVA
       else throw new UserError('OPERACION_PENDIENTE_INCIERTA', 'Una apertura anterior terminó con tiempo agotado y su estado real no se pudo confirmar. No se inicia otra operación sobre AutoCAD.', 'Cierre cuadros de diálogo o comandos en AutoCAD y repita; primero se reconcilia el estado.', { etapa: 'reconciliar_apertura', estado_incierto: true, reconciliacion: rec });
     }
     try { return await this.#exec('abrir_copia', { ruta: real, estricto: true }); }
     catch (e) {
       if (!(e instanceof UserError) || e.code !== 'AUTOCAD_ERROR' || e.detalle?.clase !== 'tiempo_agotado') throw e;
-      fs.mkdirSync(m.dir, { recursive: true });
-      fs.writeFileSync(m.file, JSON.stringify({ schema: 'tw.cad.apertura_pendiente/1', operacion: 'abrir_copia', ultima_etapa: e.detalle.etapa, estado: 'incierto', creada: new Date().toISOString() }));
+      const marca = escribirMarca(m.dir, 'apertura', m.hash, { operacion: 'abrir_copia', ultima_etapa: e.detalle.etapa, tipo_fallo: 'tiempo_agotado', estado: 'incierto' });
       const rec = await this.#reconciliar(real);
-      if (rec.estado === 'abierto') { fs.rmSync(m.file, { force: true }); return tardia(rec); }
+      if (rec.estado === 'abierto') { const [x] = listarMarcas(m.dir).filter((y) => y.file === marca); if (x) resolverMarca(x, { estado: rec.estado, ocupacion: rec.ocupacion }); return tardia(rec); }
       const txt = rec.estado === 'no_abierto' ? 'el archivo NO figura abierto' : 'no se pudo verificar el estado (AutoCAD sigue sin responder)';
-      e.detalle = { ...e.detalle, reconciliacion: rec }; e.message = `${e.message} Reconciliación: ${txt}.`; throw e;
+      e.detalle = { ...e.detalle, reconciliacion: rec, estado_parcial_registrado: path.basename(marca) }; e.message = `${e.message} Reconciliación: ${txt}.`; throw e;
     }
   }
 

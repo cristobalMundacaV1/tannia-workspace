@@ -86,3 +86,11 @@ Alternativas documentadas, **sin implementar y sin validar** (requieren decisió
 - Pruebas automáticas sobre un runner simulado: acreditan el **contrato** (qué API recibe cada tipo de archivo, qué se mide, cuándo se guarda y cuándo no), no el comportamiento de AutoCAD 2027.
 - El entorno de desarrollo no tenía red: se ejecutaron las pruebas que no dependen de `zod`, `exceljs`, `esbuild`, del SDK de MCP ni de `pdfkit`, con stubs locales mínimos (no versionados) para poder cargar los módulos de generación del DXF. **No se reconstruyó el `.mcpb`** ni se calculó un hash nuevo: el paquete con esta corrección está pendiente de construirse en un entorno completo.
 - La ejecución real en AutoCAD 2027 y el piloto de la persona usuaria siguen **NO VERIFICADOS**.
+
+## Anexo CAD-OPEN-02 — si la importación falla o queda parcial
+1. Copie el **texto visible completo** del error (etapa, HRESULT, excepción, mensaje, últimas etapas, documento aislado y entidades).
+2. `tannia_planos` acción `marcas`: lista las ejecuciones parciales/inciertas (las marcas nunca se borran).
+3. `tannia_planos` acción `inspeccionar_aislado` (solo lectura): entidades, layouts, viewports y nombre del documento aislado.
+4. Cierre usted `Dibujo2` (o el documento aislado indicado) **sin guardar**; Tannia no cierra ni guarda documentos.
+5. `tannia_planos` acción `reconciliar_marcas` (con `archivo` para las marcas históricas `apertura-*`): resuelve por adición, conservando las marcas.
+6. Solo entonces repita **una** importación. Mientras haya un documento aislado pendiente, Tannia la bloqueará.
