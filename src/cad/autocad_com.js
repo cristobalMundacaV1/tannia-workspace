@@ -177,14 +177,22 @@ function ListaDocs() {
 const PS_IMPORT = `function MedirDocumento($d) {
   Progreso 'medir_importado' 'inicio'
   $global:Etapa = 'medir_importado'
-  $porCapa = @{}; $dims = 0; $traza = 0; $ilegibles = 0; $n = [int]$d.ModelSpace.Count
+  $porCapa = @{}; $dims = 0; $traza = 0; $ilegibles = 0; $trazas = @(); $n = [int]$d.ModelSpace.Count
   for ($i = 0; $i -lt $n; $i++) {
     try {
       $e = $d.ModelSpace.Item($i); $c = [string]$e.Layer
       if ($porCapa.ContainsKey($c)) { $porCapa[$c] = $porCapa[$c] + 1 } else { $porCapa[$c] = 1 }
       if ([string]$e.ObjectName -like 'AcDb*Dimension*') { $dims++ }
       $t = $null; $v = $null
-      try { $e.GetXData('TANNIA_TRACE', [ref]$t, [ref]$v); if ($null -ne $t -and @($t).Count -gt 0) { $traza++ } } catch { }
+      # XDATA con VALORES: cada traza (ref, elemento, vista, rol, capa, tipo) se devuelve para compararla con el DXF original.
+      try {
+        $e.GetXData('TANNIA_TRACE', [ref]$t, [ref]$v)
+        if ($null -ne $t -and @($t).Count -gt 0) {
+          $traza++; $tc = @($t); $vc = @($v); $o = @{}
+          for ($k = 0; $k -lt $tc.Count; $k++) { if ([int]$tc[$k] -eq 1000) { $sx = [string]$vc[$k]; $ix = $sx.IndexOf('='); if ($ix -gt 0) { $o[$sx.Substring(0, $ix)] = $sx.Substring($ix + 1) } } }
+          $trazas += @{ ref = $o['ref']; elemento = $o['elemento']; vista = $o['vista']; rol = $o['rol']; capa = $c; tipo = [string]$e.ObjectName }
+        }
+      } catch { }
     } catch { $ilegibles++ }
   }
   $layouts = @()
@@ -200,7 +208,7 @@ const PS_IMPORT = `function MedirDocumento($d) {
     $layouts += @{ nombre = [string]$layout.Name; viewports = $views; textos = $textos }
   }
   Progreso 'medir_importado' 'ok' @{ entidades = $n; layouts = @($layouts).Count }
-  return @{ entidades_modelo = $n; por_capa = $porCapa; dimensiones = $dims; con_traza = $traza; layouts = $layouts; ilegibles = $ilegibles }
+  return @{ entidades_modelo = $n; por_capa = $porCapa; dimensiones = $dims; con_traza = $traza; trazas = $trazas; layouts = $layouts; ilegibles = $ilegibles }
 }
 function ImportarDxfAislado($rutaDxf, $insunits) {
   if ([string]$rutaDxf -notmatch '(?i)[.]dxf$') { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'TIPO_NO_PERMITIDO'; diag = @{ motivo = 'Se esperaba un .dxf' } }; exit 0 }

@@ -5,7 +5,7 @@ import { esperadoDesdeDxf } from '../src/cad/dxf_api.js';
 export function medidoDesdeDxf(dxf, mutar = null) {
   const e = esperadoDesdeDxf(dxf);
   const m = {
-    entidades_modelo: e.entidades_modelo, por_capa: { ...e.por_capa }, dimensiones: e.dimensiones, con_traza: e.con_traza, ilegibles: 0,
+    entidades_modelo: e.entidades_modelo, por_capa: { ...e.por_capa }, dimensiones: e.dimensiones, con_traza: e.con_traza, trazas: e.trazas.map((t) => ({ ...t })), ilegibles: 0,
     layouts: e.layouts.map((l) => ({ nombre: l.nombre, viewports: l.viewports.map((v) => ({ ...v })), textos: [...(e.textos_papel[l.nombre] || [])] })),
   };
   if (mutar) mutar(m);

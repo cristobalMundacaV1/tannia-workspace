@@ -92,3 +92,72 @@ test('contrato de datos entre scripts y Node: el script mide las claves que la p
   for (const k of ['entidades_modelo', 'por_capa', 'dimensiones', 'con_traza', 'layouts', 'ilegibles', 'textos', 'viewports', 'centro_papel', 'centro_vista', 'escala', 'bloqueado']) assert.ok(s.includes(k), `el script no emite «${k}»`);
   assert.match(s, /GetXData\('TANNIA_TRACE'/); assert.match(s, /AcDb\*Dimension\*/);
 });
+
+// ---- Observación del revisor (PR #21): XDATA por VALORES, no solo por conteo ----
+test('XDATA: el esperado trae las 20 trazas con elemento, vista, rol, ref, capa y tipo; las refs son únicas', () => {
+  const e = esperadoDesdeDxf(dxf);
+  assert.equal(e.trazas.length, 20); assert.equal(e.con_traza, 20); assert.equal(new Set(e.trazas.map((t) => t.ref)).size, 20, 'ref inequívoca');
+  const eje = e.trazas.find((t) => t.ref === 'planta/axis'); assert.deepEqual(eje, { ref: 'planta/axis', elemento: 'eje', vista: 'planta', rol: 'fuente', capa: 'EJE', tipo: 'AcDbLine' });
+  assert.deepEqual(e.trazas.find((t) => t.ref === 'perfil/grade'), { ref: 'perfil/grade', elemento: 'eje', vista: 'perfil', rol: 'representacion', capa: 'EJE', tipo: 'AcDbLine' });
+  assert.equal(e.trazas.find((t) => t.ref === 'seccion/outer-arch').tipo, 'AcDbArc');
+  assert.ok(e.trazas.every((t) => t.ref && t.elemento && t.vista && ['fuente', 'representacion'].includes(t.rol)));
+});
+
+test('XDATA: con el MISMO número de registros, cualquier valor alterado, intercambiado o duplicado se detecta por ref', () => {
+  const e = esperadoDesdeDxf(dxf); const por = (m, ref) => m.trazas.find((t) => t.ref === ref);
+  const casos = {
+    xdata_traza_distinta_rol: (m) => { por(m, 'planta/axis').rol = 'representacion'; },
+    xdata_traza_distinta_elemento: (m) => { por(m, 'planta/axis').elemento = 'tunel-excavacion'; },
+    xdata_traza_distinta_vista: (m) => { por(m, 'perfil/grade').vista = 'planta'; },
+    xdata_traza_distinta_capa: (m) => { por(m, 'planta/axis').capa = 'OTRA'; },
+    xdata_traza_distinta_tipo: (m) => { por(m, 'seccion/outer-arch').tipo = 'AcDbLine'; },
+    xdata_traza_distinta_valor_vacio: (m) => { por(m, 'planta/axis').elemento = null; },
+  };
+  for (const [causa, mutar] of Object.entries(casos)) {
+    const m = medidoDesdeDxf(dxf, mutar); assert.equal(m.con_traza, 20, `${causa}: el conteo NO cambia`);
+    const r = verificarImportacion(e, m); assert.equal(r.ok, false, causa); assert.ok(r.issues.some((i) => i.issue === 'xdata_traza_distinta' && i.ref), causa); assert.ok(!r.issues.some((i) => i.issue === 'xdata_tannia_trace'), `${causa}: un conteo no lo habría visto`);
+  }
+  // refs intercambiadas entre dos entidades (mismo conteo, mismas refs en conjunto)
+  const swap = medidoDesdeDxf(dxf, (m) => { const a = por(m, 'planta/axis'); const b = por(m, 'perfil/grade'); [a.ref, b.ref] = [b.ref, a.ref]; });
+  assert.equal(verificarImportacion(e, swap).ok, false);
+  // una traza desaparece y otra se duplica: mismo conteo
+  const dup = medidoDesdeDxf(dxf, (m) => { const i = m.trazas.findIndex((t) => t.ref === 'perfil/grade'); m.trazas[i] = { ...por(m, 'planta/axis') }; });
+  const rd = verificarImportacion(e, dup); assert.equal(dup.con_traza, 20); assert.ok(rd.issues.some((i) => i.issue === 'xdata_traza_faltante' && i.ref === 'perfil/grade')); assert.ok(rd.issues.some((i) => i.issue === 'xdata_ref_duplicada_o_ausente'));
+  // traza inesperada (una entidad ajena con la app registrada)
+  const extra = medidoDesdeDxf(dxf, (m) => { m.trazas.push({ ref: 'x/ajena', elemento: 'e', vista: 'v', rol: 'fuente', capa: 'EJE', tipo: 'AcDbLine' }); m.con_traza = 21; });
+  assert.ok(verificarImportacion(e, extra).issues.some((i) => i.issue === 'xdata_traza_inesperada'));
+});
+
+test('XDATA: fail-closed si el script solo cuenta (sin valores); normalización NFC/espacios no genera falsos positivos', () => {
+  const e = esperadoDesdeDxf(dxf);
+  const soloConteo = medidoDesdeDxf(dxf, (m) => { delete m.trazas; });
+  const r = verificarImportacion(e, soloConteo); assert.equal(r.ok, false); assert.ok(r.issues.some((i) => i.issue === 'xdata_valores_no_medidos'));
+  const ruido = medidoDesdeDxf(dxf, (m) => { for (const t of m.trazas) { t.elemento = ` ${t.elemento} `; t.vista = t.vista.normalize('NFD'); } });
+  assert.deepEqual(verificarImportacion(e, ruido).issues, []);
+  // un DXF con XDATA acentuado (NFC vs NFD) se compara de forma equivalente
+  const e2 = esperadoDesdeDxf(dxf.replace('elemento=tunel-excavacion', 'elemento=túnel-excavación')); const m2 = medidoDesdeDxf(dxf.replace('elemento=tunel-excavacion', 'elemento=túnel-excavación'), (m) => { for (const t of m.trazas) t.elemento = t.elemento.normalize('NFD'); });
+  assert.deepEqual(verificarImportacion(e2, m2).issues, []);
+});
+
+test('el script mide VALORES de XDATA y los envía a Node (ref, elemento, vista, rol, capa, tipo)', () => {
+  const s = buildScript('importar_dxf_aislado');
+  assert.match(s, /trazas = @\(\)/); assert.match(s, /\$o\['ref'\]/); assert.match(s, /\$o\['elemento'\]/); assert.match(s, /\$o\['vista'\]/); assert.match(s, /\$o\['rol'\]/); assert.match(s, /tipo = \[string\]\$e\.ObjectName/); assert.match(s, /trazas = \$trazas/);
+});
+
+test('puerta de fidelidad EXHAUSTIVA antes de SaveAs: layouts, viewports (centro/escala/bloqueo/región), cotas, textos, XDATA por valores', async () => {
+  const home = tmpHome('TW12 fid ñ '); const sb = new Sandbox(home); createProject(sb, 'Piloto'); const root = sb.projectRoot('Piloto');
+  const rel = '03 Trabajo/copia.dxf'; fs.writeFileSync(path.join(root, rel), dxf); const c0 = compose(tunnelModel({})); const dwgRel = '03 Trabajo/CAD/out.dwg'; fs.mkdirSync(path.join(root, '03 Trabajo', 'CAD'), { recursive: true });
+  const perdidas = {
+    layout_perdido: (m) => { m.layouts.pop(); }, viewport_perdido: (m) => { m.layouts[2].viewports.pop(); },
+    viewport_desplazado: (m) => { m.layouts[2].viewports[0].centro_papel[0] += 5; }, viewport_escala: (m) => { m.layouts[2].viewports[0].escala = 10; },
+    viewport_sin_bloqueo: (m) => { m.layouts[2].viewports[0].bloqueado = false; }, viewport_region: (m) => { m.layouts[2].viewports[0].centro_vista[0] += 1; },
+    cota_perdida: (m) => { m.dimensiones -= 1; }, texto_perdido: (m) => { m.layouts[0].textos.pop(); },
+    xdata_perdida: (m) => { m.trazas.pop(); m.con_traza -= 1; }, xdata_valor: (m) => { m.trazas[0].rol = m.trazas[0].rol === 'fuente' ? 'representacion' : 'fuente'; },
+    entidades_perdidas: (m) => { m.entidades_modelo -= 2; }, capa_perdida: (m) => { delete m.por_capa.EJE; },
+  };
+  for (const [nombre, mutar] of Object.entries(perdidas)) {
+    const llamadas = []; const c = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async (script, input) => { llamadas.push(input.dwg ? 'SaveAs' : 'importar'); return JSON.stringify({ ok: true, data: input.dwg ? {} : dataImportado(dxf, { mutar }) }); } });
+    await assert.rejects(c.guardarLaminas('Piloto', { dxf: rel, dwg: dwgRel, operacion: `fid-${nombre}`, composition: c0 }), (e) => e.code === 'IMPORTACION_DXF_INCOMPLETA' && e.detalle.issues.length > 0, nombre);
+    assert.deepEqual(llamadas, ['importar'], `${nombre}: SaveAs nunca se despacha`); assert.ok(!fs.existsSync(path.join(root, dwgRel)));
+  }
+});

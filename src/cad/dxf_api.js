@@ -31,6 +31,10 @@ export function viaApertura(ruta) {
 // VERTEX/SEQEND/ATTRIB son subentidades de otra entidad: no son entidades independientes del espacio modelo
 const SUBENTIDADES = new Set(['VERTEX', 'SEQEND', 'ATTRIB']);
 const norm = (t) => String(t).replace(/\s+/g, ' ').trim();
+/** Valor normalizado de una traza: NFC y sin espacios sobrantes; `null` si no existe. */
+export const nt = (x) => (x === undefined || x === null ? null : String(x).normalize('NFC').trim());
+/** Nombre de clase ObjectName que AutoCAD COM informa para un tipo de entidad DXF (LINE → AcDbLine). */
+export const tipoAcDb = (t) => ({ LWPOLYLINE: 'AcDbPolyline', POLYLINE: 'AcDb2dPolyline', MTEXT: 'AcDbMText', TEXT: 'AcDbText', INSERT: 'AcDbBlockReference' }[t] || `AcDb${String(t).charAt(0)}${String(t).slice(1).toLowerCase()}`);
 
 /**
  * Estructura esperada, leída del PROPIO DXF (sin AutoCAD): entidades del espacio modelo por capa, cotas, entidades con XDATA
@@ -49,7 +53,14 @@ export function esperadoDesdeDxf(texto) {
   const enPapel = (e) => get(e, 67) === '1' || e.tipo === 'VIEWPORT';
   const modelo = ents.filter((e) => e.seccion === 'ENTITIES' && !enPapel(e));
   const porCapa = {}; for (const e of modelo) { const c = get(e, 8) ?? '0'; porCapa[c] = (porCapa[c] || 0) + 1; }
-  const conTraza = modelo.filter((e) => e.g.some(([k, v]) => k === 1001 && v === APP_TRAZA)).length;
+  // Trazas XDATA con sus VALORES (no solo cuántas hay): identidad inequívoca por `ref`, más elemento, vista, rol, capa y tipo de entidad.
+  const trazas = [];
+  for (const e of modelo) {
+    let dentro = false; const t = {};
+    for (const [k, v] of e.g) { if (k === 1001) dentro = v === APP_TRAZA; else if (dentro && k === 1000) { const i = v.indexOf('='); if (i > 0) t[v.slice(0, i)] = v.slice(i + 1); } }
+    if (e.g.some(([k, v]) => k === 1001 && v === APP_TRAZA)) trazas.push({ ref: nt(t.ref), elemento: nt(t.elemento), vista: nt(t.vista), rol: nt(t.rol), capa: nt(get(e, 8) ?? '0'), tipo: tipoAcDb(e.tipo) });
+  }
+  const conTraza = trazas.length;
   const dimensiones = modelo.filter((e) => e.tipo === 'DIMENSION').length;
   const textosPapel = {};
   for (const e of ents) {
@@ -58,7 +69,7 @@ export function esperadoDesdeDxf(texto) {
     (textosPapel[layout] ||= []).push(norm(dxfDecode(get(e, 1) ?? '')));
   }
   const layouts = viewportsFromDxf(String(texto));
-  return { entidades_modelo: modelo.length, por_capa: porCapa, dimensiones, con_traza: conTraza, layouts, textos_papel: textosPapel, viewports_total: layouts.reduce((n, l) => n + l.viewports.length, 0) };
+  return { entidades_modelo: modelo.length, por_capa: porCapa, dimensiones, con_traza: conTraza, trazas, layouts, textos_papel: textosPapel, viewports_total: layouts.reduce((n, l) => n + l.viewports.length, 0) };
 }
 
 const multiconjunto = (a) => { const m = new Map(); for (const x of a) m.set(x, (m.get(x) || 0) + 1); return m; };
@@ -80,6 +91,19 @@ export function verificarImportacion(esperado, medido, { layoutsEsperados = null
   }
   if (medido.dimensiones !== esperado.dimensiones) add('cotas', { esperado: esperado.dimensiones, medido: medido.dimensiones });
   if (medido.con_traza !== esperado.con_traza) add('xdata_tannia_trace', { esperado: esperado.con_traza, medido: medido.con_traza });
+  // XDATA: no basta con contar registros. Cada traza se compara por `ref` con sus valores normalizados.
+  if (!Array.isArray(medido.trazas)) { if (esperado.trazas.length) add('xdata_valores_no_medidos', { esperado: esperado.trazas.length }); }
+  else {
+    const mapa = (lista) => { const m = new Map(); const dup = []; for (const t of lista) { const k = nt(t?.ref); if (k === null) { dup.push(null); continue; } if (m.has(k)) dup.push(k); else m.set(k, t); } return { m, dup }; };
+    const E = mapa(esperado.trazas); const M = mapa(medido.trazas);
+    for (const d of new Set(M.dup)) add('xdata_ref_duplicada_o_ausente', { ref: d });
+    for (const [ref, e] of E.m) {
+      const t = M.m.get(ref); if (!t) { add('xdata_traza_faltante', { ref }); continue; }
+      const campos = ['elemento', 'vista', 'rol', 'capa', 'tipo'].filter((c) => nt(t[c]) !== e[c]);
+      if (campos.length) add('xdata_traza_distinta', { ref, campos, esperado: Object.fromEntries(campos.map((c) => [c, e[c]])), medido: Object.fromEntries(campos.map((c) => [c, nt(t[c])])) });
+    }
+    for (const ref of M.m.keys()) if (!E.m.has(ref)) add('xdata_traza_inesperada', { ref });
+  }
   const layouts = Array.isArray(medido.layouts) ? medido.layouts : [];
   const esperadosLayouts = layoutsEsperados ?? esperado.layouts.map((l) => ({ name: l.nombre, size: null, viewports: l.viewports }));
   if (layoutsEsperados) {
