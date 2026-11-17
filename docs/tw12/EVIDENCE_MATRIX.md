@@ -144,3 +144,26 @@ ZIP de entrega: 0f1c9a3bbba9febd90ac62e9df6d1b136600163b7a0f59e8d7c8675f75b91b35
 | DWG generado y validado en AutoCAD 2027 | **NO VERIFICADO** |
 | Paquete `.mcpb` con la corrección | **PENDIENTE** (sin red para construir; sin hash nuevo) |
 Procedimiento de prueba: `docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md`.
+
+## Cierre técnico PR #21 — candidato Windows para la prueba real (código `6551bda`)
+Sustituye la fila «Paquete `.mcpb` con la corrección: PENDIENTE» de la sección anterior. Este cierre no añade funcionalidad.
+
+**CI sobre el SHA exacto `6551bda474d2f2835015c630f5daa7e1ddf12088`** (PowerShell real en Windows, sin stubs de dependencias):
+| Ejecución | Ubuntu | Windows |
+|---|---|---|
+| push (run 44071811876) | success | success |
+| pull_request (run 44071819291) | success | success |
+Historial honesto de este PR: el SHA original `e136b66` falló en Windows (`tw09_windows_powershell`, `SESION_AMBIGUA`: `dxfADwg` ahora exige exactamente un proceso `acad` y el mock no lo tenía). Se corrigió **el mock** (proceso simulado solo con `TANNIA_TEST_ACAD_PROC`) y se adaptó esa prueba al contrato de importación aislada; la sesión estricta del producto no se relajó. PR #20 en `21b4ae9`: Ubuntu y Windows success.
+**Suite local con dependencias reales** (antes del último arreglo de pruebas): 455 pruebas, 438 pasan, 0 fallan, 17 omitidas (las de PowerShell real, que requieren Windows).
+
+**Observación del revisor (XDATA):** la puerta ya no cuenta registros `TANNIA_TRACE`. `esperadoDesdeDxf` extrae las 20 trazas con `ref`, `elemento`, `vista`, `rol`, `capa` y `tipo`; el script `MedirDocumento` lee los valores con `GetXData`; `verificarImportacion` compara por `ref` (valores normalizados NFC/espacios) y rechaza trazas faltantes, distintas (con los campos), duplicadas e inesperadas; si el script solo devolvió el conteo, falla cerrado (`xdata_valores_no_medidos`). Regresiones: mismo conteo con valores alterados, refs intercambiadas y una traza duplicada en lugar de otra.
+**Auditorías (automatizadas, simuladas):** (a) `Documents.Open` aparece solo en los scripts `abrir_copia` y `cerrar_reabrir`, ambos con guardia `.dwg`, y ningún otro código fuente lo llama; un `.dxf` despacha únicamente `importar_dxf_aislado`. (b) La importación se hace en un documento propio (`Documents.Add` + `Import`); el script no contiene `Activate`, `Close`, `Save`, `SaveAs`, `Delete` ni `SendCommand`, y `ActiveDocument` solo se lee (CMDACTIVE). El guardado localiza el documento aislado por nombre, sin ruta en disco y único, antes de `SaveAs`. (c) La puerta de fidelidad rechaza **antes de `SaveAs`** y sin guardar: layout perdido, viewport perdido, desplazado, de otra escala, sin bloqueo o de otra región, cota perdida, texto perdido, XDATA perdida o con valor distinto, entidades y capas perdidas (12 casos).
+
+**Paquete (INGENIERÍA-WINDOWS)** — `tannia-workspace-tw12-6551bda-INGENIERIA-WINDOWS-85herramientas.mcpb`:
+- SHA-256 del `.mcpb`: `1dfb1e985743b896cb9ad614e751d250409b4b5ce7ecbd9a55e02bd47e6a174b`; SHA-256 del contenido: `48614dc9b00cee012bb7b6cd920657c7eda65cd532028644b76c51a787b812a5`.
+- Manifiesto: `compatibility.platforms = ["win32"]`, 85 herramientas, `TANNIA_CIC=on` y `TANNIA_ENGINEERING=on`. Listado por el cliente MCP desde el bundle desempaquetado (initialize + 85 herramientas con esquemas).
+- Binario nativo: solo `@napi-rs/canvas-win32-x64-msvc` 0.1.100 (ejecutable PE, versión igual al lockfile, integridad sha512 verificada al construir).
+- **Correspondencia exacta con el código validado:** el árbol de la rama en `6551bda` no difiere del HEAD publicado; reconstruido de nuevo desde ese árbol, el contenido del paquete es idéntico archivo a archivo (`diff -r` vacío). El hash del `.mcpb` varía entre compilaciones por marcas de tiempo del ZIP; el hash del contenido es estable. Los commits posteriores a `6551bda` solo contienen esta documentación.
+- BASE (72 herramientas, sin planos TW-12): SHA-256 `6280d1e85a61464afd1ecb6741ae07e8b78a499b33ae2fe5c2886fac5b60d652`, contenido `9cf36b34be485d6c3c5c6f65dbe0fe739fce36ec46f0cac401d510d31fde8bcd`.
+
+**Pendiente (NO verificado; no se afirma que funcione):** Windows 11 + AutoCAD 2027 reales — que `Documents.Add` + `Import` conserve layouts, viewports, cotas, textos y XDATA (si no, la puerta devolverá `IMPORTACION_DXF_INCOMPLETA` sin guardar el DWG); que la importación ya no se bloquee y la causa real del tiempo agotado; DWG guardado y reabierto; instalación del `.mcpb` en Claude Desktop real; ejecución real del binario `skia.win32-x64.msvc.node` desde el paquete (el render PDF no se probó desde el paquete en Linux); revisión independiente y piloto. Procedimiento: `docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md`.
