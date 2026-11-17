@@ -98,7 +98,7 @@ test('TW12 trust: invalid pilot cannot reach any approval channel, no generic Me
   assert.equal(consent.canApprove, false); assert.ok(consent.blocked.length >= 2); assert.match(consent.publisher, /no informado/);
   const { sb } = environment(); let attempts = 0; const ah = new AprobacionHumana(sb, { dialogo: async () => { attempts++; return 'si'; } });
   assert.equal((await ah.decidir('Piloto', 'test', { consentimiento: consent, elicitar: async () => { attempts++; return { action: 'accept', content: { aprobar: true } }; } })).bloqueado, true); assert.equal(attempts, 0);
-  assert.ok(!CONSENT_WPF.includes('MessageBox')); assert.match(CONSENT_WPF, /IsCancel = \$true/); assert.match(CONSENT_WPF, /IsEnabled = \$false/); assert.match(CONSENT_WPF, /AutomationProperties/);
+  assert.ok(!CONSENT_WPF.includes('MessageBox')); assert.match(CONSENT_WPF, /IsCancel = \$false/); assert.match(CONSENT_WPF, /Key -eq 'Escape'.*'cerrado'/); assert.match(CONSENT_WPF, /IsEnabled = \$false/); assert.match(CONSENT_WPF, /AutomationProperties/);
 });
 
 test('TW12 consent deduplicates simultaneous windows; close/decline never falls back to approve', async () => {

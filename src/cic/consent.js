@@ -51,15 +51,21 @@ $review = New-Object Windows.Controls.CheckBox
 $review.Content = $(if ($data.reviewLabel) { [string]$data.reviewLabel } else { 'He revisado el extracto y comprendo las consecuencias.' }); $review.Margin = '0,16,0,12'
 $null = $footer.Children.Add($review)
 $buttons = New-Object Windows.Controls.StackPanel; $buttons.Orientation = 'Horizontal'; $buttons.HorizontalAlignment = 'Right'
-$no = New-Object Windows.Controls.Button; $no.Content = $(if ($data.rejectLabel) { [string]$data.rejectLabel } else { '_No autorizar' }); $no.Padding = '18,10'; $no.Margin = '0,0,12,0'; $no.IsCancel = $true; $no.IsDefault = $true
+$no = New-Object Windows.Controls.Button; $no.Content = $(if ($data.rejectLabel) { [string]$data.rejectLabel } else { '_No autorizar' }); $no.Padding = '18,10'; $no.Margin = '0,0,12,0'; $no.IsCancel = $false; $no.IsDefault = $false
 $yes = New-Object Windows.Controls.Button; $yes.Content = $(if ($data.approveLabel) { [string]$data.approveLabel } else { '_Autorizar uso limitado' }); $yes.Padding = '18,10'; $yes.Background = '#163A5F'; $yes.Foreground = 'White'; $yes.IsEnabled = $false
 $null = $buttons.Children.Add($no); $null = $buttons.Children.Add($yes); $null = $footer.Children.Add($buttons)
 $scroll = New-Object Windows.Controls.ScrollViewer; $scroll.VerticalScrollBarVisibility = 'Auto'; $null = $root.Children.Add($scroll)
 $body = New-Object Windows.Controls.StackPanel; $scroll.Content = $body
 function Label($heading, $value) {
   $h = New-Object Windows.Controls.TextBlock; $h.Text = $heading; $h.FontWeight = 'SemiBold'; $h.Foreground = '#163A5F'; $h.Margin = '0,12,0,4'; $null = $body.Children.Add($h)
-  $t = New-Object Windows.Controls.TextBox; $t.Text = [string]$value; $t.IsReadOnly = $true; $t.TextWrapping = 'Wrap'; $t.BorderThickness = '0'; $t.Background = '#F5F7FA'; $t.Foreground = '#17212B'; $t.Padding = '2'; [Windows.Automation.AutomationProperties]::SetName($t, $heading); $null = $body.Children.Add($t)
+  $t = New-Object Windows.Controls.TextBox; $t.Text = [string]$value; $t.IsReadOnly = $true; $t.IsTabStop = $false; $t.TextWrapping = 'Wrap'; $t.BorderThickness = '0'; $t.Background = '#F5F7FA'; $t.Foreground = '#17212B'; $t.Padding = '2'; [Windows.Automation.AutomationProperties]::SetName($t, $heading); $null = $body.Children.Add($t)
 }
+if ($data.layout -eq 'autorizacion') {
+  # Plantilla de autorización profesional: lo esencial arriba (qué se confirma y qué significa); metadatos solo en el detalle.
+  $h1 = New-Object Windows.Controls.TextBlock; $h1.Text = [string]$data.action; $h1.FontSize = 19; $h1.FontWeight = 'SemiBold'; $h1.Foreground = '#163A5F'; $h1.TextWrapping = 'Wrap'; $h1.Margin = '0,0,0,8'; [Windows.Automation.AutomationProperties]::SetAutomationId($h1, 'txtTitulo'); $null = $body.Children.Add($h1)
+  $t0 = New-Object Windows.Controls.TextBox; $t0.Text = [string]$data.excerpt; $t0.IsReadOnly = $true; $t0.IsTabStop = $false; $t0.TextWrapping = 'Wrap'; $t0.BorderThickness = '0'; $t0.Background = '#F5F7FA'; $t0.FontSize = 14; [Windows.Automation.AutomationProperties]::SetName($t0, 'Qué va a confirmar'); [Windows.Automation.AutomationProperties]::SetAutomationId($t0, 'txtResumen'); $null = $body.Children.Add($t0)
+  Label 'Qué significa confirmar' $data.consequence
+} else {
 Label 'Acción solicitada' $data.action
 Label 'Proyecto y documento' ($data.project + ' / ' + $data.document)
 Label 'Procedencia' $data.origin
@@ -69,15 +75,20 @@ Label 'Qué está comprobado' $data.verification
 Label $(if ($data.excerptLabel) { [string]$data.excerptLabel } else { 'Extracto para revisar (contenido no confiable)' }) $data.excerpt
 Label 'Consecuencias de autorizar' $data.consequence
 Label 'Registrar, autorizar y verificar son decisiones diferentes' $data.distinction
+}
 if ($data.blocked.Count -gt 0) { Label 'No se puede autorizar todavía' ($data.blocked -join [Environment]::NewLine) }
-$details = New-Object Windows.Controls.Expander; $details.Header = 'Ver detalle técnico'; $details.Margin = '0,16,0,8'
-$technical = New-Object Windows.Controls.TextBox; $technical.Text = [string]$data.technical; $technical.IsReadOnly = $true; $technical.TextWrapping = 'Wrap'; $details.Content = $technical; $null = $body.Children.Add($details)
+$details = New-Object Windows.Controls.Expander; $details.Header = $(if ($data.layout -eq 'autorizacion') { 'Más información' } else { 'Ver detalle técnico' }); $details.Margin = '0,16,0,8'
+$technical = New-Object Windows.Controls.TextBox; $technical.Text = $(if ($data.layout -eq 'autorizacion') { 'Proyecto: ' + $data.project + [Environment]::NewLine + $data.verification + [Environment]::NewLine + $data.distinction + [Environment]::NewLine + $data.date } else { [string]$data.technical }); $technical.IsReadOnly = $true; $technical.TextWrapping = 'Wrap'; $details.Content = $technical; $null = $body.Children.Add($details)
+[Windows.Automation.AutomationProperties]::SetAutomationId($yes, 'btnAutorizar'); [Windows.Automation.AutomationProperties]::SetAutomationId($no, 'btnNoAutorizar'); [Windows.Automation.AutomationProperties]::SetAutomationId($review, 'chkRevisado'); [Windows.Automation.AutomationProperties]::SetAutomationId($scroll, 'scrollContenido')
+if ($data.scale -gt 0) { $root.LayoutTransform = New-Object Windows.Media.ScaleTransform([double]$data.scale, [double]$data.scale) }
 $review.Add_Checked({ $yes.IsEnabled = ($data.canApprove -eq $true) }); $review.Add_Unchecked({ $yes.IsEnabled = $false })
 $script:res = 'cerrado'
 $no.Add_Click({ $script:res = 'no'; $window.DialogResult = $false; $window.Close() })
 $yes.Add_Click({ if ($review.IsChecked -and $data.canApprove -eq $true) { $script:res = 'si'; $window.DialogResult = $true; $window.Close() } })
-$timer = New-Object Windows.Threading.DispatcherTimer; $timer.Interval = [TimeSpan]::FromSeconds(85)
+$timer = New-Object Windows.Threading.DispatcherTimer; $timer.Interval = [TimeSpan]::FromSeconds($(if ($data.timeoutS -gt 0) { [double]$data.timeoutS } else { 85 }))
 $timer.Add_Tick({ $timer.Stop(); $script:res = 'timeout'; $window.DialogResult = $false; $window.Close() })
+# Esc = cerrar SIN respuesta (no es un «No» explícito); Enter actúa solo sobre el botón con foco.
+$window.Add_PreviewKeyDown({ param($s, $e) if ($e.Key -eq 'Escape') { $script:res = 'cerrado'; $e.Handled = $true; $window.Close() } })
 $window.Add_ContentRendered({ $null = $no.Focus(); $timer.Start() })
 $window.Add_Closed({ $timer.Stop() })
 $null = $window.ShowDialog()

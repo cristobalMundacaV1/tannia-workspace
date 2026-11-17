@@ -24,7 +24,9 @@ export async function pedirAutorizacionHumana({ sandbox, server, proyecto, clave
     publisher: 'No aplica', date: new Date().toISOString().slice(0, 10), license: 'No aplica', verification: 'El servidor comprobó huellas, revisión vigente y bloqueos antes de mostrar esta ventana.',
     excerpt: resumen, excerptLabel: 'Qué está autorizando', consequence: consecuencia,
     distinction: 'Autorizar registra SU decisión profesional. No certifica cumplimiento normativo ni reemplaza la firma de un profesional responsable.',
-    canApprove: true, blocked: [], technical: '', approveLabel: etiquetaAprobar, rejectLabel: etiquetaRechazar, reviewLabel: etiquetaRevision,
+    canApprove: true, blocked: [], technical: '', layout: 'autorizacion',
+    // Solo para el ejecutor de pruebas de interfaz (variables de entorno del proceso, nunca argumentos del modelo):
+    ...(Number(process.env.TANNIA_GUI_PRUEBA_TIMEOUT_S) > 0 ? { timeoutS: Number(process.env.TANNIA_GUI_PRUEBA_TIMEOUT_S) } : {}), ...(Number(process.env.TANNIA_GUI_PRUEBA_ESCALA) > 0 ? { scale: Number(process.env.TANNIA_GUI_PRUEBA_ESCALA) } : {}), approveLabel: etiquetaAprobar, rejectLabel: etiquetaRechazar, reviewLabel: etiquetaRevision,
   };
   const d = await ah.decidir(proyecto, clave, { descripcion: `${titulo}\n\n${resumen}\n\n${consecuencia}`, elicitar, consentimiento, permitirArchivo: false });
   return { ...d, nombre };
@@ -38,6 +40,7 @@ export function resultadoNoConfirmado(d, objeto) {
     tiempo_agotado: ['TIEMPO_AGOTADO', `La ventana de ${objeto} se cerró por tiempo sin respuesta.`],
     error_tecnico: ['ERROR_TECNICO_VENTANA', `No se pudo mostrar o completar la ventana de ${objeto} (error técnico).`],
     sin_canal: ['SIN_CANAL_HUMANO', TEXTO_SIN_CANAL],
+    en_curso: ['SOLICITUD_EN_CURSO', `Ya hay una ventana abierta para ${objeto}; responda esa ventana.`],
   };
   const [codigo, mensaje] = M[d.resultado] || ['RESULTADO_DESCONOCIDO', `No se sabe qué ocurrió con la ventana de ${objeto}.`];
   return { codigo, mensaje, detalle: { resultado: d.resultado || 'desconocido', ventana_mostrada: d.mostrada ?? null, canal: d.canal || null, efecto: 'No se emitió una autorización nueva. Las autorizaciones anteriores vigentes NO se revocan por esto.' } };

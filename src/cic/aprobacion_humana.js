@@ -51,7 +51,7 @@ export class AprobacionHumana {
   /** @returns {por:'human_elicitation'|'human_dialog'|'human_out_of_band'|null, rechazado?} */
   async decidir(project, id, { descripcion = '', elicitar = null, usarDialogo = true, consentimiento = null, permitirArchivo = true } = {}) {
     const key = JSON.stringify([this.sandbox.home, project, id]);
-    if (activeDecisions.has(key)) return { por: null, en_curso: true };
+    if (activeDecisions.has(key)) return { por: null, en_curso: true, resultado: 'en_curso', mostrada: null };
     activeDecisions.add(key);
     try { return await this.#decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento, permitirArchivo }); }
     finally { activeDecisions.delete(key); }
