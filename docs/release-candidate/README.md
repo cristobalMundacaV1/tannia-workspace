@@ -11,6 +11,7 @@ Implementación de la remodelación diseñada por Astra ([PR #24](https://github
 | Extensión interna | `tannia-workspace-0.2.0-rc.1.mcpb`, SHA-256 `70932ccbe3eddbe0222026ec9dcb249dd8240552c5c3e3e3e84fb5896f8ef54d` |
 | Construido desde | commit `1316cb9b91a3b8f967abc9a579a03356f54c5890`, checkout limpio en CI (Ubuntu, Node 22), destino `win32-x64` |
 | Descarga | artefacto `tannia-workspace-zip-instalacion` del [run 44092643510](https://github.com/cristobalMundacaV1/tannia-workspace/actions/runs/44092643510) (requiere sesión en GitHub; caduca 2027-02-15) |
+| CI completo del commit | Ubuntu: suite 485 (0 fallos) · Windows: suite 485, 481 ok, 0 fallos, 4 omitidas (incluye las pruebas con PowerShell real) · build+pack ✅ |
 | Pruebas sobre ESE archivo | Ubuntu: verificador 11/11. Windows (`windows-latest`, misma huella comprobada con `sha256sum`): verificador 11/11 y lanzadores `INSTALAR.cmd`/`DIAGNOSTICO.cmd` reales 5/5 |
 
 Cada push vuelve a construir y probar un ZIP; el contenido de la extensión es reproducible, pero el contenedor `.mcpb` cambia de bytes en cada empaquetado. **Identifique siempre el ZIP por su SHA-256.**
