@@ -25,7 +25,7 @@ import { TARJETAS, CALCULAR, ORIGENES } from '../metodos/tarjetas.js';
 import { explicarPartida } from '../metodos/explicar.js';
 import { asegurarMigracion, leerEsquema, revertirMigracion } from '../autoridad/migracion.js';
 import { MODALIDADES, modalidad as modalidadDe, proteccionOriginales, bloqueosModalidad, avisoModalidad } from '../autoridad/modalidad.js';
-import { pedirAutorizacionHumana, TEXTO_SIN_CANAL, resultadoNoConfirmado } from '../autoridad/autorizacion.js';
+import { pedirAutorizacionHumana, TEXTO_SIN_CANAL, resultadoNoConfirmado, contenidoVentana } from '../autoridad/autorizacion.js';
 import { registrarArtefacto, estadoArtefactos, prepararManifiesto, aprobacionVigente, exportarEntrega, errorDeArchivo, ROLES_ENTREGA } from '../autoridad/entrega.js';
 
 const RO = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
@@ -167,7 +167,17 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     const clp = (x) => `$${Number(x).toLocaleString('es-CL')}`;
     const adv = [...new Set(partidas.flatMap((p) => explicarPartida(p).advertencias.map((a) => `${p.codigo}: ${a}`)))];
     const lineas = [`Proyecto: ${pr.name}`, `Revisión de datos: ${revision.id}`, ...(aviso ? ['', `ATENCIÓN: ${aviso}`] : []), '', 'Resumen económico (CLP)', `Costo directo ${clp(B.costo_directo)} · Gastos generales ${B.config.gastos_generales_pct}% ${clp(B.gastos_generales)} · Utilidades ${B.config.utilidades_pct}% ${clp(B.utilidades)}`, `Neto ${clp(B.neto)} · IVA ${B.config.iva_pct}% ${clp(B.iva)} · TOTAL ${clp(B.total)}`, 'Precios y porcentajes: origen no acreditado (declarados en la conversación).', '', `Partidas: ${partidas.length}, todas con cantidad confirmada por una persona.`, '', 'Archivos que se entregarán (exactamente estos):', ...manifiesto.archivos.map((a) => `  • ${a.rel}  (SHA-256 ${a.sha256.slice(0, 16)}…)`), ...(adv.length ? ['', 'Advertencias que permanecen (no impiden aprobar)', ...adv] : ['', 'Sin advertencias.'])];
-    const d = await pedirAutorizacionHumana({ sandbox, server, proyecto: pr.name, clave: `entrega-${manifiesto.id}`, titulo: 'Aprobar la entrega del presupuesto y la memoria', resumen: lineas.join('\n'), consecuencia: 'Si autoriza, podrá exportar estos archivos a "07 Entregables". Cualquier cambio posterior de cantidades, precios, parámetros u originales anula esta aprobación.', etiquetaAprobar: '_Aprobar entrega' });
+    const ventana = contenidoVentana({
+      pregunta: '¿Apruebas este presupuesto y su memoria para entregarlos?',
+      porque: `Todas las cantidades ya están confirmadas y los archivos están listos. Antes de entregarlos, una persona debe aprobarlos: Claude no puede hacerlo por ti.${aviso ? ` ATENCIÓN: ${aviso}` : ''}`,
+      revisar: [`TOTAL${B.parcial ? ' PARCIAL' : ''} ${clp(B.total)} (costo directo ${clp(B.costo_directo)}; gastos generales ${B.config.gastos_generales_pct} %; utilidades ${B.config.utilidades_pct} %; IVA ${B.config.iva_pct} %)`, `${partidas.length} partida(s), todas con cantidad confirmada por una persona`, 'Los precios y porcentajes los indicaste en la conversación; no provienen de una fuente verificada', ...(adv.length ? ['Advertencias que permanecen (no impiden aprobar):', ...adv.map((a) => `   ${a}`)] : ['Sin advertencias.'])],
+      autoriza: 'Que estos archivos, tal como están ahora, se entreguen como la versión aprobada del proyecto.',
+      si_acepta: 'Podrás exportar los archivos a la carpeta «07 Entregables». Si después cambia una cantidad, un precio, un porcentaje o un plano original, esta aprobación deja de valer y habrá que aprobar de nuevo.',
+      si_rechaza: 'No se entrega nada ni se borra nada. Puedes pedir correcciones y volver a solicitar la aprobación.',
+      afecta: manifiesto.archivos.map((a) => a.rel),
+      tecnico: [`Revisión de datos: ${revision.id}`, `Manifiesto: ${manifiesto.id}`, ...manifiesto.archivos.map((a) => `${a.rel} — SHA-256 ${a.sha256}`)],
+    });
+    const d = await pedirAutorizacionHumana({ sandbox, server, proyecto: pr.name, clave: `entrega-${manifiesto.id}`, ventana, titulo: 'Aprobar la entrega del presupuesto y la memoria', resumen: lineas.join('\n'), consecuencia: 'Si autoriza, podrá exportar estos archivos a "07 Entregables". Cualquier cambio posterior de cantidades, precios, parámetros u originales anula esta aprobación.', etiquetaAprobar: '_Aprobar entrega' });
     if (!d.por) { const r = resultadoNoConfirmado(d, 'aprobación de la entrega'); throw new UserError(d.rechazado ? 'APROBACION_RECHAZADA' : 'APROBACION_HUMANA_REQUERIDA', `${r.mensaje} No se cambió nada.`, d.rechazado ? 'Revise lo indicado y vuelva a solicitar la aprobación cuando corresponda.' : 'Abra Tannia Workspace en Claude Desktop en Windows (aparece una ventana para aprobar) y vuelva a pedir la aprobación.', { resultado_codigo: r.codigo, ...r.detalle, manifiesto: manifiesto.id, ignorado: aprobado_por || confirmo_revision_profesional !== undefined ? 'aprobado_por/confirmo_revision_profesional no tienen efecto' : undefined }); }
     const rec = new Recibos(sandbox).emitir(pr, { accion: 'aprobar_entrega', objetivo: manifiesto.id, objetivo_hash: hm, revision: revision.n, snapshot: revision.snapshot, artefactos: manifiesto.archivos, canal: d.por, declarado_por: d.nombre, resumen: { total: B.total, moneda: B.moneda } });
     pr.setEstado('aprobado', `Aprobado por una persona (${d.por}${d.nombre ? `: ${d.nombre}` : ''}); recibo ${rec.id}; revisión ${revision.id}`);
@@ -309,7 +319,16 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     const ex = explicarPartida(p); const cant = `${Number(p.cantidad).toLocaleString('es-CL', { maximumFractionDigits: 3 })} ${p.unidad.replace('m2', 'm²').replace('m3', 'm³')}`;
     // Resumen compacto (prueba UIA real: a 125/150 % la versión con separadores no cabía en la primera pantalla).
     const lineas = [`Cantidad que va a confirmar: ${cant}`, ...ex.calculo, `Origen: ${ex.origen}${ex.alcance ? ` ${ex.alcance}` : ''}`, ...ex.advertencias.map((a) => `Advertencia: ${a}`), ...(avisoModalidad(pr) ? [`ATENCIÓN: ${avisoModalidad(pr)}`] : []), ...(resolucion_needs_review ? [`Resolución propuesta por el asistente (revísela): ${resolucion_needs_review}`] : [])];
-    const d = await pedirAutorizacionHumana({ sandbox, server, proyecto: pr.name, clave: `verif-${p.codigo}-${p.version_id || 'legacy'}`, titulo: `Verificar cantidad de ${p.codigo} — ${p.descripcion}`, resumen: lineas.join('\n'), consecuencia: 'Confirma las medidas, los vanos informados y el resultado de esta partida; la aprobación de la entrega es un paso posterior. Si cambian las medidas, los vanos, la cantidad o el método, deberá confirmarla de nuevo; un cambio de precio no la anula.', etiquetaAprobar: `_Confirmar ${cant}`, etiquetaRechazar: '_No confirmar', etiquetaRevision: 'Revisé el cálculo y el origen de los datos.' });
+    const ventana = contenidoVentana({
+      pregunta: `¿Confirmas que ${p.descripcion} (${p.codigo}) mide ${cant}?`,
+      porque: 'Esta cantidad se usará en el presupuesto. Solo una persona puede confirmar que es correcta.',
+      revisar: lineas, autoriza: `Que ${cant} es la cantidad correcta de esta partida.`,
+      si_acepta: 'La partida queda confirmada y puede entrar al presupuesto. Si después cambian las medidas, los vanos, la cantidad o el método, tendrás que confirmarla de nuevo (un cambio de precio no la anula).',
+      si_rechaza: 'La partida queda sin confirmar y no se puede aprobar la entrega todavía. Si ya tenía una confirmación vigente, esa se mantiene.',
+      afecta: ['Presupuesto (Excel)', 'Memoria de cálculo (PDF)'],
+      tecnico: [`Partida: ${p.codigo} · versión ${p.version_id || 'heredada'}`, `Regla: ${p.regla || '—'}`],
+    });
+    const d = await pedirAutorizacionHumana({ sandbox, server, proyecto: pr.name, clave: `verif-${p.codigo}-${p.version_id || 'legacy'}`, ventana, titulo: `Verificar cantidad de ${p.codigo} — ${p.descripcion}`, resumen: lineas.join('\n'), consecuencia: 'Confirma las medidas, los vanos informados y el resultado de esta partida; la aprobación de la entrega es un paso posterior. Si cambian las medidas, los vanos, la cantidad o el método, deberá confirmarla de nuevo; un cambio de precio no la anula.', etiquetaAprobar: `_Confirmar ${cant}`, etiquetaRechazar: '_No confirmar', etiquetaRevision: 'Revisé el cálculo y el origen de los datos.' });
     if (!d.por) { const r = resultadoNoConfirmado(d, `verificación de ${codigo}`); throw new UserError(d.rechazado ? 'VERIFICACION_RECHAZADA' : 'VERIFICACION_HUMANA_REQUERIDA', r.mensaje, 'No se emitió una verificación nueva. Si la partida ya tenía una verificación vigente, sigue vigente.', { resultado_codigo: r.codigo, ...r.detalle }); }
     let actual = pr.partidas().find((x) => x.codigo === codigo);
     if (!actual.version_id) { pr.savePartidas(pr.partidas(), { revisar: true }); actual = pr.partidas().find((x) => x.codigo === codigo); } // partidas heredadas sin versión
