@@ -129,3 +129,64 @@ Suite local: 443 pruebas, 426 pasan, 0 fallan, 17 omitidas. Paquetes win32-x64, 
 | BASE (72) | e9e26ebf1b084050883b738f25302800aacd689ebb1d82851c5af9984e086b7e |
 | INGENIERIA-WINDOWS (85, platforms win32) | 606387f8bb61947bbd42b70d638237e63f78325db67e351b8b22de57b8dd492a |
 ZIP de entrega: 0f1c9a3bbba9febd90ac62e9df6d1b136600163b7a0f59e8d7c8675f75b91b35.
+
+## CAD-OPEN-01 — 3.ª incidencia: `Documents.Open` usado sobre archivos DXF (incompatibilidad con la API oficial)
+**Hallazgo (documental):** la ayuda oficial de AutoCAD 2027 (ActiveX, `Open`) especifica DWG para `Documents.Open` y `Import` para DXF. El driver llamaba `Open` con `.dxf` en `abrir_copia`, `laminas_a_dwg` y `dxf_a_dwg`.
+**Estado de la causa:** HIPÓTESIS FUERTE, NO CONFIRMADA. No se atribuye el tiempo agotado repetido a esta causa sin validación real.
+**Corrección (código, rama `fix/cad-open-dxf-import`):** `Documents.Open` solo con `.dwg` y guardia; DXF → `Documents.Add` + `Import` en documento aislado; puerta de verificación en Node (4 layouts, 5 viewports, 9 cotas, 20 entidades con `TANNIA_TRACE`, textos del cajetín, conteos por capa) **antes** de `SaveAs`; tiempo agotado/reconciliación/instancia única/estado incierto conservados.
+**Pruebas automáticas (simuladas):** `test/tw12_dxf_api_contrato.test.js` (7; escaneo estático de `Documents.Open`, vía por extensión, aislamiento, extractor, puerta con 7 pérdidas, contrato de datos) + adaptadas `tw12_cad_open` (8), `tw12_cad_timeout` (6), `tw06_cad` (contrato COM), `tw12_workspace`, `tw15`, `tw17`.
+| Criterio | Estado |
+|---|---|
+| Contrato de API por tipo de archivo (DXF nunca a `Open`) | PASA (prueba estática automatizada) |
+| Aislamiento de `Dibujo1` en el script y en el flujo | PASA en simulación; NO VERIFICADO en AutoCAD real |
+| `Import` conserva layouts/viewports/cotas/textos/XDATA | **NO VERIFICADO** (la puerta lo comprobará en la prueba real) |
+| La importación ya no se bloquea | **NO VERIFICADO** |
+| DWG generado y validado en AutoCAD 2027 | **NO VERIFICADO** |
+| Paquete `.mcpb` con la corrección | **PENDIENTE** (sin red para construir; sin hash nuevo) |
+Procedimiento de prueba: `docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md`.
+
+## Cierre técnico PR #21 — candidato Windows para la prueba real (código `6551bda`)
+Sustituye la fila «Paquete `.mcpb` con la corrección: PENDIENTE» de la sección anterior. Este cierre no añade funcionalidad.
+
+**CI sobre el SHA exacto `6551bda474d2f2835015c630f5daa7e1ddf12088`** (PowerShell real en Windows, sin stubs de dependencias):
+| Ejecución | Ubuntu | Windows |
+|---|---|---|
+| push (run 44071811876) | success | success |
+| pull_request (run 44071819291) | success | success |
+Historial honesto de este PR: el SHA original `e136b66` falló en Windows (`tw09_windows_powershell`, `SESION_AMBIGUA`: `dxfADwg` ahora exige exactamente un proceso `acad` y el mock no lo tenía). Se corrigió **el mock** (proceso simulado solo con `TANNIA_TEST_ACAD_PROC`) y se adaptó esa prueba al contrato de importación aislada; la sesión estricta del producto no se relajó. PR #20 en `21b4ae9`: Ubuntu y Windows success.
+**Suite local con dependencias reales** (antes del último arreglo de pruebas): 455 pruebas, 438 pasan, 0 fallan, 17 omitidas (las de PowerShell real, que requieren Windows).
+
+**Observación del revisor (XDATA):** la puerta ya no cuenta registros `TANNIA_TRACE`. `esperadoDesdeDxf` extrae las 20 trazas con `ref`, `elemento`, `vista`, `rol`, `capa` y `tipo`; el script `MedirDocumento` lee los valores con `GetXData`; `verificarImportacion` compara por `ref` (valores normalizados NFC/espacios) y rechaza trazas faltantes, distintas (con los campos), duplicadas e inesperadas; si el script solo devolvió el conteo, falla cerrado (`xdata_valores_no_medidos`). Regresiones: mismo conteo con valores alterados, refs intercambiadas y una traza duplicada en lugar de otra.
+**Auditorías (automatizadas, simuladas):** (a) `Documents.Open` aparece solo en los scripts `abrir_copia` y `cerrar_reabrir`, ambos con guardia `.dwg`, y ningún otro código fuente lo llama; un `.dxf` despacha únicamente `importar_dxf_aislado`. (b) La importación se hace en un documento propio (`Documents.Add` + `Import`); el script no contiene `Activate`, `Close`, `Save`, `SaveAs`, `Delete` ni `SendCommand`, y `ActiveDocument` solo se lee (CMDACTIVE). El guardado localiza el documento aislado por nombre, sin ruta en disco y único, antes de `SaveAs`. (c) La puerta de fidelidad rechaza **antes de `SaveAs`** y sin guardar: layout perdido, viewport perdido, desplazado, de otra escala, sin bloqueo o de otra región, cota perdida, texto perdido, XDATA perdida o con valor distinto, entidades y capas perdidas (12 casos).
+
+**Paquete (INGENIERÍA-WINDOWS)** — `tannia-workspace-tw12-6551bda-INGENIERIA-WINDOWS-85herramientas.mcpb`:
+- SHA-256 del `.mcpb`: `1dfb1e985743b896cb9ad614e751d250409b4b5ce7ecbd9a55e02bd47e6a174b`; SHA-256 del contenido: `48614dc9b00cee012bb7b6cd920657c7eda65cd532028644b76c51a787b812a5`.
+- Manifiesto: `compatibility.platforms = ["win32"]`, 85 herramientas, `TANNIA_CIC=on` y `TANNIA_ENGINEERING=on`. Listado por el cliente MCP desde el bundle desempaquetado (initialize + 85 herramientas con esquemas).
+- Binario nativo: solo `@napi-rs/canvas-win32-x64-msvc` 0.1.100 (ejecutable PE, versión igual al lockfile, integridad sha512 verificada al construir).
+- **Correspondencia exacta con el código validado:** el árbol de la rama en `6551bda` no difiere del HEAD publicado; reconstruido de nuevo desde ese árbol, el contenido del paquete es idéntico archivo a archivo (`diff -r` vacío). El hash del `.mcpb` varía entre compilaciones por marcas de tiempo del ZIP; el hash del contenido es estable. Los commits posteriores a `6551bda` solo contienen esta documentación.
+- BASE (72 herramientas, sin planos TW-12): SHA-256 `6280d1e85a61464afd1ecb6741ae07e8b78a499b33ae2fe5c2886fac5b60d652`, contenido `9cf36b34be485d6c3c5c6f65dbe0fe739fce36ec46f0cac401d510d31fde8bcd`.
+
+**Pendiente (NO verificado; no se afirma que funcione):** Windows 11 + AutoCAD 2027 reales — que `Documents.Add` + `Import` conserve layouts, viewports, cotas, textos y XDATA (si no, la puerta devolverá `IMPORTACION_DXF_INCOMPLETA` sin guardar el DWG); que la importación ya no se bloquee y la causa real del tiempo agotado; DWG guardado y reabierto; instalación del `.mcpb` en Claude Desktop real; ejecución real del binario `skia.win32-x64.msvc.node` desde el paquete (el render PDF no se probó desde el paquete en Linux); revisión independiente y piloto. Procedimiento: `docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md`.
+
+## CAD-OPEN-02 — importación parcial: `Documents.Add` creó `Dibujo2` vacío y la operación devolvió `APERTURA_FALLIDA` (piloto real, AutoCAD 2027)
+**Hechos del piloto:** COM y AutoCAD funcionan; `Documents.Add` creó `Dibujo2`; `Dibujo2` quedó con 0 entidades; resultado `APERTURA_FALLIDA` sin timeout, DWG ni reintentos; Claude Desktop no recibió el detalle; quedaron dos marcas históricas `apertura-*.pendiente.json`. **La causa de la excepción NO está identificada** (se desconocen etapa exacta, HRESULT y mensaje: justamente lo que no llegó). No se cambió la API (`Documents.Add` + `Import`) ni se aumentó ningún timeout.
+**Auditoría del flujo `Documents.Add → Import → MedirDocumento` (hallazgos de código):**
+1. El texto visible del error solo traía código, mensaje y «qué hacer»; etapa, HRESULT, tipo de excepción y trazas viajaban únicamente en `structuredContent.detalle`, que Claude Desktop no consumió.
+2. Solo el timeout dejaba constancia; una excepción posterior a `Documents.Add` no dejaba ningún registro, y la marca era única por ruta (se sobrescribía).
+3. Una nueva importación solo se bloqueaba si había marca para la misma ruta; con un documento aislado abierto de otra ejecución se podía crear `Dibujo3`.
+4. `APERTURA_FALLIDA` agrupa cualquier etapa (`crear_documento_aislado`, `importar_dxf`, `medir_importado`): sin la etapa visible no se distingue una excepción en `Import` de una en la medición.
+5. Tras un fallo en `SetVariable`/`Import`/`MedirDocumento` no se capturaba el estado del documento propio.
+**Cambios:**
+- **Texto MCP visible** (`fail()` → `diagnosticoVisible`): `Diagnóstico: etapa · operación · HRESULT · excepción · duración`, mensaje saneado (≤300), `Últimas etapas` (6, con tiempos), documento aislado y sus entidades tras el error, documentos sin guardar, estado parcial registrado, reconciliación y diferencias de la puerta. `structuredContent` se mantiene íntegro.
+- **PowerShell:** etapa `configurar_unidades` separada; todo error de `SetVariable`/`Import`/medición captura `error_import` y `entidades_aislado_tras_error` (lectura) antes de relanzar; no se cierra ni guarda nada.
+- **Registro persistente** (`src/cad/marcas.js`): cualquier excepción tras crear el documento aislado —no solo timeout— y también una importación incompleta rechazada por la puerta escriben una marca única `importacion-<hash>-<fecha>.pendiente.json` (modo `wx`, jamás sobrescribe) con etapa, código, HRESULT, tipo, nombre del documento aislado, entidades vistas y últimas etapas, sin rutas del equipo. Los fallos previos a la creación (AutoCAD ocupado, ruta inválida) no dejan marca.
+- **Bloqueo automático:** mientras exista una marca de importación sin resolver, `abrir_copia`/`exportar_dwg`/`dxf_a_dwg` no inician otra importación (`IMPORTACION_PENDIENTE_SIN_RECONCILIAR`); primero se reconcilia por COM (solo lectura).
+- **Inspección de solo lectura** (`tannia_planos` acción `inspeccionar_aislado`; sin añadir herramientas, 85 se mantiene): nombre, guardado, entidades, capas, tipos, cotas, trazas, layouts con viewports y textos, documentos y ocupación. El script no contiene `Add`, `Import`, `Activate`, `SaveAs`, `Close`, `Save`, `Delete`, `SendCommand`, `Documents.Open` ni `SetVariable`, y el nombre se valida (sin inyección).
+- **Marcas históricas** (`marcas`, `reconciliar_marcas`): jamás se borran ni se modifican. Se resuelven por una entrada de solo-adición en `*.resolucion.json` con la evidencia. Importación: se resuelve solo si el documento aislado ya no existe y AutoCAD está libre; si sigue abierto, se pide a la persona cerrarlo SIN guardar (Tannia nunca cierra). Apertura (formato anterior, solo guardan el hash de la ruta): se reconcilian indicando `archivo`; sin él quedan `requiere_archivo`; no bloquean importaciones. Fail-closed ante marcas ilegibles.
+**Pruebas** (`test/tw12_cad_open02.test.js`, 8, más ajustes en 4 archivos): excepción exacta tras `Documents.Add` con `Dibujo2` vacío y cliente MCP en memoria que **solo lee el texto**; bloqueo de nuevas importaciones (también `exportar_dwg`); inspección de solo lectura y validación del nombre; reconciliación sin borrar marcas y reanudación con una única importación; dos marcas históricas; fallos previos vs. posteriores a la creación; `diagnosticoVisible`. Los controles de integridad, XDATA por valores, sesión única, timeouts y no sobrescritura siguen cubiertos por las pruebas existentes.
+**Criterio de aceptación:** si vuelve a fallar en AutoCAD real, el texto visible trae etapa y excepción, el estado parcial queda en disco y no se duplican operaciones. **Que `Import` funcione y la causa real siguen PENDIENTE_EXTERNO (AutoCAD 2027 real).**
+
+### Candidato CAD-OPEN-02 (código `97109eb`) — para la siguiente prueba real
+**CI sobre `97109ebee4710e76df14dba638e00500c3d948dc`:** push (run 44076293496) y pull_request (run 44076303570): Ubuntu success, Windows success (PowerShell real). Suite local con dependencias reales: 463 pruebas, 446 pasan, 0 fallan, 17 omitidas.
+**Paquete INGENIERÍA-WINDOWS** `tannia-workspace-tw12-97109eb-INGENIERIA-WINDOWS-85herramientas.mcpb`: SHA-256 `bf6536a531e84c5998fe43440dde17aff583cc2ec67989e5a71e7deeea7e419e`; contenido `0d6c32511fbdac280e39c3955def95a60f8bd2c3415f58f4c49bc3413d780515`; `platforms ["win32"]`, 85 herramientas (cliente MCP), binario `canvas-win32-x64-msvc` (PE). Reconstruido desde el árbol validado: contenido idéntico (`diff -r` vacío). BASE (72): `cf1235c9ada0b582d0cefe618296fab05ad8f231ac10194bc0825a22c3f7b576`.
+**Pendiente (NO verificado):** la excepción real tras `Documents.Add` (etapa, HRESULT, mensaje) solo se conocerá repitiendo la prueba en AutoCAD 2027 con este paquete; si `Import` conserva layouts/viewports/cotas/textos/XDATA; DWG guardado y reabierto; instalación en Claude Desktop; ejecución del binario de Windows.

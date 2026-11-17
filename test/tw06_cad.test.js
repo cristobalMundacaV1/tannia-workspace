@@ -85,8 +85,10 @@ test('contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/C
     if (!['agregar_lineas', 'construir_3d'].includes(n)) assert.ok(!/\.Delete\(/.test(s), `${n}: Delete no permitido`);
     if (!['agregar_lineas', 'transformar_solido'].includes(n)) assert.ok(!/\.Save\(/.test(s), `${n}: Save no permitido`);
     if (!['cerrar_reabrir', 'construir_3d'].includes(n)) assert.ok(!/\.Close\(/.test(s), `${n}: Close no permitido`);
-    if (!['cerrar_reabrir', 'abrir_copia', 'dxf_a_dwg', 'laminas_a_dwg'].includes(n)) assert.ok(!/Documents\.Open\(/.test(s), `${n}: Open no permitido`);
-    if (n !== 'construir_3d') assert.ok(!/Documents\.Add\(/.test(s), `${n}: Documents.Add solo en construir_3d`);
+    // CAD-OPEN-01 (3.ª): Documents.Open es DWG-only (abrir_copia, cerrar_reabrir); un DXF jamás llega a Open: se importa en un documento aislado
+    if (!['cerrar_reabrir', 'abrir_copia'].includes(n)) assert.ok(!/Documents\.Open\(/.test(s), `${n}: Open no permitido`);
+    if (n !== 'importar_dxf_aislado') assert.ok(!/\.Import\(/.test(s), `${n}: Import solo en importar_dxf_aislado`);
+    if (!['construir_3d', 'importar_dxf_aislado'].includes(n)) assert.ok(!/Documents\.Add\(/.test(s), `${n}: Documents.Add solo en construir_3d e importar_dxf_aislado`);
     // Causa raíz de "capas: []": `foreach` sobre colecciones COM de AutoCAD no enumera de forma fiable → se recorre por índice
     assert.ok(!/foreach \(\$\w+ in \$\w*\.?(ModelSpace|Layers|Documents)\b/.test(s), `${n}: enumeración COM con foreach (usar índices)`);
     assert.ok(!/foreach \(\$\w+ in \$(doc|d|acad|objetivo|nuevo)\.(ModelSpace|Layers|Documents)\)/.test(s), `${n}: foreach sobre colección COM`);

@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { dataImportado } from './helpers_dxf_import.js';
 import { AutoCadCom, runPowerShell, buildScript } from '../src/cad/autocad_com.js';
 import { Sandbox } from '../src/security/sandbox.js';
 import { createProject } from '../src/project/projects.js';
@@ -20,7 +21,9 @@ const HAS_PS = process.platform === 'win32' && spawnSync('powershell.exe', ['-No
 const opts = { skip: HAS_PS ? false : 'requiere Windows PowerShell (powershell.exe)', timeout: 120000 };
 
 // AutoCAD simulado (PowerShell). Registra cada escritura en $env:TANNIA_TEST_LOG para inspeccionarla después.
-const MOCK_CONNECT = `$global:TW_LOG = $env:TANNIA_TEST_LOG
+const MOCK_CONNECT = `# Proceso acad simulado SOLO cuando la prueba lo pide: la sesión estricta del producto exige exactamente un proceso (no se relaja en producción).
+if ($env:TANNIA_TEST_ACAD_PROC -eq '1') { function global:Get-Process { [CmdletBinding()] param($Name) [pscustomobject]@{ Id = 4242 } } }
+$global:TW_LOG = $env:TANNIA_TEST_LOG
 $global:TW_FAILAT = 0; if ($env:TANNIA_TEST_FAILAT) { $global:TW_FAILAT = [int]$env:TANNIA_TEST_FAILAT }
 $global:TW_LAYERFAIL = ($env:TANNIA_TEST_LAYERFAIL -eq '1')
 $global:TW_SAVEFAIL = ($env:TANNIA_TEST_SAVEFAIL -eq '1')
@@ -64,6 +67,7 @@ $global:TW_DOCS = New-Object System.Collections.ArrayList
 Add-Member -InputObject $acad -MemberType NoteProperty -Name Documents -Value $global:TW_DOCS
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name SaveAs -Value { param($p, $t) if ($t -ne 64 -and $null -ne $t) { throw 'tipo inválido' }; [IO.File]::WriteAllBytes($p, ([Text.Encoding]::ASCII.GetBytes('AC1032') + (New-Object byte[] 3000))); TW-L ('SAVEAS ' + $t) }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name SetVariable -Value { param($n, $v) TW-L ('SETVAR ' + $n + ' ' + $v) }
+Add-Member -InputObject $doc -MemberType ScriptMethod -Name Activate -Value { }
 Add-Member -InputObject $global:TW_DOCS -MemberType ScriptMethod -Name Open -Value { param($p, $ro) if ($env:TANNIA_TEST_REOPENFAIL -eq '1') { throw 'no se pudo reabrir' }; TW-L 'OPEN'; if ($env:TANNIA_TEST_LOSE -eq '1') { $global:TW_MS.Clear(); Set-Content -LiteralPath ($env:TANNIA_TEST_LOG + '.lost') -Value '1' }; if ($p -and ($p -ine $global:TW_DOC.FullName)) { $global:TW_DOC.FullName = $p; $global:TW_DOC.Name = [IO.Path]::GetFileName($p) }; [void]$global:TW_DOCS.Add($global:TW_DOC); $global:TW_DOC.Saved = $true; return $global:TW_DOC }
 Add-Member -InputObject $doc -MemberType ScriptMethod -Name Close -Value { param($guardar) TW-L ('CLOSE ' + $guardar); $global:TW_DOCS.Remove($this) }
 if ($env:TANNIA_TEST_RECT -and -not $global:TW_LOST) { $rp = $env:TANNIA_TEST_RECT -split ','; $w = [double]$rp[0]; $h = [double]$rp[1]; $null = $global:TW_MS.AddLine(@(0.0, 0.0, 0.0), @($w, 0.0, 0.0)); $null = $global:TW_MS.AddLine(@($w, 0.0, 0.0), @($w, $h, 0.0)); $null = $global:TW_MS.AddLine(@($w, $h, 0.0), @(0.0, $h, 0.0)); $null = $global:TW_MS.AddLine(@(0.0, $h, 0.0), @(0.0, 0.0, 0.0)); $global:TW_N = 0; TW-ClearAdds }
@@ -363,16 +367,23 @@ test('PowerShell real: con ruta esperada se localiza EXACTAMENTE ese documento (
   } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
 });
 
-test('PowerShell real: DXF→DWG en ruta con ó ñ y apóstrofo: INSUNITS=4, SaveAs al DWG nuevo, cabecera verificada en disco', opts, async () => {
+test('PowerShell real: DXF→DWG en ruta con ó ñ y apóstrofo — el DXF se importa en un documento aislado (contrato en tw12_*) y el GUARDADO se ejecuta con PowerShell real: INSUNITS=4, SaveAs, cabecera verificada en disco', opts, async () => {
   const e = entorno();
   try {
     const dir = path.join(e.root, '03 Trabajo', 'Anteproyectos', "Casa ñ'"); fs.mkdirSync(dir, { recursive: true });
-    const dxf = path.join(dir, 'v001.dxf'); fs.writeFileSync(dxf, escribirDxf(generarModelo({}), derivar(generarModelo({})), { titulo: 'Casa', version: 'v001', fecha: '2026-11-16' }));
-    const com = adaptador(e, e.work);
-    const r = await com.dxfADwg(e.P, `03 Trabajo/Anteproyectos/Casa ñ'/v001.dxf`);
+    const dxf = path.join(dir, 'v001.dxf'); const texto = escribirDxf(generarModelo({}), derivar(generarModelo({})), { titulo: 'Casa', version: 'v001', fecha: '2026-11-16' }); fs.writeFileSync(dxf, texto);
+    // Documents.Add + Import: simulado a nivel de runner (sin PowerShell) con la medición perfecta del propio DXF; el guardado SÍ corre en PowerShell real
+    // contra un AutoCAD simulado cuyo único documento es el aislado «Drawing2.dwg» (sin ruta en disco). Sesión estricta: un proceso acad simulado.
+    const adaptadorAislado = () => new AutoCadCom({
+      sandbox: e.sb, platform: 'win32', connect: MOCK_CONNECT,
+      runner: (script, input) => (/Documents\.Add\(/.test(script)
+        ? Promise.resolve(JSON.stringify({ ok: true, data: dataImportado(texto) }))
+        : runPowerShell(script, input, { env: { TANNIA_TEST_DOC: 'Drawing2.dwg', TANNIA_TEST_LOG: e.log, TANNIA_TEST_ACAD_PROC: '1' } })),
+    });
+    const r = await adaptadorAislado().dxfADwg(e.P, `03 Trabajo/Anteproyectos/Casa ñ'/v001.dxf`);
     assert.equal(r.archivo_dwg.cabecera_dwg_valida, true); assert.equal(r.archivo_dwg.cabecera, 'AC1032'); assert.ok(fs.existsSync(path.join(dir, 'v001.dwg')));
     assert.deepEqual(leer(e.log).filter((x) => /^(SETVAR|SAVEAS)/.test(x)), ['SETVAR INSUNITS 4', 'SAVEAS 64']);
-    await assert.rejects(() => adaptador(e, e.work).dxfADwg(e.P, `03 Trabajo/Anteproyectos/Casa ñ'/v001.dxf`), (x) => x.code === 'DWG_YA_EXISTE');
+    await assert.rejects(() => adaptadorAislado().dxfADwg(e.P, `03 Trabajo/Anteproyectos/Casa ñ'/v001.dxf`), (x) => x.code === 'DWG_YA_EXISTE');
     assert.equal(fs.readFileSync(e.orig, 'utf8'), 'ORIGINAL');
   } finally { fs.rmSync(e.home, { recursive: true, force: true }); }
 });

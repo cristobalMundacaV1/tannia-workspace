@@ -12,6 +12,7 @@ import { AutoCadCom, SCRIPTS, buildScript, validarArchivoParaApertura } from '..
 import { tunnelModel, compose } from '../src/drawing/model.js';
 import { buildDrawingDxf } from '../src/drawing/dxf.js';
 import { expectedLayouts } from '../src/drawing/layouts_check.js';
+import { dataImportado } from './helpers_dxf_import.js';
 
 function entorno() {
   const home = tmpHome('TW12 open ñ '); const sb = new Sandbox(home); createProject(sb, 'Piloto'); const root = sb.projectRoot('Piloto');
@@ -35,20 +36,21 @@ test('CAD-OPEN-01 script: una sola apertura, sin reintento tras error, rutas sin
   assert.ok(!/New-Object -ComObject|CreateObject|Start-Process|AutoCAD\.Application'\)\s*\)/.test(s.replace(/GetActiveObject[^\n]*/g, '')), 'nunca lanza otra instancia');
 });
 
-test('CAD-OPEN-01 con Dibujo1 sin guardar: abre/reutiliza y expone los documentos sin guardar; una sola llamada', async () => {
+test('CAD-OPEN-01 con Dibujo1 sin guardar: el DXF se importa en un documento AISLADO (Add+Import), Dibujo1 solo se observa; una sola llamada', async () => {
   const e = entorno(); const calls = [];
-  const c = cad(e.sb, async (script, input) => { calls.push(input); return JSON.stringify({ ok: true, data: { documento: 'copia.dxf', ruta: e.abs, reutilizado: false, recuperado_tras_error: false, guardado: true, documentos_abiertos: 2, sin_guardar: ['Dibujo1.dwg'] } }); });
+  const c = cad(e.sb, async (script, input) => { calls.push({ script, input }); return JSON.stringify({ ok: true, data: dataImportado(e.dxf) }); });
   const r = await c.abrirCopia('Piloto', e.rel);
-  assert.deepEqual(r.sin_guardar, ['Dibujo1.dwg']); assert.equal(calls.length, 1); assert.equal(calls[0].estricto, true);
-  assert.equal(calls[0].ruta, fs.realpathSync.native(e.abs));
+  assert.deepEqual(r.sin_guardar, ['Dibujo1.dwg', 'Drawing2.dwg']); assert.equal(calls.length, 1); assert.equal(calls[0].input.estricto, true);
+  assert.equal(calls[0].input.dxf, fs.realpathSync.native(e.abs)); assert.equal(r.aislado, true); assert.equal(r.importacion_conforme, true);
+  assert.ok(!/Documents\.Open\(/.test(calls[0].script), 'un DXF nunca llega a Documents.Open'); assert.match(calls[0].script, /Documents\.Add\(\)/); assert.match(calls[0].script, /\.Import\(/);
 });
 
 test('CAD-OPEN-01 fallo de apertura: etapa, HRESULT, tipo y diagnóstico en detalle; NO se reintenta; no se lanza otra operación', async () => {
   const e = entorno(); let calls = 0;
-  const c = cad(e.sb, async () => { calls++; return JSON.stringify({ ok: false, etapa: 'abrir_documento', hresult: '0x80020009', tipo: 'COMException', msg: 'Error de AutoCAD al abrir C:\\Users\\Alguien\\x.dxf', diag: { documentos: [DIBUJO1, { nombre: 'otro.dwg', con_ruta_en_disco: true, guardado: true }], sin_guardar: ['Dibujo1.dwg'], ocupacion: { quiescente: true, cmdactive: 0, error_estado: null } } }); });
+  const c = cad(e.sb, async () => { calls++; return JSON.stringify({ ok: false, etapa: 'importar_dxf', hresult: '0x80020009', tipo: 'COMException', msg: 'Error de AutoCAD al abrir C:\\Users\\Alguien\\x.dxf', diag: { documentos: [DIBUJO1, { nombre: 'otro.dwg', con_ruta_en_disco: true, guardado: true }], sin_guardar: ['Dibujo1.dwg'], ocupacion: { quiescente: true, cmdactive: 0, error_estado: null } } }); });
   await assert.rejects(c.abrirCopia('Piloto', e.rel), err => {
     assert.equal(err.code, 'APERTURA_FALLIDA'); const d = err.detalle;
-    assert.equal(d.etapa, 'abrir_documento'); assert.equal(d.hresult, '0x80020009'); assert.equal(d.tipo_excepcion, 'COMException'); assert.equal(d.operacion, 'abrir_copia');
+    assert.equal(d.etapa, 'importar_dxf'); assert.equal(d.hresult, '0x80020009'); assert.equal(d.tipo_excepcion, 'COMException'); assert.equal(d.operacion, 'importar_dxf_aislado');
     assert.deepEqual(d.diagnostico.sin_guardar, ['Dibujo1.dwg']); assert.equal(d.diagnostico.documentos[0].con_ruta_en_disco, false);
     assert.ok(!JSON.stringify(d).includes('Alguien'), 'sin rutas/usuarios del equipo'); return true;
   });
@@ -92,29 +94,42 @@ test('CAD-OPEN-01 originales siguen protegidos y la sesión ambigua bloquea la a
   assert.match(buildScript('abrir_copia'), /SESION_AMBIGUA/);
 });
 
-test('CAD-OPEN-01 recuperación: apertura válida (con Dibujo1 sin guardar) → DXF→DWG continúa una sola vez y es idempotente', async () => {
+test('CAD-OPEN-01 recuperación: importación aislada + puerta → DXF→DWG guarda una sola vez y es idempotente', async () => {
   const e = entorno(); const c0 = compose(tunnelModel({})); const exp = expectedLayouts(c0);
   const dwgRel = '03 Trabajo/CAD/planos.dwg'; fs.mkdirSync(path.join(e.root, '03 Trabajo', 'CAD'), { recursive: true }); const dwgAbs = path.join(e.root, dwgRel);
-  const seq = [];
+  const seq = []; const importes = [];
   const c = cad(e.sb, async (script, input) => {
-    if (input.dwg) { seq.push('laminas_a_dwg'); fs.writeFileSync(dwgAbs, 'AC1032 synthetic'); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true } }); }
-    if (input.ruta && !input.ruta_esperada) { seq.push('abrir_copia'); return JSON.stringify({ ok: true, data: { documento: 'copia.dxf', ruta: e.abs, reutilizado: false, guardado: true, sin_guardar: ['Dibujo1.dwg'] } }); }
+    if (input.dwg) { seq.push('laminas_a_dwg'); assert.equal(input.nombre_aislado, 'Drawing2.dwg'); assert.ok(!/Documents\.(Open|Add)\(|\.Import\(/.test(script), 'guardar no abre ni importa'); fs.writeFileSync(dwgAbs, 'AC1032 synthetic'); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true } }); }
+    if (input.dxf) { seq.push('importar'); importes.push(input.dxf); return JSON.stringify({ ok: true, data: dataImportado(e.dxf) }); }
     seq.push('inspeccionar'); const layouts = exp.map(l => ({ nombre: l.name, viewports: l.viewports.map(v => ({ centro_papel: [...v.paperCenter], ancho: v.width, alto: v.height, escala: v.scale, bloqueado: true, centro_vista: [...v.modelCenter] })) }));
     return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true, unidades: 6, layouts } });
   });
-  const abierto = await c.abrirCopia('Piloto', e.rel); assert.deepEqual(abierto.sin_guardar, ['Dibujo1.dwg']);
   const r1 = await c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: 'open01', composition: c0 });
-  assert.equal(r1.dwg_validado_autocad_real, false); assert.equal(r1.verificacion_layouts.ok, true);
+  assert.equal(r1.dwg_validado_autocad_real, false); assert.equal(r1.verificacion_layouts.ok, true); assert.equal(r1.verificacion_importacion.ok, true);
+  assert.deepEqual(r1.verificacion_importacion.resumen, { layouts: 4, viewports: 5, cotas: 9, con_traza: 20, entidades_modelo: 29 });
   const r2 = await c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: 'open01', composition: c0 });
-  assert.equal(r2.reused, true); assert.deepEqual(seq, ['abrir_copia', 'abrir_copia', 'laminas_a_dwg', 'inspeccionar'], 'la 2.ª exportación (verificada) no toca AutoCAD: ni apertura ni guardado repetidos');
+  assert.equal(r2.reused, true); assert.deepEqual(seq, ['importar', 'laminas_a_dwg', 'inspeccionar'], 'la 2.ª exportación (verificada) no toca AutoCAD: ni importación ni guardado repetidos');
 });
 
-test('CAD-OPEN-01 exportar_dwg: documento abierto con cambios / solo lectura / otra ruta se distinguen, sin escribir', async () => {
+test('CAD-OPEN-01 exportar_dwg: guardado negativo (solo lectura / documento aislado ausente) se distingue; el DXF perdido en Import NO se guarda', async () => {
   const e = entorno(); const c0 = compose(tunnelModel({})); const dwgRel = '03 Trabajo/CAD/out.dwg'; fs.mkdirSync(path.join(e.root, '03 Trabajo', 'CAD'), { recursive: true });
-  for (const [codigo, code] of [['CAMBIOS_SIN_GUARDAR', 'CAMBIOS_SIN_GUARDAR'], ['DOCUMENTO_SOLO_LECTURA', 'DOCUMENTO_SOLO_LECTURA'], ['DOCUMENTO_CAMBIO', 'DOCUMENTO_CAMBIO']]) {
-    let n = 0; const c = cad(e.sb, async (script, input) => { if (!input.dwg) return JSON.stringify({ ok: true, data: { documento: 'copia.dxf', ruta: e.abs } }); n++; assert.match(script, /SaveAs/); return JSON.stringify({ ok: false, etapa: 'verificar_documento', codigo, diag: { documento: 'copia.dxf', solo_lectura: false, guardado: false } }); });
-    await assert.rejects(c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: `neg-${codigo}`, composition: c0 }), err => err.code === code && err.detalle.diagnostico.documento === 'copia.dxf');
+  for (const [codigo, code] of [['DOCUMENTO_SOLO_LECTURA', 'DOCUMENTO_SOLO_LECTURA'], ['DOCUMENTO_AISLADO_NO_ENCONTRADO', 'DOCUMENTO_AISLADO_NO_ENCONTRADO']]) {
+    let n = 0; const c = cad(e.sb, async (script, input) => { if (!input.dwg) return JSON.stringify({ ok: true, data: dataImportado(e.dxf) }); n++; assert.match(script, /SaveAs/); return JSON.stringify({ ok: false, etapa: 'verificar_documento', codigo, diag: { documento: 'Drawing2.dwg' } }); });
+    await assert.rejects(c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: `neg-${codigo}`, composition: c0 }), err => err.code === code);
     assert.equal(n, 1); assert.ok(!fs.existsSync(path.join(e.root, dwgRel)));
   }
-  const s = SCRIPTS.laminas_a_dwg; assert.ok(s.indexOf('DOCUMENTO_SOLO_LECTURA') < s.indexOf('SaveAs')); assert.ok(s.indexOf('CAMBIOS_SIN_GUARDAR') < s.indexOf('SaveAs'));
+  // PUERTA: Import que pierde viewports / cotas / XDATA / textos → no se guarda NADA
+  const perdidas = {
+    viewports: m => { m.layouts[0].viewports.pop(); }, layout: m => { m.layouts.pop(); }, cotas: m => { m.dimensiones = 0; }, xdata: m => { m.con_traza = 0; },
+    textos: m => { m.layouts[0].textos = m.layouts[0].textos.slice(1); }, entidades: m => { m.entidades_modelo -= 1; },
+  };
+  for (const [nombre, mutar] of Object.entries(perdidas)) {
+    // Un entorno limpio por caso: una importación incompleta deja una marca persistente que bloquea la siguiente (CAD-OPEN-02)
+    const f = entorno(); fs.mkdirSync(path.join(f.root, '03 Trabajo', 'CAD'), { recursive: true });
+    let guardados = 0; const c = cad(f.sb, async (script, input) => { if (input.dwg) { guardados++; return JSON.stringify({ ok: true, data: {} }); } return JSON.stringify({ ok: true, data: dataImportado(f.dxf, { mutar }) }); });
+    await assert.rejects(c.guardarLaminas('Piloto', { dxf: f.rel, dwg: dwgRel, operacion: `perdida-${nombre}`, composition: c0 }), err => err.code === 'IMPORTACION_DXF_INCOMPLETA' && err.detalle.issues.length > 0 && !!err.detalle.estado_parcial_registrado, nombre);
+    assert.equal(guardados, 0, `${nombre}: no se guardó`); assert.ok(!fs.existsSync(path.join(f.root, dwgRel)));
+    assert.equal(c.marcas('Piloto').filter((m) => m.tipo === 'importacion' && !m.resuelta).length, 1, `${nombre}: el documento aislado incompleto queda registrado`);
+  }
+  const s = SCRIPTS.laminas_a_dwg; assert.ok(s.indexOf('DOCUMENTO_SOLO_LECTURA') < s.indexOf('SaveAs')); assert.ok(s.indexOf('LocalizarAislado $in.nombre_aislado') < s.indexOf('SaveAs'));
 });

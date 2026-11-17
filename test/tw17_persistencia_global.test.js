@@ -75,7 +75,7 @@ test('ciclo COM: cero documentos, lecturas por ruta, reintentos solo en lecturas
     const lecturas = calls.filter((x) => ['leer_lote', 'enumerar', 'resumen'].includes(x.name)); assert.ok(lecturas.length >= 6 && lecturas.every((x) => x.input.ruta_esperada === e.dwg), 'todas las lecturas indican la ruta del documento');
     const cierre = calls.find((x) => x.name === 'cerrar_reabrir').input; assert.equal(cierre.esperadas, 51);
     // los scripts que crean o abren dibujos no exigen documento previo; los de lectura/escritura sí lo resuelven
-    assert.deepEqual([...SIN_DOCUMENTO_PREVIO].sort(), ['abrir_copia', 'construir_3d', 'dxf_a_dwg', 'estado', 'laminas_a_dwg', 'reconciliar_apertura']);
+    assert.deepEqual([...SIN_DOCUMENTO_PREVIO].sort(), ['abrir_copia', 'construir_3d', 'dxf_a_dwg', 'estado', 'importar_dxf_aislado', 'inspeccionar_aislado', 'laminas_a_dwg', 'reconciliar_apertura', 'reconciliar_importacion']);
     assert.ok(!buildScript('construir_3d').includes("codigo = 'SIN_DOCUMENTO'") && buildScript('leer_lote').includes("codigo = 'SIN_DOCUMENTO'") && buildScript('leer_lote').includes('ruta_esperada'));
     // reintento seguro: una escritura con AutoCAD ocupado NO se repite; una lectura sí
     let intentos = 0; const ocupado = JSON.stringify({ ok: false, etapa: 'x', hresult: '0x8001010A' });

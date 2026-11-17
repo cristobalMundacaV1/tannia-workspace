@@ -2,6 +2,8 @@
 // del anteproyecto, con interruptores para simular defectos (arcos con longitud 0, textos corruptos, límite de llamada, etc.).
 import { parseDxf } from '../src/dxf/reader.js';
 import { dxfDecode } from '../src/design/salidas.js';
+import fs from 'node:fs';
+import { dataImportado } from './helpers_dxf_import.js';
 
 const D2R = Math.PI / 180;
 
@@ -42,7 +44,7 @@ export function tipado(e, h) {
  * Runner que simula AutoCAD: estado/enumerar/leer_lote/resumen/cerrar_reabrir/dxf_a_dwg.
  * opciones: { activePath, maxHandles (simula timeout si una llamada trae más), alReabrir(entidades)→entidades, capasVacias, calls }
  */
-export function servidorSimulado(entidades, { activePath, maxHandles = Infinity, alReabrir, capasVacias = false, calls = [], arcoLongitud0 = false, escribeDwg, sinBbox = false, defectoSolido, falloConstruir, reaperturaConteoCero = false, rutaReabierta, sinDocumento = false } = {}) {
+export function servidorSimulado(entidades, { activePath, maxHandles = Infinity, alReabrir, capasVacias = false, calls = [], arcoLongitud0 = false, escribeDwg, sinBbox = false, defectoSolido, falloConstruir, reaperturaConteoCero = false, rutaReabierta, sinDocumento = false, mutarImportacion = null } = {}) {
   let reabierto = false;
   let ents = entidades.map((e, i) => ({ ...e, handle: (0x100 + i).toString(16).toUpperCase() }));
   const leer = (e) => { const t = tipado(e, e.handle); if (arcoLongitud0 && t.tipo === 'AcDbArc') t.longitud_arco = 0; return t; };
@@ -61,6 +63,7 @@ export function servidorSimulado(entidades, { activePath, maxHandles = Infinity,
       data = { ruta: activePath, unidades_insunits: 4, documento: 'x.dwg', entidades: input.handles.map((h) => (m.has(h) ? leer(m.get(h)) : { handle: h, error: 'no_encontrada' })) };
     } else if (n === 'resumen') data = { documento: 'x.dwg', ruta: activePath, guardado: true, entidades: reabierto && reaperturaConteoCero ? 0 : ents.length, capas: capas(), entidades_por_capa: porCapa(), entidades_por_tipo: {}, unidades_insunits: 4 };
     else if (n === 'cerrar_reabrir') { if (alReabrir) ents = alReabrir(ents); reabierto = true; data = { documento: 'x.dwg', ruta: rutaReabierta || activePath, guardado: true, entidades: reaperturaConteoCero ? 0 : ents.length, conteo_inicial_tras_abrir: reaperturaConteoCero ? 0 : ents.length, espera_ms: 0, unidades_insunits: 4 }; }
+    else if (n === 'importar_dxf_aislado') { const txt = fs.readFileSync(input.dxf, 'utf8'); data = dataImportado(txt, { mutar: mutarImportacion }); }
     else if (n === 'dxf_a_dwg') { if (escribeDwg) escribeDwg(input.dwg); data = { documento: 'v001.dwg', ruta: input.dwg, entidades: ents.length, capas: capas(), entidades_por_capa: porCapa(), textos_normalizados: 0, unidades_insunits: 4 }; }
     else if (n === 'construir_3d') {
       if (falloConstruir) throw Object.assign(new Error('fallo'), { clase: 'powershell_fallo' });
