@@ -3,7 +3,9 @@
 //  - lectura: siempre permitida sobre el documento activo;
 //  - escritura: solo si el documento activo está en "03 Trabajo" del proyecto autorizado (ruta real, sin enlaces) y se
 //    RE-VERIFICA dentro de PowerShell que el documento activo no cambió justo antes de dibujar;
-//  - ningún script contiene Erase/Purge/Quit/Close/SaveAs/SendCommand; Delete solo para revertir lo creado en la misma llamada.
+//  - ningún script contiene Erase/Purge/Quit; SaveAs solo en construir_3d y en el guardado del documento AISLADO importado (laminas_a_dwg, dxf_a_dwg);
+//    Close solo en cerrar_reabrir/construir_3d (documento propio); SendCommand solo en los scripts 3D; Delete solo para revertir lo creado en la misma llamada;
+//  - Documents.Open solo recibe .dwg; los .dxf se importan en un documento aislado (ver CONTRATO DE APERTURA y dxf_api.js).
 //
 // Transporte: la ENTRADA viaja como JSON UTF-8 en base64 (variable de entorno) y la SALIDA como una línea
 // `TANNIA_OUT:<base64 de JSON UTF-8>`; así la página de códigos de la consola no puede corromper rutas Unicode.
@@ -24,6 +26,7 @@ import { verificarContencion } from '../project/store.js';
 const sha256Text = (t) => crypto.createHash('sha256').update(t).digest('hex');
 import { CadOperations } from './operations.js';
 import { expectedLayouts, verifyLayouts } from '../drawing/layouts_check.js';
+import { viaApertura, esperadoDesdeDxf, verificarImportacion } from './dxf_api.js';
 
 const digestRuta = (p) => sha256Text(String(p).toLowerCase()).slice(0, 16);
 /** Diagnóstico del script: solo nombres de documentos y banderas; las rutas absolutas se sanean. */
@@ -143,18 +146,91 @@ if ($in.ruta_esperada) {
   if ($null -eq $doc) { Emit @{ ok = $false; etapa = 'documento_activo'; codigo = 'SIN_DOCUMENTO' }; exit 0 }
 }
 `;
-export const SIN_DOCUMENTO_PREVIO = new Set(['construir_3d', 'abrir_copia', 'dxf_a_dwg', 'estado', 'laminas_a_dwg', 'reconciliar_apertura']);
+export const SIN_DOCUMENTO_PREVIO = new Set(['construir_3d', 'abrir_copia', 'dxf_a_dwg', 'estado', 'laminas_a_dwg', 'reconciliar_apertura', 'importar_dxf_aislado', 'reconciliar_importacion']);
 // Solo las lecturas pueden reintentarse si AutoCAD está ocupado: una escritura repetida podría duplicar o alterar el dibujo.
 export const REINTENTO_SEGURO = new Set(['estado', 'listar', 'medir', 'leer_lote', 'enumerar', 'resumen']);
 
-// ÚNICA lógica de apertura (abrir_copia, laminas_a_dwg, dxf_a_dwg): mismos controles y mismas etapas de progreso.
-// Reutiliza el documento abierto por ruta, nunca lanza otra instancia y hace como máximo UN Documents.Open.
-const PS_ABRIR = `function AbrirPorRuta($rutaPedida) {
+// CONTRATO DE APERTURA (CAD-OPEN-01, 3.ª incidencia). Fuente: https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-ActiveX-Reference/files/GUID-9ED7A548-7978-4BFD-8462-E2FA747E8880.htm
+//  - Documents.Open abre DWG. Un DXF NUNCA se pasa a Open (AbrirDwg lo rechaza antes de tocar AutoCAD).
+//  - Un DXF se importa en un documento AISLADO (Documents.Add + Document.Import): Dibujo1 y demás documentos del usuario no se tocan.
+//  - Import no se asume fiel: MedirDocumento mide el resultado y Node lo compara con el DXF (dxf_api.verificarImportacion) ANTES de guardar.
+// Mismos controles previos (Preflight) y mismas etapas de progreso en todas las vías; nunca otra instancia; como máximo UN Open/Add/Import.
+const PS_ABRIR = `function Preflight() {
   $global:Diag = @{}
   $oc = Ocupacion; $global:Diag.ocupacion = $oc
   if ($null -ne $oc.cmdactive -and ($oc.cmdactive -band 8)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_CUADRO_MODAL'; diag = $global:Diag }; exit 0 }
   if ($null -ne $oc.cmdactive -and ($oc.cmdactive -band 7)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_COMANDO_ACTIVO'; diag = $global:Diag }; exit 0 }
   if ($oc.quiescente -eq $false) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_OCUPADO'; diag = $global:Diag }; exit 0 }
+}
+function ListaDocs() {
+  $docs = @(); $n = [int]$acad.Documents.Count
+  for ($i = 0; $i -lt $n; $i++) {
+    $nombre = $null; $ruta = $null; $guardado = $null
+    try { $c = $acad.Documents.Item($i); $nombre = [string]$c.Name; $ruta = RutaSegura $c.FullName; $guardado = [bool]$c.Saved } catch { $nombre = if ($nombre) { $nombre } else { '(ilegible)' } }
+    $docs += @{ nombre = $nombre; con_ruta_en_disco = ($null -ne $ruta); guardado = $guardado }
+  }
+  return ,$docs
+}
+`;
+
+// Vía DXF: SOLO la incluye importar_dxf_aislado (Documents.Add + Import + medición). Ningún otro script crea ni importa documentos.
+const PS_IMPORT = `function MedirDocumento($d) {
+  Progreso 'medir_importado' 'inicio'
+  $global:Etapa = 'medir_importado'
+  $porCapa = @{}; $dims = 0; $traza = 0; $ilegibles = 0; $n = [int]$d.ModelSpace.Count
+  for ($i = 0; $i -lt $n; $i++) {
+    try {
+      $e = $d.ModelSpace.Item($i); $c = [string]$e.Layer
+      if ($porCapa.ContainsKey($c)) { $porCapa[$c] = $porCapa[$c] + 1 } else { $porCapa[$c] = 1 }
+      if ([string]$e.ObjectName -like 'AcDb*Dimension*') { $dims++ }
+      $t = $null; $v = $null
+      try { $e.GetXData('TANNIA_TRACE', [ref]$t, [ref]$v); if ($null -ne $t -and @($t).Count -gt 0) { $traza++ } } catch { }
+    } catch { $ilegibles++ }
+  }
+  $layouts = @()
+  for ($i = 0; $i -lt [int]$d.Layouts.Count; $i++) {
+    $layout = $d.Layouts.Item($i); if ($layout.ModelType) { continue }; $views = @(); $textos = @()
+    for ($j = 0; $j -lt [int]$layout.Block.Count; $j++) {
+      try {
+        $e = $layout.Block.Item($j); $tipo = [string]$e.ObjectName
+        if ($tipo -eq 'AcDbViewport') { $views += @{ centro_papel = DArr $e.Center; escala = DNum $e.CustomScale; centro_vista = DArr $e.ViewCenter; ancho = DNum $e.Width; alto = DNum $e.Height; bloqueado = [bool]$e.DisplayLocked } }
+        elseif ($tipo -eq 'AcDbText' -or $tipo -eq 'AcDbMText') { $textos += [string]$e.TextString }
+      } catch { $ilegibles++ }
+    }
+    $layouts += @{ nombre = [string]$layout.Name; viewports = $views; textos = $textos }
+  }
+  Progreso 'medir_importado' 'ok' @{ entidades = $n; layouts = @($layouts).Count }
+  return @{ entidades_modelo = $n; por_capa = $porCapa; dimensiones = $dims; con_traza = $traza; layouts = $layouts; ilegibles = $ilegibles }
+}
+function ImportarDxfAislado($rutaDxf, $insunits) {
+  if ([string]$rutaDxf -notmatch '(?i)[.]dxf$') { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'TIPO_NO_PERMITIDO'; diag = @{ motivo = 'Se esperaba un .dxf' } }; exit 0 }
+  Preflight
+  if ($null -eq (RutaSegura $rutaDxf)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'RUTA_NO_VALIDA' }; exit 0 }
+  Progreso 'enumerar_documentos' 'inicio'
+  $previos = ListaDocs; $global:Diag.documentos = $previos; $global:Diag.sin_guardar = @($previos | Where-Object { $_.guardado -eq $false } | ForEach-Object { $_.nombre })
+  Progreso 'enumerar_documentos' 'ok' @{ abiertos = @($previos).Count }
+  $nuevo = $null
+  # Documento NUEVO y propio: nunca se opera sobre Dibujo1 ni sobre otro documento del usuario. Si algo falla, el documento propio queda abierto sin guardar (no se cierra nada automáticamente).
+  $global:Etapa = 'crear_documento_aislado'
+  Progreso 'crear_documento_aislado' 'inicio'
+  $nuevo = $acad.Documents.Add()
+  $global:Diag.documento_aislado = [string]$nuevo.Name
+  Progreso 'crear_documento_aislado' 'ok' @{ nombre = [string]$nuevo.Name }
+  if ($null -ne $insunits) { $nuevo.SetVariable('INSUNITS', [int]$insunits) }
+  $global:Etapa = 'importar_dxf'
+  Progreso 'importar_dxf' 'inicio'
+  $pt = New-Object 'double[]' 3; $pt[0] = 0.0; $pt[1] = 0.0; $pt[2] = 0.0
+  $nuevo.Import([string]$rutaDxf, $pt, 1.0)
+  Progreso 'importar_dxf' 'ok'
+  $m = MedirDocumento $nuevo
+  return @{ doc = $nuevo; medido = $m; previos = $previos }
+}
+`;
+
+// Única función con Documents.Open: SOLO la incluye abrir_copia (y cerrar_reabrir tiene su propio guardia). Los scripts de DXF no la contienen.
+const PS_OPEN_DWG = `function AbrirDwg($rutaPedida) {
+  if ([string]$rutaPedida -notmatch '(?i)[.]dwg$') { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'TIPO_NO_PERMITIDO_OPEN'; diag = @{ motivo = 'Documents.Open solo admite DWG; un DXF se importa en un documento aislado' } }; exit 0 }
+  Preflight
   $destino = RutaSegura $rutaPedida
   if ($null -eq $destino) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'RUTA_NO_VALIDA' }; exit 0 }
   function BuscarAbierto() {
@@ -190,21 +266,37 @@ const PS_ABRIR = `function AbrirPorRuta($rutaPedida) {
 }
 `;
 
+// Localiza el documento aislado creado por importar_dxf_aislado: por nombre, sin ruta en disco (nunca un documento del usuario guardado) y único.
+const PS_GUARDAR = `function LocalizarAislado($nombre) {
+  $hallados = @(); $n = [int]$acad.Documents.Count
+  for ($i = 0; $i -lt $n; $i++) {
+    try { $c = $acad.Documents.Item($i); if ([string]$c.Name -ceq [string]$nombre -and [string]$c.FullName -ceq [string]$c.Name) { $hallados += $c } } catch { }
+  }
+  if ($hallados.Count -ne 1) { Emit @{ ok = $false; etapa = 'localizar_aislado'; codigo = 'DOCUMENTO_AISLADO_NO_ENCONTRADO'; diag = @{ coincidencias = $hallados.Count } }; exit 0 }
+  return $hallados[0]
+}
+`;
+
 // Cuerpos estáticos: los datos del usuario viajan SOLO en $in, nunca interpolados en el script.
 export const SCRIPTS = {
-  laminas_a_dwg: `${PS_ABRIR}
+  // Paso 2 (tras la puerta de verificación en Node): SaveAs del documento aislado creado por importar_dxf_aislado. No abre nada.
+  laminas_a_dwg: `${PS_ABRIR}${PS_GUARDAR}
 if (Test-Path -LiteralPath $in.dwg) { Emit @{ ok = $false; codigo = 'DESTINO_EXISTE' }; exit 0 }
-if ((Get-FileHash -LiteralPath $in.dxf -Algorithm SHA256).Hash -ine $in.sha256_dxf) { Emit @{ ok = $false; codigo = 'DOCUMENTO_MODIFICADO_EXTERNAMENTE' }; exit 0 }
-$r = AbrirPorRuta $in.dxf; $d = $r.doc
+Preflight
+$d = LocalizarAislado $in.nombre_aislado
 $global:Diag.documento = [string]$d.Name; $global:Diag.solo_lectura = [bool]$d.ReadOnly; $global:Diag.guardado = [bool]$d.Saved
 if ($d.ReadOnly) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_SOLO_LECTURA'; diag = $global:Diag }; exit 0 }
-if (-not $d.Saved) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'CAMBIOS_SIN_GUARDAR'; diag = $global:Diag }; exit 0 }
+$d.Activate()
 Progreso 'guardar_como_dwg' 'inicio'
 $d.SetVariable('INSUNITS', 6)
 $d.SaveAs([string]$in.dwg, 64)
 Progreso 'guardar_como_dwg' 'ok'
 if ($d.FullName -ine $in.dwg -or -not $d.Saved) { Emit @{ ok = $false; codigo = 'GUARDADO_FALLO' }; exit 0 }
 Emit @{ ok = $true; data = @{ ruta = [string]$d.FullName; guardado = [bool]$d.Saved } }`,
+  importar_dxf_aislado: `${PS_ABRIR}${PS_IMPORT}
+if ($in.sha256_dxf -and (Get-FileHash -LiteralPath $in.dxf -Algorithm SHA256).Hash -ine $in.sha256_dxf) { Emit @{ ok = $false; codigo = 'DOCUMENTO_MODIFICADO_EXTERNAMENTE' }; exit 0 }
+$r = ImportarDxfAislado $in.dxf $in.insunits; $d = $r.doc
+Emit @{ ok = $true; data = @{ documento = [string]$d.Name; nombre_aislado = [string]$d.Name; ruta = [string]$d.FullName; guardado = [bool]$d.Saved; aislado = $true; via = 'Documents.Add+Import'; documentos_abiertos = [int]$acad.Documents.Count; sin_guardar = $global:Diag.sin_guardar; medido = $r.medido } }`,
   inspeccionar_laminas: `$layouts = @()
 for ($i = 0; $i -lt [int]$doc.Layouts.Count; $i++) {
   $layout = $doc.Layouts.Item($i); if ($layout.ModelType) { continue }; $views = @()
@@ -241,8 +333,8 @@ if ($null -ne $o['radio']) { $o['Radius'] = $o['radio'] }
 $tt = DNum $e.TotalAngle; if ($null -ne $tt) { $o['TotalAngle'] = $tt }
 if ($e.ObjectName -eq 'AcDb3dSolid' -or $e.ObjectName -eq 'AcDbRegion') { $vv = DNum $e.Volume; if ($null -ne $vv) { $o['Volume'] = $vv }; $o['Centroid'] = DArr $e.Centroid; $aa = DNum $e.Area; if ($null -ne $aa) { $o['Area'] = $aa } }
 Emit @{ ok = $true; data = $o }`,
-  abrir_copia: `${PS_ABRIR}
-$r = AbrirPorRuta $in.ruta; $d = $r.doc
+  abrir_copia: `${PS_ABRIR}${PS_OPEN_DWG}
+$r = AbrirDwg $in.ruta; $d = $r.doc
 Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; reutilizado = $r.reutilizado; recuperado_tras_error = $r.recuperado; guardado = [bool]$d.Saved; documentos_abiertos = [int]$acad.Documents.Count; sin_guardar = $global:Diag.sin_guardar } }`,
   reconciliar_apertura: `$global:Diag = @{}
 $oc = Ocupacion; $destino = RutaSegura $in.ruta
@@ -256,6 +348,18 @@ for ($i = 0; $i -lt $n; $i++) {
 }
 Progreso 'enumerar_documentos' 'ok' @{ abiertos = $n; ya_abierto = $abierto }
 Emit @{ ok = $true; data = @{ abierto = $abierto; documentos = $docs; ocupacion = $oc; procesos = @(Get-Process -Name acad -ErrorAction SilentlyContinue | ForEach-Object { $_.Id }) } }`,
+  // Solo lectura: ¿sigue presente el documento aislado (sin ruta en disco) y cuántas entidades tiene? No abre, no importa, no guarda.
+  reconciliar_importacion: `${PS_ABRIR}
+$global:Diag = @{}
+$oc = Ocupacion
+Progreso 'enumerar_documentos' 'inicio'
+$docs = ListaDocs; $presente = $false; $ents = $null
+if ($in.nombre_aislado) {
+  $n = [int]$acad.Documents.Count
+  for ($i = 0; $i -lt $n; $i++) { try { $c = $acad.Documents.Item($i); if ([string]$c.Name -ceq [string]$in.nombre_aislado -and [string]$c.FullName -ceq [string]$c.Name) { $presente = $true; try { $ents = [int]$c.ModelSpace.Count } catch { } } } catch { } }
+}
+Progreso 'enumerar_documentos' 'ok' @{ abiertos = @($docs).Count; aislado_presente = $presente }
+Emit @{ ok = $true; data = @{ aislado_presente = $presente; entidades_aislado = $ents; documentos = $docs; ocupacion = $oc; procesos = @(Get-Process -Name acad -ErrorAction SilentlyContinue | ForEach-Object { $_.Id }) } }`,
   sesion: `$processes = @(Get-Process -Name acad -ErrorAction SilentlyContinue)
 $busy = -not [bool]$acad.GetAcadState().IsQuiescent
 Emit @{ ok = $true; data = @{ ruta = [string]$doc.FullName; documento = [string]$doc.Name; version = [string]$acad.Version; guardado = [bool]$doc.Saved; solo_lectura = [bool]$doc.ReadOnly; ocupado = $busy; procesos = @($processes | ForEach-Object { $_.Id }); ventana = [string]$acad.HWND; activa = [string]$acad.ActiveDocument.FullName } }`,
@@ -289,6 +393,7 @@ if (-not $objetivo.Saved) { Emit @{ ok = $false; etapa = 'verificar_guardado'; c
 $ruta = [string]$objetivo.FullName
 try { $objetivo.Close($false) } catch { Fail 'cerrar' $_; exit 0 }
 Start-Sleep -Milliseconds 400
+if ($ruta -notmatch '(?i)[.]dwg$') { Emit @{ ok = $false; etapa = 'reabrir'; codigo = 'TIPO_NO_PERMITIDO_OPEN' }; exit 0 }
 try { $nuevo = $acad.Documents.Open($ruta, $false) } catch { $ex = Inner $_.Exception; Emit @{ ok = $false; etapa = 'reabrir'; codigo = 'REAPERTURA_FALLIDA'; hresult = (HR $ex) }; exit 0 }
 try { $nuevo.Activate() } catch { }
 # Instrumentación: el conteo del espacio modelo puede tardar en estar disponible tras abrir; se registra el valor inicial, el final y la espera.
@@ -296,8 +401,11 @@ $esperadas = 0; if ($null -ne $in.esperadas) { $esperadas = [int]$in.esperadas }
 $inicial = [int]$nuevo.ModelSpace.Count; $final = $inicial; $espera = 0
 while ($final -ne $esperadas -and $espera -lt 6000) { Start-Sleep -Milliseconds 300; $espera += 300; $final = [int]$nuevo.ModelSpace.Count }
 Emit @{ ok = $true; data = @{ documento = [string]$nuevo.Name; ruta = [string]$nuevo.FullName; guardado = [bool]$nuevo.Saved; entidades = $final; conteo_inicial_tras_abrir = $inicial; espera_ms = $espera; unidades_insunits = $nuevo.GetVariable('INSUNITS') } }`,
-  dxf_a_dwg: `${PS_ABRIR}
-$r = AbrirPorRuta $in.dxf; $d = $r.doc
+  dxf_a_dwg: `${PS_ABRIR}${PS_GUARDAR}
+if (Test-Path -LiteralPath $in.dwg) { Emit @{ ok = $false; codigo = 'DESTINO_EXISTE' }; exit 0 }
+Preflight
+$d = LocalizarAislado $in.nombre_aislado
+$d.Activate()
 try { $d.SetVariable('INSUNITS', 4) } catch { }
 # Normaliza textos: si AutoCAD dejó secuencias \\U+XXXX sin decodificar, se sustituyen por el carácter real (ñ, Ñ, tildes)
 $norm = 0; $nm = [int]$d.ModelSpace.Count
@@ -628,6 +736,8 @@ export class AutoCadCom {
     const detalle = { etapa: r.etapa || null, operacion: name, hresult: hr, tipo_excepcion: r.tipo || null, mensaje: r.msg ? sanitizar(r.msg) : null, ...(r.diag ? { diagnostico: sanitizarDiag(r.diag) } : {}), ...(trazas.length ? { etapas: trazas.slice(-30).map(x => ({ etapa: x.etapa, estado: x.estado, t_ms: x.t_ms })) } : {}) };
     if (r.codigo === 'AUTOCAD_CUADRO_MODAL') return new UserError('AUTOCAD_CUADRO_MODAL', 'AutoCAD tiene un cuadro de diálogo abierto; no se abrió nada.', 'Cierre el cuadro de diálogo en AutoCAD y repita.', detalle);
     if (r.codigo === 'AUTOCAD_COMANDO_ACTIVO') return new UserError('AUTOCAD_COMANDO_ACTIVO', 'AutoCAD tiene un comando en curso; no se abrió nada.', 'Pulse Esc en AutoCAD y repita.', detalle);
+    if (r.codigo === 'TIPO_NO_PERMITIDO_OPEN') return new UserError('TIPO_NO_PERMITIDO_OPEN', 'Documents.Open solo admite DWG; un DXF se importa en un documento aislado. No se tocó AutoCAD.', 'Use tannia_cad_abrir_copia con la copia .dxf (se importa en un documento nuevo) o abra un .dwg.', detalle);
+    if (r.codigo === 'DOCUMENTO_AISLADO_NO_ENCONTRADO') return new UserError('DOCUMENTO_AISLADO_NO_ENCONTRADO', 'El documento aislado de la importación ya no está abierto o no es único; no se guardó nada.', 'Cierre sin guardar los documentos nuevos que haya dejado la importación y repita la exportación.', detalle);
     if (r.codigo === 'RUTA_NO_VALIDA') return new UserError('RUTA_NO_VALIDA', 'La ruta de la copia no es válida para AutoCAD.', 'Use una copia dentro de 03 Trabajo.', detalle);
     if (['SESION_AMBIGUA', 'DOCUMENTO_SOLO_LECTURA', 'DOCUMENTO_MODIFICADO_EXTERNAMENTE', 'AUTOCAD_OCUPADO'].includes(r.codigo)) return new UserError(r.codigo, 'La sesión o el documento no permite esta operación CAD.', 'Revise el estado del documento objetivo antes de continuar.', detalle);
     if (r.codigo === 'AUTOCAD_NO_ABIERTO') {
@@ -648,7 +758,7 @@ export class AutoCadCom {
     if (GONE.has(up)) return new UserError('AUTOCAD_RPC', 'Se perdió la comunicación con AutoCAD (se cerró o dejó de responder).', 'Verifique que AutoCAD siga abierto y reintente.', detalle);
     if (r.etapa === 'dibujar') return new UserError('DIBUJO_REVERTIDO', 'No se pudo dibujar; se revirtió lo creado en esta operación (sin efectos parciales).', 'Revise el detalle y reintente.', { ...detalle, revertido: !!r.revertido, capa_revertida: !!r.capa_revertida });
     if (r.etapa === 'preparar_capa') return new UserError('CAPA_NO_DISPONIBLE', 'No se pudo crear ni seleccionar la capa; no se dibujó nada.', 'Pruebe otro nombre de capa o revise que el dibujo no esté bloqueado.', detalle);
-    if (['abrir_documento', 'verificar_apertura'].includes(r.etapa) && ['abrir_copia', 'dxf_a_dwg', 'laminas_a_dwg'].includes(name)) return new UserError('APERTURA_FALLIDA', 'AutoCAD no pudo abrir el archivo (apertura DXF/DWG). No se modificó ningún original ni se lanzó otra instancia.', 'Revise el detalle (HRESULT, etapa y documentos abiertos). No se reintentó la apertura.', detalle);
+    if (['abrir_documento', 'verificar_apertura', 'crear_documento_aislado', 'importar_dxf', 'medir_importado'].includes(r.etapa) && ['abrir_copia', 'importar_dxf_aislado'].includes(name)) return new UserError('APERTURA_FALLIDA', 'AutoCAD no pudo abrir el archivo (apertura DXF/DWG). No se modificó ningún original ni se lanzó otra instancia.', 'Revise el detalle (HRESULT, etapa y documentos abiertos). No se reintentó la apertura.', detalle);
     if (r.etapa === 'enumerar_documentos' || r.etapa === 'activar_documento') return new UserError('AUTOCAD_COM_FALLO', 'AutoCAD respondió con un error COM al consultar o activar documentos.', 'Revise el detalle; los dibujos sin guardar no se tocaron.', detalle);
     return new UserError('AUTOCAD_ERROR', 'AutoCAD no pudo completar la operación.', 'Revise que el dibujo esté activo y sin comandos en curso; el detalle indica la etapa.', detalle);
   }
@@ -662,12 +772,16 @@ export class AutoCadCom {
     const expected = expectedLayouts(composition);
     const hash = sha256File(input);
     const journal = new CadOperations(target.root); const prior = journal.status(operacion);
-    // La apertura (potencialmente bloqueante) va ANTES del diario: un tiempo agotado al abrir no deja una escritura «incierta» que nunca se aplicó.
-    if (!prior || prior.state === 'prepared') { validarArchivoParaApertura(input); await this.#abrirReconciliando(project, input); }
+    // La importación (potencialmente bloqueante) y su PUERTA de verificación van ANTES del diario: un tiempo agotado o un DXF incompleto no dejan una escritura «incierta» que nunca se aplicó.
+    let importado = null;
+    if (!prior || prior.state === 'prepared') { validarArchivoParaApertura(input); importado = await this.#importarVerificado(project, input, { layoutsEsperados: expected, insunits: 6, sha256: hash }); }
     return journal.run({
       id: operacion, intent: { tipo: 'laminas_dwg_v1', source: input, sha256: hash, target: target.abs, expected },
       preflight: async () => { if (fs.existsSync(target.abs)) throw new UserError('DESTINO_EXISTE', 'El DWG ya existe; no se sobrescribe.'); return { source_sha256: hash }; },
-      apply: () => this.#exec('laminas_a_dwg', { dxf: input, dwg: target.abs, sha256_dxf: hash, estricto: true }),
+      apply: () => {
+        if (!importado?.nombre_aislado) throw new UserError('IMPORTACION_NO_DISPONIBLE', 'No hay un documento importado y verificado para guardar; repita la exportación.');
+        return this.#exec('laminas_a_dwg', { dwg: target.abs, nombre_aislado: importado.nombre_aislado, estricto: true });
+      },
       verify: async result => {
         confirmarRuta(result, target.abs, 'guardar_laminas');
         if (!fs.existsSync(target.abs) || fs.readFileSync(target.abs).subarray(0, 4).toString('ascii') !== 'AC10') return false;
@@ -675,6 +789,7 @@ export class AutoCadCom {
         result.inspection = inspection; result.sha256 = sha256File(target.abs); result.autocad_real = 'REQUIERE_REGISTRO_DE_EVIDENCIA';
         const structure = verifyLayouts(inspection.layouts, expected);
         result.verificacion_layouts = structure; result.dwg_validado_autocad_real = false;
+        if (importado) result.verificacion_importacion = importado.verificacion_importacion;
         return inspection.guardado === true && inspection.unidades === 6 && structure.ok;
       },
     });
@@ -781,7 +896,56 @@ export class AutoCadCom {
     const { abs } = this.sandbox.resolve(project, rel);
     const real = this.#assertWorkCopy(project, abs);
     validarArchivoParaApertura(real);
-    return this.#abrirReconciliando(project, real);
+    if (viaApertura(real) === 'open_dwg') return this.#abrirReconciliando(project, real); // Documents.Open: SOLO DWG
+    const r = await this.#importarReconciliando(project, real, {});
+    if (r.apertura_tardia || r.importacion_incierta) return r;
+    const verificacion = verificarImportacion(esperadoDesdeDxf(fs.readFileSync(real, 'utf8')), r.medido);
+    return { ...r, verificacion_importacion: verificacion, importacion_conforme: verificacion.ok, advertencia: verificacion.ok ? undefined : 'El DXF se importó en un documento NUEVO pero la medición no coincide con el DXF; revise verificacion_importacion. No se guardó ningún DWG.' };
+  }
+
+  // --- Importación de DXF en documento aislado (Documents.Add + Import) con el mismo manejo de estado incierto que la apertura ---
+  #marcaImportacion(project, real) {
+    const root = this.sandbox.projectRoot(project); const dir = path.join(root, FOLDERS.trabajo, 'CAD', 'operaciones');
+    return { root, dir, file: path.join(dir, `importacion-${digestRuta(real)}.pendiente.json`) };
+  }
+  async #reconciliarImportacion(nombre) {
+    try {
+      const r = await this.#exec('reconciliar_importacion', { nombre_aislado: nombre || null, estricto: true }, { timeoutMs: 15000 });
+      const oc = r.ocupacion || {}; const libre = oc.quiescente === true && (oc.cmdactive === 0 || oc.cmdactive === null || oc.cmdactive === undefined);
+      return { estado: r.aislado_presente ? 'aislado_presente' : 'aislado_ausente', entidades_aislado: r.entidades_aislado ?? null, listo_para_operar: libre, ocupacion: sanitizarDiag(oc), documentos: sanitizarDiag(r.documentos || []), procesos_acad: Array.isArray(r.procesos) ? r.procesos.length : null };
+    } catch (e) {
+      return { estado: 'no_verificable', codigo: e?.code || 'ERROR', etapa: e?.detalle?.etapa ?? null, estado_incierto: e?.detalle?.estado_incierto === true };
+    }
+  }
+  /** UNA importación (Add + Import + medición). Tras tiempo agotado NO se repite: se reconcilia y se informa; nunca se cierra ni se guarda nada automáticamente. */
+  async #importarReconciliando(project, real, { insunits = null, sha256 = null } = {}) {
+    const m = this.#marcaImportacion(project, real); verificarContencion(m.root, m.dir);
+    if (fs.existsSync(m.file)) {
+      let previo = {}; try { previo = JSON.parse(fs.readFileSync(m.file, 'utf8')); } catch { /* marca ilegible: se trata como incierta */ }
+      const rec = await this.#reconciliarImportacion(previo.nombre_aislado);
+      if (rec.estado === 'aislado_ausente' && rec.listo_para_operar) fs.rmSync(m.file, { force: true }); // estado real comprobado y limpio: esta llamada explícita puede importar
+      else throw new UserError('OPERACION_PENDIENTE_INCIERTA', 'Una importación anterior terminó con tiempo agotado y su estado real no está limpio o no se pudo confirmar. No se inicia otra operación sobre AutoCAD.', 'En AutoCAD cierre SIN guardar el documento nuevo sin ruta que dejó la importación (y cualquier cuadro/comando abierto) y repita; primero se reconcilia el estado.', { etapa: 'reconciliar_importacion', estado_incierto: true, reconciliacion: rec });
+    }
+    try { return await this.#exec('importar_dxf_aislado', { dxf: real, insunits, sha256_dxf: sha256, estricto: true }, { timeoutMs: 120000 }); }
+    catch (e) {
+      if (!(e instanceof UserError) || e.code !== 'AUTOCAD_ERROR' || e.detalle?.clase !== 'tiempo_agotado') throw e;
+      const creada = (e.detalle?.etapas || []).find((x) => x.etapa === 'crear_documento_aislado' && x.estado === 'ok');
+      const nombre = typeof creada?.dato?.nombre === 'string' ? creada.dato.nombre : null;
+      fs.mkdirSync(m.dir, { recursive: true });
+      fs.writeFileSync(m.file, JSON.stringify({ schema: 'tw.cad.importacion_pendiente/1', operacion: 'importar_dxf_aislado', ultima_etapa: e.detalle.etapa, nombre_aislado: nombre, estado: 'incierto', creada: new Date().toISOString() }));
+      const rec = await this.#reconciliarImportacion(nombre);
+      e.detalle = { ...e.detalle, reconciliacion: rec, importacion_incierta: true };
+      e.message = `${e.message} Reconciliación: ${rec.estado === 'aislado_presente' ? 'el documento aislado figura abierto (importación posiblemente incompleta, NO verificada; ciérrelo sin guardar)' : rec.estado === 'aislado_ausente' ? 'no figura documento aislado' : 'no se pudo verificar el estado'}.`;
+      throw e;
+    }
+  }
+  /** Importa y aplica la PUERTA: si la medición no coincide con el DXF no se guarda ningún DWG. */
+  async #importarVerificado(project, input, { layoutsEsperados = null, insunits = 6, sha256 = null } = {}) {
+    const esperado = esperadoDesdeDxf(fs.readFileSync(input, 'utf8'));
+    const r = await this.#importarReconciliando(project, input, { insunits, sha256 });
+    const verificacion = verificarImportacion(esperado, r.medido, { layoutsEsperados });
+    if (!verificacion.ok) throw new UserError('IMPORTACION_DXF_INCOMPLETA', 'AutoCAD importó el DXF en un documento nuevo, pero el resultado no conserva todo lo esperado (layouts, viewports, cotas, textos o XDATA). No se guardó ningún DWG.', 'Cierre sin guardar el documento nuevo; la vía Import no es suficiente para este DXF y requiere otra decisión (ver docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md).', { etapa: 'verificar_importacion', documento_aislado: r.nombre_aislado ?? null, issues: verificacion.issues.slice(0, 40), resumen: verificacion.resumen });
+    return { ...r, verificacion_importacion: verificacion };
   }
 
   // --- Apertura con reconciliación (CAD-OPEN-01, 2.ª incidencia): tras un tiempo agotado NO se repite Documents.Open ---
@@ -959,7 +1123,9 @@ export class AutoCadCom {
     this.sandbox.resolveWritable(project, dwgRel); // debe quedar en una carpeta de escritura y nunca en originales
     if (fs.existsSync(dwgAbs)) throw new UserError('DWG_YA_EXISTE', 'Ya existe un DWG de esa versión; no se sobrescribe.', 'Genere una nueva versión del anteproyecto o renombre el DWG existente.');
     const esperado = conteoPorCapa(parseDxf(fs.readFileSync(abs)));
-    const r = await this.#exec('dxf_a_dwg', { dxf: abs, dwg: dwgAbs }, { timeoutMs: 120000 });
+    validarArchivoParaApertura(abs);
+    const importado = await this.#importarVerificado(project, abs, { insunits: 4 }); // Add + Import + puerta; Documents.Open nunca recibe un DXF
+    const r = await this.#exec('dxf_a_dwg', { dwg: dwgAbs, nombre_aislado: importado.nombre_aislado, estricto: true }, { timeoutMs: 120000 });
     let cabecera = null; let bytes = 0;
     try { const st = fs.statSync(dwgAbs); bytes = st.size; const fd = fs.openSync(dwgAbs, 'r'); const b = Buffer.alloc(6); fs.readSync(fd, b, 0, 6, 0); fs.closeSync(fd); cabecera = b.toString('latin1'); } catch { /* se informa abajo */ }
     const valido = !!cabecera && /^AC10\d\d$/.test(cabecera) && bytes > 1000;

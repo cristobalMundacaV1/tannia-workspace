@@ -146,6 +146,7 @@ test('TW12 oracle (ezdxf, independent reader): 4 layouts, no audit errors, viewp
 });
 
 import { expectedLayouts, verifyLayouts, viewportsFromDxf } from '../src/drawing/layouts_check.js';
+import { dataImportado } from './helpers_dxf_import.js';
 const composed = () => compose(tunnelModel({}));
 // Mock of what AutoCAD returns, derived from the expectation (an independent description, then mutated).
 const mock = (exp, { overall = true } = {}) => exp.map(l => ({ nombre: l.name, viewports: [...(overall ? [{ centro_papel: [l.size[0] / 2, l.size[1] / 2], ancho: l.size[0], alto: l.size[1], escala: 1, bloqueado: false }] : []), ...l.viewports.map(v => ({ centro_papel: [...v.paperCenter], ancho: v.width, alto: v.height, escala: v.scale, bloqueado: true, centro_vista: [...v.modelCenter] }))] }));
@@ -191,7 +192,8 @@ test('TW12 guardarLaminas: structural mismatch in the saved DWG fails verificati
   const dxfRel = '03 Trabajo/CAD/modelos/x/planos.dxf'; const dwgRel = '03 Trabajo/CAD/modelos/x/planos.dwg';
   fs.mkdirSync(path.join(root, path.dirname(dxfRel)), { recursive: true }); fs.writeFileSync(path.join(root, dxfRel), buildDrawingDxf(c));
   const dwgAbs = path.join(root, dwgRel);
-  const make = mutate => new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async script => {
+  const make = mutate => new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async (script, input) => {
+    if (input.dxf && !input.dwg) return JSON.stringify({ ok: true, data: dataImportado(buildDrawingDxf(c)) }); // paso 1: importación aislada (puerta aprobada)
     if (/SaveAs/.test(script)) { fs.writeFileSync(dwgAbs, 'AC1032 synthetic stub, not a real DWG'); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true } }); }
     const layouts = mock(exp); mutate(layouts); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true, unidades: 6, layouts } });
   } });

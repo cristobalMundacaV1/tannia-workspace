@@ -129,3 +129,18 @@ Suite local: 443 pruebas, 426 pasan, 0 fallan, 17 omitidas. Paquetes win32-x64, 
 | BASE (72) | e9e26ebf1b084050883b738f25302800aacd689ebb1d82851c5af9984e086b7e |
 | INGENIERIA-WINDOWS (85, platforms win32) | 606387f8bb61947bbd42b70d638237e63f78325db67e351b8b22de57b8dd492a |
 ZIP de entrega: 0f1c9a3bbba9febd90ac62e9df6d1b136600163b7a0f59e8d7c8675f75b91b35.
+
+## CAD-OPEN-01 — 3.ª incidencia: `Documents.Open` usado sobre archivos DXF (incompatibilidad con la API oficial)
+**Hallazgo (documental):** la ayuda oficial de AutoCAD 2027 (ActiveX, `Open`) especifica DWG para `Documents.Open` y `Import` para DXF. El driver llamaba `Open` con `.dxf` en `abrir_copia`, `laminas_a_dwg` y `dxf_a_dwg`.
+**Estado de la causa:** HIPÓTESIS FUERTE, NO CONFIRMADA. No se atribuye el tiempo agotado repetido a esta causa sin validación real.
+**Corrección (código, rama `fix/cad-open-dxf-import`):** `Documents.Open` solo con `.dwg` y guardia; DXF → `Documents.Add` + `Import` en documento aislado; puerta de verificación en Node (4 layouts, 5 viewports, 9 cotas, 20 entidades con `TANNIA_TRACE`, textos del cajetín, conteos por capa) **antes** de `SaveAs`; tiempo agotado/reconciliación/instancia única/estado incierto conservados.
+**Pruebas automáticas (simuladas):** `test/tw12_dxf_api_contrato.test.js` (7; escaneo estático de `Documents.Open`, vía por extensión, aislamiento, extractor, puerta con 7 pérdidas, contrato de datos) + adaptadas `tw12_cad_open` (8), `tw12_cad_timeout` (6), `tw06_cad` (contrato COM), `tw12_workspace`, `tw15`, `tw17`.
+| Criterio | Estado |
+|---|---|
+| Contrato de API por tipo de archivo (DXF nunca a `Open`) | PASA (prueba estática automatizada) |
+| Aislamiento de `Dibujo1` en el script y en el flujo | PASA en simulación; NO VERIFICADO en AutoCAD real |
+| `Import` conserva layouts/viewports/cotas/textos/XDATA | **NO VERIFICADO** (la puerta lo comprobará en la prueba real) |
+| La importación ya no se bloquea | **NO VERIFICADO** |
+| DWG generado y validado en AutoCAD 2027 | **NO VERIFICADO** |
+| Paquete `.mcpb` con la corrección | **PENDIENTE** (sin red para construir; sin hash nuevo) |
+Procedimiento de prueba: `docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md`.
