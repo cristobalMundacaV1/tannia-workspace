@@ -23,3 +23,20 @@ Estados permitidos: `PASS_AUTOMATIZADO`, `PENDIENTE_EXTERNO`. Nada aquí está a
 - Ejercicio académico: sin geotecnia, sostenimiento, topografía ni normativa. Los campos institución/autor/fecha quedan `PENDIENTE` hasta que el usuario los confirme.
 - Cada detalle es la geometría del espesor (6 y 8 cm), no un diseño de revestimiento.
 - El PDF se genera desde el modelo, no desde un DWG guardado.
+
+## Auditoría PR #20 — hallazgo P1 (viewports) y cierre
+- `guardarLaminas` ya no usa `some()` sobre escalas. `src/drawing/layouts_check.js` verifica cada layout: identidad y duplicados, cantidad exacta de viewports (tolera como máximo un viewport global del tamaño de la lámina), asignación uno a uno por centro y tamaño en papel, escala, bloqueo y región del modelo. Rechaza faltantes, sobrantes, duplicados, desplazados, sin bloqueo y asociados a otra vista.
+- El mismo verificador se aplica (a) al DXF generado, leído con un parser independiente de códigos de grupo (`LAYOUTS_INVALIDOS` si falla) y (b) a la inspección que devuelve AutoCAD sobre el DWG guardado.
+- Pruebas: oráculo DXF, mocks positivos y 16 negativos, test de `guardarLaminas` con runner simulado. El resultado siempre incluye `dwg_validado_autocad_real: false`.
+- **Límite declarado:** la región del modelo (`ViewCenter`) se verifica en el DXF; en el DWG solo si AutoCAD la expone por COM. Si no, el nivel es `parcial_sin_region_modelo`. Que el DWG real conserve centros, escala y bloqueo sigue **PENDIENTE_EXTERNO** (AutoCAD 2027).
+- La suma de escalas coincidentes NO acredita un DWG válido.
+
+## Auditoría de Trust & Consent UX
+- Orden de canales: confirmación MCP (elicitación) → ventana nativa estructurada → archivo fuera de banda. Rechazo, cierre o tiempo agotado = no.
+- Se bloquea antes de abrir cualquier canal: URL explícita inválida/reservada (`.invalid`, `.test`, `.local`, `localhost`, credenciales en la URL, sin dominio), licencia `licensed` sin evidencia, extracto ausente, fuente vencida o no candidata. Caso negativo `Guía hash / https://x.invalid / unknown / licensed` probado.
+- Un origen local o no informado NO se bloquea: se muestra «No informado» y la decisión es de la persona (antes del ajuste bloqueaba toda fuente manual).
+- Una solicitud idéntica simultánea no abre dos ventanas. Ningún secreto en rutas accesibles al agente (TW-11 P1/SEC-02 intactos).
+- Pendiente: usabilidad real del diálogo WPF en Windows (accesibilidad, lectores de pantalla) — **PENDIENTE_EXTERNO**.
+
+## Alcance
+La generación de planos de TW-12 está **especializada en el túnel académico de herradura** (`tunnelModel`). No hay soporte general de proyectos ni de otras geometrías; ampliar requiere modelos y pruebas representativas adicionales.

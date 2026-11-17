@@ -20,6 +20,7 @@ import { parseDxf } from '../dxf/reader.js';
 import { dxfDecode } from '../design/salidas.js';
 import { sha256File } from '../security/sandbox.js';
 import { CadOperations } from './operations.js';
+import { expectedLayouts, verifyLayouts } from '../drawing/layouts_check.js';
 
 const PS_PRELUDE = `$ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -107,7 +108,7 @@ for ($i = 0; $i -lt [int]$doc.Layouts.Count; $i++) {
   $layout = $doc.Layouts.Item($i); if ($layout.ModelType) { continue }; $views = @()
   for ($j = 0; $j -lt [int]$layout.Block.Count; $j++) {
     $e = $layout.Block.Item($j)
-    if ($e.ObjectName -eq 'AcDbViewport') { $views += @{ centro_papel = DArr $e.Center; escala = DNum $e.CustomScale; ancho = DNum $e.Width; alto = DNum $e.Height; bloqueado = [bool]$e.DisplayLocked; objetivo = DArr $e.Target } }
+    if ($e.ObjectName -eq 'AcDbViewport') { $views += @{ centro_papel = DArr $e.Center; escala = DNum $e.CustomScale; centro_vista = DArr $e.ViewCenter; ancho = DNum $e.Width; alto = DNum $e.Height; bloqueado = [bool]$e.DisplayLocked; objetivo = DArr $e.Target } }
   }
   $layouts += @{ nombre = [string]$layout.Name; viewports = $views }
 }
@@ -520,7 +521,7 @@ export class AutoCadCom {
     const source = this.sandbox.resolve(project, dxf); const target = this.sandbox.resolveWritable(project, dwg);
     const input = this.#assertWorkCopy(project, source.abs);
     if (!isInside(path.join(target.root, FOLDERS.trabajo), target.abs) || !/\.dwg$/i.test(target.abs)) throw new UserError('DESTINO_INVALIDO', 'El DWG debe estar en la zona de trabajo CAD.');
-    const expected = composition.sheets.map(s => ({ name: `TW12-${s.id}`, scales: s.views.map(v => v.viewport.scale) }));
+    const expected = expectedLayouts(composition);
     const hash = sha256File(input);
     return new CadOperations(target.root).run({
       id: operacion, intent: { tipo: 'laminas_dwg_v1', source: input, sha256: hash, target: target.abs, expected },
@@ -531,10 +532,9 @@ export class AutoCadCom {
         if (!fs.existsSync(target.abs) || fs.readFileSync(target.abs).subarray(0, 4).toString('ascii') !== 'AC10') return false;
         const inspection = confirmarRuta(await this.#exec('inspeccionar_laminas', { ruta_esperada: target.abs, estricto: true }), target.abs, 'inspeccionar_laminas');
         result.inspection = inspection; result.sha256 = sha256File(target.abs); result.autocad_real = 'REQUIERE_REGISTRO_DE_EVIDENCIA';
-        return inspection.guardado === true && inspection.unidades === 6 && expected.every(s => {
-          const actual = inspection.layouts?.find(l => l.nombre === s.name);
-          return actual && s.scales.every(scale => actual.viewports.some(v => v.bloqueado === true && Math.abs(v.escala - scale) < 1e-8));
-        });
+        const structure = verifyLayouts(inspection.layouts, expected);
+        result.verificacion_layouts = structure; result.dwg_validado_autocad_real = false;
+        return inspection.guardado === true && inspection.unidades === 6 && structure.ok;
       },
     });
   }

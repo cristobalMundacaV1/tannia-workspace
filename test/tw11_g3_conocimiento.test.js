@@ -57,7 +57,7 @@ test('citas verificables (P02): exacta, inventada, localizador distinto, hash_on
     r = data(await K(c, { accion: 'verificar_cita', id, cita: 'el método prismoidal requiere tres secciones como mínimo' })); assert.equal(r.estado, 'not_found_in_source');
     r = data(await K(c, { accion: 'verificar_cita', id, cita: 'incorpora el área de la sección intermedia real', localizador: { page: 1 } })); assert.equal(r.estado, 'locator_mismatch');
     r = data(await K(c, { accion: 'verificar_cita', id: 'src-inexistente-00000000', cita: 'cualquier texto largo aquí' })); assert.equal(r.estado, 'source_not_registered');
-    r = data(await K(c, { accion: 'proponer_fuente', titulo: 'Guía solo hash', url: 'https://ejemplo.invalid/g', extracto: 'Texto literal extenso de la guía externa investigada.', almacenamiento: 'hash_only', licencia: 'licensed' })); const hid = r.id;
+    r = data(await K(c, { accion: 'proponer_fuente', titulo: 'Guía solo hash', url: 'https://ejemplo.org/g', extracto: 'Texto literal extenso de la guía externa investigada.', almacenamiento: 'hash_only', licencia: 'licensed' })); const hid = r.id;
     r = data(await K(c, { accion: 'verificar_cita', id: hid, cita: 'Texto literal extenso de la guía' })); assert.equal(r.estado, 'source_not_approved', 'una candidata no respalda citas');
   } finally { await close(); }
 });
@@ -65,7 +65,7 @@ test('citas verificables (P02): exacta, inventada, localizador distinto, hash_on
 test('T18/ADR-003: una fuente externa propuesta por Claude NO puede aprobarse sola (ni con parámetros inventados); archivo fuera de banda sí', async () => {
   const { home, client: c, close } = await entorno();
   try {
-    let r = await K(c, { accion: 'proponer_fuente', titulo: 'Manual de túneles (institución X)', url: 'https://ejemplo.invalid/manual', publisher: 'Institución X', clase: 'A', binding: 'recommendation', extracto: 'El espesor del sostenimiento se define según la clase de roca. Esta guía es una recomendación.', fecha_acceso: '2026-11-16', licencia: 'unknown' });
+    let r = await K(c, { accion: 'proponer_fuente', titulo: 'Manual de túneles (institución X)', url: 'https://ejemplo.org/manual', publisher: 'Institución X', clase: 'A', binding: 'recommendation', extracto: 'El espesor del sostenimiento se define según la clase de roca. Esta guía es una recomendación.', fecha_acceso: '2026-11-16', licencia: 'unknown' });
     assert.ok(!r.isError); const id = data(r).id; assert.equal(data(r).estado, 'candidate'); assert.equal(data(r).contenido_verificado_por_servidor, false);
     // no aparece en la búsqueda por defecto, sí etiquetada si se piden candidatas
     assert.equal(data(await K(c, { accion: 'buscar', consultas: ['espesor del sostenimiento según clase de roca'] })).no_encontrado, true);
@@ -97,7 +97,7 @@ test('aprobación humana por elicitación del cliente: aceptar / rechazar / canc
     const home = tmpHome('Tannia ñ elic '); const c = await clienteConElicitacion(home, resp);
     try {
       await call(c, 'tannia_proyecto_crear', { nombre: P });
-      const id = data(await K(c, { accion: 'proponer_fuente', titulo: 'Fuente E', url: 'https://ejemplo.invalid/e', extracto: 'Extracto literal de la fuente externa de prueba.' })).id;
+      const id = data(await K(c, { accion: 'proponer_fuente', titulo: 'Fuente E', url: 'https://ejemplo.org/e', extracto: 'Extracto literal de la fuente externa de prueba.' })).id;
       const r = data(await K(c, { accion: 'decidir_fuente', id })); assert.equal(r.estado, esperado, JSON.stringify(resp));
       if (esperado === 'registered') assert.equal(r.por, 'human_elicitation');
     } finally { await c.close(); }

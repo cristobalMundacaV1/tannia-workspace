@@ -144,3 +144,61 @@ test('TW12 oracle (ezdxf, independent reader): 4 layouts, no audit errors, viewp
   for (const [name, s] of Object.entries(scale)) for (const [w, h, vh] of o.vp[name]) assert.ok(Math.abs(vh - h * s / 1000) < 1e-6, `${name}: ${vh} vs ${h * s / 1000}`);
   assert.equal(Object.values(o.vp).flat().length, 5);
 });
+
+import { expectedLayouts, verifyLayouts, viewportsFromDxf } from '../src/drawing/layouts_check.js';
+const composed = () => compose(tunnelModel({}));
+// Mock of what AutoCAD returns, derived from the expectation (an independent description, then mutated).
+const mock = (exp, { overall = true } = {}) => exp.map(l => ({ nombre: l.name, viewports: [...(overall ? [{ centro_papel: [l.size[0] / 2, l.size[1] / 2], ancho: l.size[0], alto: l.size[1], escala: 1, bloqueado: false }] : []), ...l.viewports.map(v => ({ centro_papel: [...v.paperCenter], ancho: v.width, alto: v.height, escala: v.scale, bloqueado: true, centro_vista: [...v.modelCenter] }))] }));
+const issuesOf = (layouts, exp) => verifyLayouts(layouts, exp).issues.map(i => i.issue);
+
+test('TW12 layouts: DXF written by the generator satisfies the structural check read by an independent parser', () => {
+  const c = composed(); const r = verifyLayouts(viewportsFromDxf(buildDrawingDxf(c)), expectedLayouts(c));
+  assert.deepEqual(r.issues, []); assert.equal(r.ok, true); assert.equal(r.level, 'completo'); assert.equal(r.region_verificada, true);
+});
+
+test('TW12 layouts: positive mock passes; negatives are rejected with the precise issue', () => {
+  const exp = expectedLayouts(composed());
+  assert.deepEqual(issuesOf(mock(exp), exp), []); assert.deepEqual(issuesOf(mock(exp, { overall: false }), exp), []);
+  const clone = () => JSON.parse(JSON.stringify(mock(exp)));
+  let m = clone(); m[3].viewports.pop(); assert.ok(issuesOf(m, exp).includes('viewport_faltante'));                                  // missing
+  m = clone(); m[0].viewports.push({ ...m[0].viewports[1] }); assert.ok(issuesOf(m, exp).includes('viewport_sobrante'));             // extra/duplicate
+  assert.ok(issuesOf(m, exp).includes('viewport_duplicado'));
+  m = clone(); m[3].viewports[2] = { ...m[3].viewports[1] }; { const got = issuesOf(m, exp); assert.ok(got.includes('viewport_duplicado') || got.includes('viewport_desplazado_o_ausente')); }
+  m = clone(); m[2].viewports[1].centro_papel[0] += 5; assert.ok(issuesOf(m, exp).includes('viewport_desplazado_o_ausente'));        // displaced
+  m = clone(); m[2].viewports[1].escala = 10; assert.ok(issuesOf(m, exp).includes('viewport_escala'));                                // wrong scale
+  m = clone(); { const a = m[3].viewports[1]; const b = m[3].viewports[2]; [a.centro_papel, b.centro_papel] = [b.centro_papel, a.centro_papel]; [a.centro_vista, b.centro_vista] = [b.centro_vista, a.centro_vista]; const got = issuesOf(m, exp); assert.ok(got.includes('viewport_dimensiones')); } // viewport tied to the other detail view
+  m = clone(); m[2].viewports[1].bloqueado = false; assert.ok(issuesOf(m, exp).includes('viewport_sin_bloqueo'));                      // unlocked
+  m = clone(); m[2].viewports[1].ancho += 1; assert.ok(issuesOf(m, exp).includes('viewport_dimensiones'));                           // size
+  m = clone(); m[2].viewports[1].centro_vista[0] += 0.5; assert.ok(issuesOf(m, exp).includes('viewport_region_equivocada'));         // wrong region
+  m = clone(); m[2].viewports[1].centro_vista[1] += 1000; assert.ok(issuesOf(m, exp).includes('viewport_region_equivocada'));        // other view's region
+  m = clone(); m.pop(); assert.ok(issuesOf(m, exp).includes('layout_faltante'));
+  m = clone(); m.push({ nombre: 'EXTRA', viewports: [] }); assert.ok(issuesOf(m, exp).includes('layout_inesperado'));
+  m = clone(); m.push(JSON.parse(JSON.stringify(m[0]))); assert.ok(issuesOf(m, exp).includes('layout_duplicado'));
+  m = clone(); m[0].viewports.push({ ...m[0].viewports[0] }); assert.ok(issuesOf(m, exp).includes('viewport_global_duplicado'));      // two overall viewports
+  assert.equal(verifyLayouts(undefined, exp).ok, false); assert.equal(verifyLayouts([], exp).ok, false);
+});
+
+test('TW12 layouts: scale-only coincidence (old some() check) no longer passes; missing model region is declared partial, never complete', () => {
+  const exp = expectedLayouts(composed()); const m = mock(exp);
+  m[3].viewports = m[3].viewports.filter((_, i) => i === 1); m[3].viewports.push({ ...m[3].viewports[0], centro_papel: [1, 1] });
+  assert.equal(verifyLayouts(m, exp).ok, false);
+  const noRegion = mock(exp); for (const l of noRegion) for (const v of l.viewports) delete v.centro_vista;
+  const r = verifyLayouts(noRegion, exp); assert.equal(r.ok, true); assert.equal(r.level, 'parcial_sin_region_modelo'); assert.equal(r.region_verificada, false);
+});
+
+test('TW12 guardarLaminas: structural mismatch in the saved DWG fails verification and never claims real-AutoCAD validation', async () => {
+  const { sb, root } = environment(); const c = composed(); const exp = expectedLayouts(c);
+  const dxfRel = '03 Trabajo/CAD/modelos/x/planos.dxf'; const dwgRel = '03 Trabajo/CAD/modelos/x/planos.dwg';
+  fs.mkdirSync(path.join(root, path.dirname(dxfRel)), { recursive: true }); fs.writeFileSync(path.join(root, dxfRel), buildDrawingDxf(c));
+  const dwgAbs = path.join(root, dwgRel);
+  const make = mutate => new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async script => {
+    if (/SaveAs/.test(script)) { fs.writeFileSync(dwgAbs, 'AC1032 synthetic stub, not a real DWG'); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true } }); }
+    const layouts = mock(exp); mutate(layouts); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true, unidades: 6, layouts } });
+  } });
+  const good = await make(() => {}).guardarLaminas('Piloto', { dxf: dxfRel, dwg: dwgRel, operacion: 'ok-1', composition: c });
+  assert.equal(good.dwg_validado_autocad_real, false); assert.equal(good.verificacion_layouts.ok, true); assert.equal(good.autocad_real, 'REQUIERE_REGISTRO_DE_EVIDENCIA');
+  fs.rmSync(dwgAbs);
+  await assert.rejects(make(l => { l[2].viewports[1].centro_papel[0] += 9; }).guardarLaminas('Piloto', { dxf: dxfRel, dwg: dwgRel, operacion: 'bad-1', composition: c }));
+  fs.rmSync(dwgAbs, { force: true });
+  await assert.rejects(make(l => { l[3].viewports.pop(); }).guardarLaminas('Piloto', { dxf: dxfRel, dwg: dwgRel, operacion: 'bad-2', composition: c }));
+});

@@ -23,7 +23,7 @@ async function casoObsoleto(c, N) { await call(c, 'tannia_cic_encargo', { proyec
 test('P1: ningún secreto de aprobación existe en el proyecto ni es recuperable con herramientas MCP (fuente candidata y borrador desactualizado)', async () => {
   const { home, client: c, close } = await env();
   try {
-    const f = data(await call(c, 'tannia_cic_conocimiento', { proyecto: P, accion: 'proponer_fuente', titulo: 'Manual X', url: 'https://ejemplo.invalid/x', extracto: 'El espesor del sostenimiento depende de la clase de roca.' })); assert.ok(f.id);
+    const f = data(await call(c, 'tannia_cic_conocimiento', { proyecto: P, accion: 'proponer_fuente', titulo: 'Manual X', url: 'https://ejemplo.org/x', extracto: 'El espesor del sostenimiento depende de la clase de roca.' })); assert.ok(f.id);
     await casoObsoleto(c, 'Obs'); const r0 = await call(c, 'tannia_cic_entregable', { proyecto: P, caso: 'Obs', tipos: ['memoria_md'], borrador_desactualizado: true }); assert.equal(data(r0).error, 'CONSENTIMIENTO_HUMANO_REQUERIDO');
     // 1) recorrido exhaustivo del proyecto: ni archivos «codigo» ni líneas «APRUEBO <id> <código>»
     const proyecto = path.join(home, 'Proyectos', P); const archivos = caminar(proyecto); for (const a of archivos) { assert.ok(!/codigo|nonce/i.test(path.basename(a)), `archivo con nombre de código: ${a}`); let t = ''; try { t = fs.readFileSync(a, 'utf8'); } catch { /* binario */ } assert.ok(!SECRETO.test(t), `secreto legible en ${path.relative(home, a)}`); }
@@ -40,7 +40,7 @@ test('P1: ningún secreto de aprobación existe en el proyecto ni es recuperable
 test('P1: el agente no puede autoaprobar (archivos falsos en el proyecto, parámetros, preexistentes, de otro id, contenido ajeno)', async () => {
   const { home, client: c, close } = await env(); const ah = new AprobacionHumana(new Sandbox(home));
   try {
-    const f = data(await call(c, 'tannia_cic_conocimiento', { proyecto: P, accion: 'proponer_fuente', titulo: 'Guía', url: 'https://ejemplo.invalid/g', extracto: 'Extracto literal suficientemente largo de la guía.' })); const id = f.id;
+    const f = data(await call(c, 'tannia_cic_conocimiento', { proyecto: P, accion: 'proponer_fuente', titulo: 'Guía', url: 'https://ejemplo.org/g', extracto: 'Extracto literal suficientemente largo de la guía.' })); const id = f.id;
     const decidir = async (extra = {}) => data(await call(c, 'tannia_cic_conocimiento', { proyecto: P, accion: 'decidir_fuente', id, ...extra })).estado;
     // (a) parámetros inventados
     assert.equal(await decidir({ aprobado: true, aprobar: true, humano: true, confirmado_por_usuario: true, por: 'human_dialog' }), 'candidate');

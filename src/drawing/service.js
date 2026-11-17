@@ -9,6 +9,7 @@ import { readJson, verificarContencion } from '../project/store.js';
 import { UserError } from '../mcp/util.js';
 import { copiarDentro } from '../project/store.js';
 import { renderPdf } from './render.js';
+import { expectedLayouts, verifyLayouts, viewportsFromDxf } from './layouts_check.js';
 
 export class DrawingService {
   constructor(sandbox) { this.sandbox = sandbox; }
@@ -45,7 +46,9 @@ export class DrawingService {
     const pdfQa = []; const sceneQa = composition.sheets.map(s => ({ sheet: s.id, ...validateScene(sceneForSheet(composition, s), s) }));
     if (sceneQa.some(q => !q.ok)) throw new UserError('LEGIBILIDAD_FALLIDA', 'La lámina no supera el gate de legibilidad.', '', sceneQa);
     add('modelo.json', JSON.stringify(model, null, 2)); add('composicion.json', JSON.stringify(composition, null, 2));
-    add('planos.dxf', buildDrawingDxf(composition));
+    const dxfText = buildDrawingDxf(composition); const layoutQa = verifyLayouts(viewportsFromDxf(dxfText), expectedLayouts(composition));
+    if (!layoutQa.ok) throw new UserError('LAYOUTS_INVALIDOS', 'El DXF generado no cumple la verificación estructural de layouts y viewports.', '', layoutQa);
+    add('planos.dxf', dxfText);
     for (const sheet of composition.sheets) {
       const pdf = await buildSheetsPdf(composition, sheet.id); const rendered = await renderPdf(pdf);
       if (rendered.length !== 1 || !rendered[0].qa.ok) throw new UserError('RENDER_INVALIDO', 'El PDF renderizado está vacío o fuera del área de página.');
@@ -58,7 +61,7 @@ export class DrawingService {
     if (!combinedQa.ok) throw new UserError('PDF_INVALIDO', 'El PDF combinado es inválido.');
     add('conjunto.pdf', combined);
     const columns = Object.keys(model.quantities[0]); add('cantidades.csv', `${columns.join(';')}\n${model.quantities.map(q => columns.map(c => q[c]).join(';')).join('\n')}\n`);
-    add('verificacion.json', JSON.stringify({ dimensions: verifyDimensions(model), composition: sceneQa, pdf: pdfQa, combined: combinedQa, dwg: 'NOT_RUN', ready_for_delivery: false, warnings: model.warnings }, null, 2));
+    add('verificacion.json', JSON.stringify({ dimensions: verifyDimensions(model), composition: sceneQa, layouts_dxf: layoutQa, pdf: pdfQa, combined: combinedQa, dwg: 'NOT_RUN', ready_for_delivery: false, warnings: model.warnings }, null, 2));
     const entry = { id, files: all.map(a => a.nombre), model_sha256: digest(model), status: 'review_candidate', origin: model.provenance };
     const next = { schema: 'tw.drawing.history/1', head: id, versiones: [entry], redo: [] };
     commitConHistorial({ dir, historial: history, id, archivos: all, base: prior?.head || null, nuevo: prior ? null : next, entrada: entry, raiz: root });

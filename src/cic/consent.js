@@ -1,11 +1,15 @@
 // All source strings remain untrusted display data. This module grants no approval.
 export function sourceConsent(project, source, excerpts = []) {
   const blocked = [];
-  let url;
-  try {
-    url = new URL(source.origin?.path_or_url);
-    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || /(^|\.)(invalid|localhost|test|local)$/.test(url.hostname) || !url.hostname.includes('.')) blocked.push('La dirección de origen no es una fuente pública válida.');
-  } catch { blocked.push('Falta una dirección de origen válida.'); }
+  // Only an explicit web address can be invalid. A local document or an unspecified origin is shown
+  // to the person (origin 'No informado') and remains their decision; it is never silently approved.
+  const raw = source.origin?.path_or_url;
+  if (typeof raw === 'string' && /^[a-z][a-z0-9+.-]*:\/\//i.test(raw.trim())) {
+    try {
+      const url = new URL(raw.trim());
+      if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || /(^|\.)(invalid|localhost|test|local)$/.test(url.hostname) || !url.hostname.includes('.')) blocked.push('La dirección de origen no es una fuente pública válida.');
+    } catch { blocked.push('Falta una dirección de origen válida.'); }
+  }
   if (source.state !== 'candidate') blocked.push('La fuente no está disponible para autorización.');
   if (!source.content?.available || !excerpts.some(p => p.text?.trim().length >= 10)) blocked.push('No hay un extracto disponible para revisar.');
   if (source.valid_until && source.valid_until < new Date().toISOString().slice(0, 10)) blocked.push('La fuente está vencida; requiere evidencia actualizada.');
