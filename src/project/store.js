@@ -100,7 +100,7 @@ export class Project {
    */
   savePartidas(x, { revisar = false } = {}) {
     const previas = new Map(this.partidas().map((p) => [p.codigo, { h: huella(contenidoPartida(p)), v: p.version_id }]));
-    const out = x.map((p) => { const prev = previas.get(p.codigo); const h = huella(contenidoPartida(p)); return { ...p, version_id: prev && prev.h === h && prev.v ? prev.v : idAleatorio('pv') }; });
+    const out = x.map((p) => { const prev = previas.get(p.codigo); const h = huella(contenidoPartida(p)); const { cantidad_verificada: _cv, verificada_por: _vp, verificada_en: _ve, verificacion: _vr, ...limpio } = p; return { ...limpio, version_id: prev && prev.h === h && prev.v ? prev.v : idAleatorio('pv') }; }); // la verificación vive SOLO en los recibos (sin campo contradictorio en disco)
     this.escribir(this.p(FOLDERS.cubicaciones, 'partidas.json'), out); this.cambio('Se modificaron las partidas.');
     if (!revisar) this.invalidateApproval('Se modificaron las partidas.');
   }

@@ -23,13 +23,13 @@
     "@modelcontextprotocol/sdk": "1.32.2",
     "@napi-rs/canvas": "0.1.100",
     "exceljs": "4.4.0",
+    "fflate": "0.8.3",
     "pdfjs-dist": "5.4.149",
     "pdfkit": "0.17.2",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@anthropic-ai/mcpb": "2.1.2",
-    "esbuild": "0.25.12",
-    "fflate": "0.8.3"
+    "esbuild": "0.25.12"
   }
 }

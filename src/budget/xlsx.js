@@ -9,7 +9,7 @@ const fillWarn = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE699
 const fillHead = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
 const fillInput = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
 
-export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, cache = true, generado = new Date().toISOString() }) {
+export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, cache = true, generado = new Date().toISOString(), revision = null, origen_economico = null }) {
   const B = computeBudget({ partidas, apus, config });
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Tannia Workspace'; wb.created = new Date(generado);
@@ -22,6 +22,7 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   const nd = 'NO DEFINIDO: se calcula con 0 solo como borrador; indique el valor antes de entregar.';
   wp.addRow(['Gastos generales (%)', B.config.gastos_generales_pct ?? 0, B.config.gastos_generales_pct == null ? nd : 'Editable. Valor indicado explícitamente.']);
   wp.addRow(['Utilidades (%)', B.config.utilidades_pct ?? 0, B.config.utilidades_pct == null ? nd : 'Editable. Valor indicado explícitamente.']);
+  if (origen_economico) wp.addRow(['Origen de precios y porcentajes', origen_economico, 'Tannia no puede acreditar quién aportó estos valores.']);
   wp.addRow(['IVA (%)', B.config.iva_pct ?? 0, B.config.iva_pct == null ? nd : 'Editable. Valor indicado explícitamente; tasa legal vigente: VERIFICAR antes de entregar.']);
   for (const r of [2, 3, 4]) wp.getCell(`B${r}`).fill = fillInput;
 
@@ -68,7 +69,7 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   const ws = wb.addWorksheet('Presupuesto', { views: [{ state: 'frozen', ySplit: 4 }] });
   ws.columns = [{ width: 10 }, { width: 50 }, { width: 8 }, { width: 14 }, { width: 16 }, { width: 18 }, { width: 44 }];
   ws.getCell('A1').value = `Presupuesto — ${proyecto}`; ws.getCell('A1').font = { bold: true, size: 14 };
-  ws.getCell('A2').value = B.estado_final_posible ? 'Estado: apto para revisión final (cantidades marcadas como verificadas y precios completos)' : 'BORRADOR — NO FINAL: hay precios o cantidades pendientes (ver hoja Alertas)';
+  ws.getCell('A2').value = B.estado_final_posible ? `CANDIDATO A ENTREGA${revision ? ` — revisión ${revision}` : ''}: válido solo si su huella coincide con el manifiesto aprobado` : 'BORRADOR — NO FINAL: hay precios o cantidades pendientes (ver hoja Alertas)';
   ws.getCell('A2').font = { bold: true, color: { argb: B.estado_final_posible ? 'FF2E7D32' : 'FFC00000' } };
   ws.getRow(4).values = ['Código', 'Partida', 'Unidad', 'Cantidad', 'P. unitario CLP', 'Total CLP', 'Estado de la cantidad'];
   ws.getRow(4).font = bold; ws.getRow(4).fill = fillHead;

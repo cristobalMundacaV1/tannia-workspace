@@ -16,20 +16,27 @@ export function latin(s) {
  */
 export function buildMemoriaPdf(data) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 50, info: { Title: `Memoria de cálculo — ${data.proyecto}`, Author: 'Tannia Workspace', Creator: 'Tannia Workspace' }, bufferPages: true });
+    const doc = new PDFDocument({ compress: false, size: 'A4', margin: 50, info: { Title: `Memoria de cálculo — ${data.proyecto}`, Author: 'Tannia Workspace', Creator: 'Tannia Workspace' }, bufferPages: true });
     const rawText = doc.text.bind(doc); doc.text = (t, ...r) => rawText(typeof t === 'string' ? latin(t) : t, ...r);
     const chunks = [];
     doc.on('data', (c) => chunks.push(c)); doc.on('end', () => resolve(Buffer.concat(chunks))); doc.on('error', reject);
     const H = (t) => { doc.moveDown(0.8).font('Helvetica-Bold').fontSize(13).fillColor('#1F3864').text(t).moveDown(0.3).fillColor('black').font('Helvetica').fontSize(10); };
-    const final = data.estado === 'entregable';
+    // Estado del DOCUMENTO por su contenido (no por el estado del flujo): evita la circularidad aprobar→exportar→«final».
+    // 'candidato' = completo y verificado; su validez como entrega depende del manifiesto aprobado (huellas exactas).
+    const candidato = data.estado_documento === 'candidato';
 
     doc.font('Helvetica-Bold').fontSize(18).text('Memoria de cálculo y cubicación');
-    doc.font('Helvetica').fontSize(11).text(`Proyecto: ${data.proyecto}`).text(`Generado: ${data.generado}`).text(`Estado del proyecto: ${data.estado}`);
-    if (!final) doc.moveDown(0.5).font('Helvetica-Bold').fillColor('#C00000').text('BORRADOR — no es un documento final ni una certificación profesional.').fillColor('black').font('Helvetica');
+    doc.font('Helvetica').fontSize(11).text(`Proyecto: ${data.proyecto}`).text(`Generado: ${data.generado}`).text(`Revisión de datos: ${data.revision || 'no informada'}`);
+    if (candidato) doc.moveDown(0.5).font('Helvetica-Bold').fillColor('#1F3864').text(`CANDIDATO A ENTREGA — revisión ${data.revision}. Solo es entrega válida si sus huellas SHA-256 coinciden con el manifiesto aprobado por una persona. No es una certificación profesional.`).fillColor('black').font('Helvetica');
+    else doc.moveDown(0.5).font('Helvetica-Bold').fillColor('#C00000').text('BORRADOR — no es un documento final ni una certificación profesional.').fillColor('black').font('Helvetica');
 
-    H('1. Archivos de origen (trazabilidad)');
-    if (!data.archivos?.length) doc.text('Sin archivos registrados.');
-    for (const a of data.archivos || []) doc.text(`• ${a.archivo}  —  SHA-256: ${a.sha256 || 'no registrado'}`, { width: 495 });
+    H('1. Trazabilidad');
+    doc.font('Helvetica-Bold').text('1.1 Originales registrados en el proyecto (protegidos, huella al registrarlos)').font('Helvetica');
+    if (!data.originales?.length) doc.text('Ninguno.');
+    for (const a of data.originales || []) doc.text(`• ${a.archivo}  —  SHA-256: ${a.sha256}`, { width: 495 });
+    doc.font('Helvetica-Bold').text('1.2 Fuentes geométricas vinculadas a partidas').font('Helvetica');
+    if (!data.archivos?.length) doc.text('Ninguna partida tiene fuente geométrica (cantidades manuales o por método sin archivo).');
+    for (const a of data.archivos || []) doc.text(`• ${a.archivo}  —  SHA-256 usado en el cálculo: ${a.sha256 || 'no registrado'}  —  partidas: ${(a.partidas || []).join(', ')}`, { width: 495 });
 
     H('2. Partidas y cantidades');
     for (const p of data.partidas || []) {
@@ -48,6 +55,7 @@ export function buildMemoriaPdf(data) {
       doc.text(`Costo directo: ${clp(B.costo_directo)}`).text(`Gastos generales (${B.config.gastos_generales_pct ?? 'NO DEFINIDO'}%): ${clp(B.gastos_generales)}`).text(`Utilidades (${B.config.utilidades_pct ?? 'NO DEFINIDO'}%): ${clp(B.utilidades)}`).text(`Neto: ${clp(B.neto)}`).text(`IVA (${B.config.iva_pct ?? 'NO DEFINIDO'}%): ${clp(B.iva)}`);
       doc.font('Helvetica-Bold').text(`TOTAL${B.parcial ? ' PARCIAL (excluye partidas pendientes)' : ''}: ${clp(B.total)}`).font('Helvetica');
       doc.text(B.redondeo, { width: 495 });
+      if (data.origen_economico) doc.text(`Origen de precios y porcentajes: ${data.origen_economico}`, { width: 495 });
     }
     H('4. Advertencias, pendientes y límites');
     const adv = [...(data.advertencias || []), ...(data.presupuesto?.bloqueos || [])];

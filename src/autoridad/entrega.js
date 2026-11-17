@@ -9,6 +9,19 @@ import { Recibos } from './recibos.js';
 import { sha256File, FOLDERS } from '../security/sandbox.js';
 import { UserError } from '../mcp/util.js';
 import { copiarDentro, verificarContencion } from '../project/store.js';
+import { unzipSync, strFromU8 } from 'fflate';
+
+// Frases EXACTAS que emiten los generadores (mayúsculas): un nombre de proyecto como «R7 borrador» no es una marca.
+const MARCAS_NO_FINALES = /BORRADOR [—\x97-]|BORRADOR DESACTUALIZADO|NO FINAL|TOTAL PARCIAL|DESACTUALIZADA/;
+/** Revisa el CONTENIDO real del archivo (no solo metadatos): un documento que se declara borrador no puede ser entrega final. */
+export function marcasNoFinales(abs) {
+  const b = fs.readFileSync(abs);
+  try {
+    if (/\.pdf$/i.test(abs)) { const raw = b.toString('latin1'); const texto = raw + (raw.match(/<([0-9a-fA-F]{2,})>/g) || []).map((h) => Buffer.from(h.slice(1, -1), 'hex').toString('latin1')).join(''); const m = texto.match(MARCAS_NO_FINALES); return m ? [m[0]] : []; }
+    if (/\.xlsx$/i.test(abs)) { const z = unzipSync(new Uint8Array(b), { filter: (f) => /^xl\/(sharedStrings|worksheets\/sheet\d+)\.xml$/.test(f.name) }); const out = []; for (const [n, d] of Object.entries(z)) { const m = strFromU8(d).match(MARCAS_NO_FINALES); if (m) out.push(`${m[0]} (${n})`); } return out; }
+  } catch { return ['contenido ilegible']; }
+  return [];
+}
 
 const ARCHIVO_ARTEFACTOS = ['.tannia', 'artefactos.json'];
 export const ROLES_ENTREGA = { presupuesto_xlsx: 'Presupuesto (Excel)', memoria_pdf: 'Memoria de cálculo (PDF)' };
@@ -53,7 +66,12 @@ export function prepararManifiesto(pr, { presupuesto, integridad, partidas }) {
     if (!vig.length) {
       const viejos = arts.filter((a) => a.tipo === tipo).length;
       bloqueos.push(`${ROLES_ENTREGA[tipo]}: no hay uno generado desde la revisión vigente ${rev.id}${viejos ? ' (los existentes corresponden a datos anteriores o fueron modificados)' : ''}. Vuelva a generarlo.`);
-    } else elegido[tipo] = vig.at(-1);
+    } else {
+      const a = vig.at(-1); elegido[tipo] = a;
+      if (a.datos?.estado_documento !== 'candidato') bloqueos.push(`${ROLES_ENTREGA[tipo]} «${a.rel}» se generó como BORRADOR. Regenérelo cuando no haya pendientes.`);
+      const marcas = marcasNoFinales(pr.p(...a.rel.split('/')));
+      if (marcas.length) bloqueos.push(`${ROLES_ENTREGA[tipo]} «${a.rel}» contiene marcas de documento no final (${marcas.join(', ')}); no puede exportarse como entrega final.`);
+    }
   }
   if (!presupuesto?.estado_final_posible) bloqueos.push(...(presupuesto?.bloqueos?.length ? presupuesto.bloqueos.slice(0, 15) : ['Presupuesto no apto para estado final.']));
   if (!integridad?.ok) bloqueos.push('Integridad de originales comprometida.');
