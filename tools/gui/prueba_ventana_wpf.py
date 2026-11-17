@@ -128,12 +128,14 @@ def no_verificada(r, codigo):
 ESPERADO_TEXTO = ["Cantidad que va a confirmar: 10 m²", "5 m × 2,4 m = 12 m²", "Descuento por puerta: 1 m × 2 m = 2 m²", "Superficie neta: 12 − 2 = 10 m²", "no medidas en el plano", "No se comprobó en el plano si existen otros vanos", "sin trazabilidad geométrica", "la aprobación de la entrega es un paso posterior"]
 
 
-def c_contenido_y_confirmar(escala="1"):
+def c_contenido_y_confirmar(escala="1", modalidad=None):
     def f():
-        proc, js = lanzar(f"confirmar_{escala}", "--escala", escala)
+        extra = ["--modalidad", modalidad] if modalidad else []
+        proc, js = lanzar(f"confirmar_{escala}{'_' + modalidad if modalidad else ''}", "--escala", escala, *extra)
         w = ventana()
         txt = textos(w)
-        faltan = [e for e in ESPERADO_TEXTO if e not in txt]
+        esperado = ESPERADO_TEXTO + (["Sin originales registrados. Datos suministrados en conversación"] if modalidad else [])
+        faltan = [e for e in esperado if e not in txt]
         assert not faltan, f"texto faltante: {faltan}"
         si, no, chk = control(w, "btnAutorizar"), control(w, "btnNoAutorizar"), control(w, "chkRevisado")
         assert "Confirmar 10 m²" in si.window_text() and "No confirmar" in no.window_text(), (si.window_text(), no.window_text())
@@ -143,7 +145,7 @@ def c_contenido_y_confirmar(escala="1"):
         res = control(w, "txtResumen")
         sv = control(w, "scrollContenido").rectangle(); rr = res.rectangle()
         assert rr.top >= sv.top and rr.bottom <= sv.bottom, f"el resumen no cabe en la primera pantalla (escala {escala}): {rr} vs {sv}"
-        img = captura(w, f"ventana_escala_{escala.replace('.', '_')}")
+        img = captura(w, f"ventana_escala_{escala.replace('.', '_')}{'_' + modalidad if modalidad else ''}")
         chk.click_input()
         time.sleep(0.3)
         assert si.is_enabled()
@@ -295,6 +297,7 @@ if os.name != "nt":
 caso("contenido, controles y confirmación (escala 100 %)", c_contenido_y_confirmar("1"))
 caso("contenido y confirmación con escala de diseño 125 %", c_contenido_y_confirmar("1.25"))
 caso("contenido y confirmación con escala de diseño 150 %", c_contenido_y_confirmar("1.5"))
+caso("modalidad manual sin originales: advertencia visible y resumen sin desplazar a 150 %", c_contenido_y_confirmar("1.5", "manual_declarado"))
 caso("desplazamiento con escala 150 %: botones siempre accesibles", c_scroll("1.5"))
 caso("rechazo con el botón «No confirmar»", c_rechazo)
 caso("Enter sobre «No confirmar» = rechazo explícito", c_enter_sobre_no)

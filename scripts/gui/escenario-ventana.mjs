@@ -25,6 +25,7 @@ const p = { proyecto: 'GUI Prueba' };
 const out = { escenario, politica, escala: arg('escala') || '1', etiqueta: 'AUTORIZACIONES SIMULADAS POR UI AUTOMATION — NO SON ACEPTACIÓN HUMANA' };
 try {
   await T('tannia_proyecto_crear', { nombre: p.proyecto });
+  if (arg('modalidad')) await T('tannia_proyecto_modalidad', { ...p, accion: 'definir', modalidad: arg('modalidad') });
   const pol = politica === 'descontar_mayores_a' ? { tipo: politica, umbral_m2: 2.5, origen: 'decision_profesional' } : { tipo: politica, origen: 'decision_profesional' };
   const m = await T('tannia_metodo', { ...p, accion: 'calcular', metodo: 'MC01-muro-area-neta', datos: { tramos: [{ longitud_m: 5, origen: 'declarado_usuaria' }], altura: { valor_m: 2.4, origen: 'declarado_usuaria' }, vanos: [{ descripcion: 'puerta', ancho_m: 1, alto_m: 2, tramo: 0, origen: 'declarado_usuaria' }], politica_descuento: pol }, guardar_como: { codigo: 'M1', descripcion: 'Muro eje A' } });
   out.cantidad = m.datos?.cantidad;
