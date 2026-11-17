@@ -79,7 +79,7 @@ test('TW12 PDF: rendered four physical A3 sheets, text and vector content surviv
   assert.equal(pages.length, 4); assert.ok(pages.every(p => p.qa.ok && p.png.length > 10000));
   const qa = await verifyPdf(pdf, c.sheets); assert.equal(qa.ok, true); assert.equal(qa.pages, 4);
   assert.equal((await verifyPdf(await buildSheetsPdf(c, '01'), [c.sheets[2]])).ok, false, 'wrong sheet must fail even though valid PDF');
-  const dxf = buildDrawingDxf(c); assert.match(dxf, /\$INSUNITS\n70\n6/); assert.equal((dxf.match(/0\nVIEWPORT\n/g) || []).length, 5); assert.equal((dxf.match(/0\nDIMENSION\n/g) || []).length, 8);
+  const dxf = buildDrawingDxf(c); assert.match(dxf, /\$INSUNITS\n70\n6/); assert.equal((dxf.match(/0\nVIEWPORT\n/g) || []).length, 5); assert.equal((dxf.match(/0\nDIMENSION\n/g) || []).length, 9);
 });
 
 test('TW12 service preserves originals, emits immutable PDF/DXF/PNG revisions and detects alteration', async () => {
@@ -106,4 +106,41 @@ test('TW12 consent deduplicates simultaneous windows; close/decline never falls 
   const ah = new AprobacionHumana(sb, { dialogo: async () => { windows++; return waiting; } });
   const first = ah.decidir('Piloto', 'same'); await new Promise(r => setImmediate(r));
   assert.equal((await ah.decidir('Piloto', 'same')).en_curso, true); assert.equal(windows, 1); release('no'); assert.equal((await first).rechazado, true);
+});
+
+test('TW12 audit: plan has A-A cut marker at 0+075, profile has height dimension, revision table and short dimension labels clear of geometry', () => {
+  const model = tunnelModel({}); const c = compose(model);
+  const plan = model.views.find(v => v.id === 'planta'); const cut = plan.entities.find(e => e.layer === 'CORTE');
+  assert.equal(cut.a[0], 75); assert.equal(cut.b[0], 75);
+  assert.ok(plan.labels.filter(l => l.text === 'A').length === 2);
+  const profile = model.views.find(v => v.id === 'perfil'); const h = profile.dimensions.find(d => d.id === 'profile-height');
+  assert.ok(Math.abs(h.value - 5.25) < 1e-12);
+  for (const sheet of c.sheets) {
+    const scene = sceneForSheet(c, sheet); const qa = validateScene(scene, sheet);
+    assert.equal(qa.ok, true, JSON.stringify(qa.issues));
+    assert.ok(scene.some(e => e.kind === 'text' && e.value.startsWith('REVISIONES')), 'revision table');
+    assert.ok(scene.some(e => e.kind === 'text' && /^R01 /.test(e.value)));
+  }
+  assert.ok(compose(model).sheets[0].legend.some(l => l.id === 'CORTE'));
+});
+
+test('TW12 audit: physical 1:50 section — 5.5 m measures 110 mm in the PDF scene and 0.25 m radius arrows stay legible', () => {
+  const c = compose(tunnelModel({})); const sheet = c.sheets.find(s => s.id === '03'); const v = sheet.views[0];
+  const xs = sceneForSheet(c, sheet).filter(e => e.kind === 'path').flatMap(p => p.points.map(q => q[0]));
+  assert.ok(Math.abs((Math.max(...xs) - Math.min(...xs)) - 110) < 1e-6);
+  assert.equal(v.viewport.scale, 20);
+});
+
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
+const pyOk = spawnSync('python3', ['-I', '-c', 'import ezdxf'], { encoding: 'utf8' }).status === 0;
+test('TW12 oracle (ezdxf, independent reader): 4 layouts, no audit errors, viewport paper size / view height == scale', { skip: pyOk ? false : 'requiere python3 + ezdxf' }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw12-ez-')); const file = path.join(dir, 'p.dxf');
+  fs.writeFileSync(file, buildDrawingDxf(compose(tunnelModel({}))));
+  const code = `import sys,json,ezdxf\nfrom ezdxf import recover\nd,a=recover.readfile(sys.argv[1])\nout={'errors':len(a.errors),'layouts':[l.name for l in d.layouts],'vp':{l.name:[[v.dxf.width,v.dxf.height,v.dxf.view_height] for v in l.viewports()] for l in d.layouts if l.name!='Model'}}\nprint(json.dumps(out))`;
+  const r = spawnSync('python3', ['-I', '-c', code, file], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr);
+  const o = JSON.parse(r.stdout); assert.equal(o.errors, 0); assert.deepEqual(o.layouts, ['Model', 'TW12-01', 'TW12-02', 'TW12-03', 'TW12-04']);
+  const scale = { 'TW12-01': 500, 'TW12-03': 50 };
+  for (const [name, s] of Object.entries(scale)) for (const [w, h, vh] of o.vp[name]) assert.ok(Math.abs(vh - h * s / 1000) < 1e-6, `${name}: ${vh} vs ${h * s / 1000}`);
+  assert.equal(Object.values(o.vp).flat().length, 5);
 });

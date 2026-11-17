@@ -107,7 +107,7 @@ for ($i = 0; $i -lt [int]$doc.Layouts.Count; $i++) {
   $layout = $doc.Layouts.Item($i); if ($layout.ModelType) { continue }; $views = @()
   for ($j = 0; $j -lt [int]$layout.Block.Count; $j++) {
     $e = $layout.Block.Item($j)
-    if ($e.ObjectName -eq 'AcDbViewport') { $views += @{ centro_papel = DArr $e.Center; escala = [double]$e.CustomScale; ancho = [double]$e.Width; alto = [double]$e.Height; bloqueado = [bool]$e.DisplayLocked; objetivo = DArr $e.Target } }
+    if ($e.ObjectName -eq 'AcDbViewport') { $views += @{ centro_papel = DArr $e.Center; escala = DNum $e.CustomScale; ancho = DNum $e.Width; alto = DNum $e.Height; bloqueado = [bool]$e.DisplayLocked; objetivo = DArr $e.Target } }
   }
   $layouts += @{ nombre = [string]$layout.Name; viewports = $views }
 }

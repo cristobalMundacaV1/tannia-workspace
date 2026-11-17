@@ -39,7 +39,7 @@ export function sceneForSheet(composition, sheet) {
       }
       const a = xy(d.a); const b = xy(d.b); const horizontal = Math.abs(d.b[1] - d.a[1]) < 1e-9;
       let c; let e;
-      if (horizontal) { const y = Math.max(a[1], b[1]) + d.offset; c = [a[0], y]; e = [b[0], y]; text(`${number(d.value)} m`, (c[0] + e[0]) / 2, y + 1, 2.5, 35, 'center').movable = true; }
+      if (horizontal) { const y = Math.max(a[1], b[1]) + d.offset; c = [a[0], y]; e = [b[0], y]; const short = Math.abs(e[0] - c[0]) < 14; text(`${number(d.value)} m`, short ? Math.max(c[0], e[0]) + 9 : (c[0] + e[0]) / 2, short ? y - 1.5 : y + 1, 2.5, 35, 'center').movable = true; }
       else { const x = a[0] + d.offset; c = [x, a[1]]; e = [x, b[1]]; text(`${number(d.value)} m`, x + (d.offset < 0 ? -10 : 10), (a[1] + b[1]) / 2, 2.5, 22, 'center').movable = true; }
       addLine(a, c); addLine(b, e); addLine(c, e);
       for (const p of [c, e]) addLine([p[0] - 1, p[1] + 1], [p[0] + 1, p[1] - 1]);
@@ -54,6 +54,11 @@ export function sceneForSheet(composition, sheet) {
   for (const v of sheet.views) for (const note of v.notes) { text(note, m + 4, ny, 2.5, w - 2 * m - 8); ny += 4; }
   text(`Leyenda: ${sheet.legend.map(l => l.legend).join(' | ')}`, m + 4, h - m - 65, 2.3, w - 2 * m - 8);
   composition.model.warnings.forEach((warning, i) => text(warning, m + 4, h - m - 59 + i * 4, 2.5, w - 2 * m - 8));
+  const rx = w - m - 72; const ry = h - m - 94;
+  scene.push({ kind: 'rect', x: rx, y: ry, w: 68, h: 12 }); addLine([rx, ry + 4], [rx + 68, ry + 4]); addLine([rx, ry + 8], [rx + 68, ry + 8]);
+  text('REVISIONES: Rev  Fecha  Descripción', rx + 2, ry + 0.6, 2.3, 64);
+  text(`${meta.revision}   ${meta.date}   Emisión para revisión`, rx + 2, ry + 4.6, 2.3, 64);
+  text('(sin revisiones posteriores)', rx + 2, ry + 8.6, 2.3, 64);
   const b = sheet.titleBlock; scene.push({ kind: 'rect', x: b.x, y: b.y, w: b.width, h: b.height });
   const colW = b.width / 3;
   for (let i = 1; i < 3; i++) addLine([b.x + colW * i, b.y], [b.x + colW * i, b.y + b.height]);
