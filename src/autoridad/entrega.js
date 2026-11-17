@@ -57,7 +57,7 @@ export function estadoArtefactos(pr, rev = revisionVigente(pr)) {
  * Prepara (sin aprobar) el manifiesto de la revisión vigente. Lanza GATE_NO_CUMPLIDO con todos los bloqueos si no es entregable.
  * `presupuesto` es computeBudget de las partidas ya proyectadas con verificaciones reales; `integridad` = verifyOriginals().
  */
-export function prepararManifiesto(pr, { presupuesto, integridad, partidas }) {
+export function prepararManifiesto(pr, { presupuesto, integridad, partidas, bloqueosExtra = [], modalidad = null, proteccion_originales = null, aviso = null }) {
   const rev = revisionVigente(pr); const bloqueos = [];
   const arts = estadoArtefactos(pr, rev);
   const elegido = {};
@@ -75,6 +75,7 @@ export function prepararManifiesto(pr, { presupuesto, integridad, partidas }) {
   }
   if (!presupuesto?.estado_final_posible) bloqueos.push(...(presupuesto?.bloqueos?.length ? presupuesto.bloqueos.slice(0, 15) : ['Presupuesto no apto para estado final.']));
   if (!integridad?.ok) bloqueos.push('Integridad de originales comprometida.');
+  bloqueos.push(...bloqueosExtra);
   const desact = (partidas || []).filter((p) => p.desactualizada).map((p) => p.codigo);
   if (desact.length) bloqueos.push(`Partidas desactualizadas respecto de su archivo de origen: ${desact.join(', ')}.`);
   if (bloqueos.length) throw new UserError('GATE_NO_CUMPLIDO', `No se puede preparar la entrega: ${[...new Set(bloqueos)].join(' | ')}`, 'Resuelva los pendientes indicados y vuelva a generar los archivos si cambió algún dato.', { bloqueos: [...new Set(bloqueos)], revision: rev.id });
@@ -83,7 +84,8 @@ export function prepararManifiesto(pr, { presupuesto, integridad, partidas }) {
     revision: rev.n, revision_id: rev.id, snapshot: rev.snapshot,
     archivos: Object.entries(elegido).map(([rol, a]) => ({ rol, rel: a.rel, sha256: a.sha256, bytes: a.bytes, artefacto: a.id })),
     resumen: { total: presupuesto.total, costo_directo: presupuesto.costo_directo, moneda: presupuesto.moneda, politica_economica: presupuesto.config, partidas: partidas.map((p) => ({ codigo: p.codigo, cantidad: p.cantidad, unidad: p.unidad, recibo_verificacion: p.verificacion?.recibo || null })) },
-    originales: { estado: integridad.estado, verificados: integridad.verificados },
+    modalidad, proteccion_originales, advertencias: aviso ? [aviso] : [],
+    originales: { estado: proteccion_originales === 'no_aplica_sin_originales' ? 'no_aplica_sin_originales' : integridad.estado, verificados: integridad.verificados },
     creado: new Date().toISOString(),
   };
   const f = pr.p('.tannia', 'entregas', `${manifiesto.id}.json`);

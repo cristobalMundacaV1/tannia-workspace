@@ -28,12 +28,13 @@ export function buildMemoriaPdf(data) {
 
     doc.font('Helvetica-Bold').fontSize(18).text('Memoria de cálculo y cubicación');
     doc.font('Helvetica').fontSize(11).text(`Proyecto: ${data.proyecto}`).text(`Generado: ${data.generado}`).text(`Revisión de datos: ${data.revision || 'no informada'}`);
+    if (data.aviso_modalidad) doc.moveDown(0.5).font('Helvetica-Bold').fillColor('#C00000').text(`ATENCIÓN: ${data.aviso_modalidad}`).fillColor('black').font('Helvetica');
     if (candidato) doc.moveDown(0.5).font('Helvetica-Bold').fillColor('#1F3864').text(`CANDIDATO A ENTREGA — revisión ${data.revision}. Solo es entrega válida si sus huellas SHA-256 coinciden con el manifiesto aprobado por una persona. No es una certificación profesional.`).fillColor('black').font('Helvetica');
     else doc.moveDown(0.5).font('Helvetica-Bold').fillColor('#C00000').text('BORRADOR — no es un documento final ni una certificación profesional.').fillColor('black').font('Helvetica');
 
     H('1. Trazabilidad');
     doc.font('Helvetica-Bold').text('1.1 Originales registrados en el proyecto (protegidos, huella al registrarlos)').font('Helvetica');
-    if (!data.originales?.length) doc.text('Ninguno.');
+    if (!data.originales?.length) doc.text(data.proteccion_originales === 'no_aplica_sin_originales' ? 'Ninguno. Protección de originales: no aplica (modalidad manual declarada).' : 'Ninguno.');
     for (const a of data.originales || []) doc.text(`• ${a.archivo}  —  SHA-256: ${a.sha256}`, { width: 495 });
     doc.font('Helvetica-Bold').text('1.2 Fuentes geométricas vinculadas a partidas').font('Helvetica');
     if (!data.archivos?.length) doc.text('Ninguna partida tiene fuente geométrica (cantidades manuales o por método sin archivo).');

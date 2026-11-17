@@ -16,7 +16,7 @@ export const PROCEDIMIENTOS = [
   {
     nombre: 'tw-recibir-expediente', titulo: 'Organizar los antecedentes de un proyecto', skill: 'tw-recibir-expediente',
     descripcion: 'Crea o abre el proyecto, importa planos/PDF/EETT por ruta local, registra originales protegidos y resume qué hay.',
-    pasos: ['Identifique el proyecto (tannia_proyecto_resolver; si no existe, tannia_proyecto_crear).', 'Importe los archivos que la usuaria indique por su ruta local (tannia_proyecto_importar). Un adjunto del chat no es un archivo accesible.', 'Registre los originales (tannia_originales_registrar) y confirme integridad (tannia_originales_verificar).', 'Resuma con tannia_proyecto_resumen: qué archivos hay, cuáles faltan (XREF, EETT, revisiones) y la siguiente acción.'],
+    pasos: ['Identifique el proyecto (tannia_proyecto_resolver; si no existe, tannia_proyecto_crear).', 'Si se trabajará SIN planos, solo con datos dichos en la conversación, pregunte y declare la modalidad «manual_declarado» (tannia_proyecto_modalidad); nunca registre un archivo ficticio para pasar un control.', 'Importe los archivos que la usuaria indique por su ruta local (tannia_proyecto_importar). Un adjunto del chat no es un archivo accesible.', 'Registre los originales (tannia_originales_registrar) y confirme integridad (tannia_originales_verificar).', 'Resuma con tannia_proyecto_resumen: qué archivos hay, cuáles faltan (XREF, EETT, revisiones) y la siguiente acción.'],
     prohibido: ['sobrescribir un original', 'resolver XREF externos automáticamente', 'asumir que un archivo es la revisión vigente por su nombre'],
   },
   {

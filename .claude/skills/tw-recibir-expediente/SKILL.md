@@ -11,9 +11,10 @@ Crea o abre el proyecto, importa planos/PDF/EETT por ruta local, registra origin
 
 Pasos:
 1. Identifique el proyecto (tannia_proyecto_resolver; si no existe, tannia_proyecto_crear).
-2. Importe los archivos que la usuaria indique por su ruta local (tannia_proyecto_importar). Un adjunto del chat no es un archivo accesible.
-3. Registre los originales (tannia_originales_registrar) y confirme integridad (tannia_originales_verificar).
-4. Resuma con tannia_proyecto_resumen: qué archivos hay, cuáles faltan (XREF, EETT, revisiones) y la siguiente acción.
+2. Si se trabajará SIN planos, solo con datos dichos en la conversación, pregunte y declare la modalidad «manual_declarado» (tannia_proyecto_modalidad); nunca registre un archivo ficticio para pasar un control.
+3. Importe los archivos que la usuaria indique por su ruta local (tannia_proyecto_importar). Un adjunto del chat no es un archivo accesible.
+4. Registre los originales (tannia_originales_registrar) y confirme integridad (tannia_originales_verificar).
+5. Resuma con tannia_proyecto_resumen: qué archivos hay, cuáles faltan (XREF, EETT, revisiones) y la siguiente acción.
 
 Prohibido:
 - sobrescribir un original

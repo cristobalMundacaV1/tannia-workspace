@@ -49,7 +49,7 @@ export function contenidoRevision(pr) {
   }
   const originales = Object.fromEntries(Object.entries(pr.originales()).map(([k, v]) => [k, v.sha256]));
   const verificaciones = [...verificacionesVigentes(pr, partidas).values()].map((r) => r.id).sort();
-  return { partidas: partidas.map((p) => ({ ...contenidoPartida(p), apu: p.apu ?? null, version_id: p.version_id ?? null })), apus: pr.apus(), config: pr.configGuardada(), calibraciones: pr.calibraciones(), originales, fuentes_actuales: fuentes, verificaciones };
+  return { modalidad: pr.meta()?.modalidad ?? null, partidas: partidas.map((p) => ({ ...contenidoPartida(p), apu: p.apu ?? null, version_id: p.version_id ?? null })), apus: pr.apus(), config: pr.configGuardada(), calibraciones: pr.calibraciones(), originales, fuentes_actuales: fuentes, verificaciones };
 }
 
 /** Revisión vigente. Si el contenido cambió (por herramienta o por fuera), crea una revisión nueva con su motivo. */
