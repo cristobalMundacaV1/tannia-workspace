@@ -51,6 +51,17 @@ function point(e, bx = 10, by = 20, bz = 30) {
   return { x: firstNum(e, bx, 0), y: firstNum(e, by, 0), z: firstNum(e, bz, 0) };
 }
 
+/** Traza TANNIA (XDATA): vincula la entidad gráfica con vista, elemento físico y rol. Solo texto; nunca se ejecuta. */
+export const APP_TRAZA = 'TANNIA_TRACE';
+function parseTraza(raw) {
+  let dentro = false; const t = {};
+  for (const p of raw.pairs) {
+    if (p.c === 1001) dentro = p.v === APP_TRAZA;
+    else if (dentro && p.c === 1000) { const i = p.v.indexOf('='); if (i > 0) t[p.v.slice(0, i)] = p.v.slice(i + 1).slice(0, 200); }
+  }
+  return Object.keys(t).length ? { elemento: t.elemento || null, vista: t.vista || null, rol: t.rol || null, ref: t.ref || null } : null;
+}
+
 // Convierte una entidad cruda en un objeto estructurado.
 export function buildEntity(raw, following = []) {
   const t = raw.type;
@@ -58,6 +69,7 @@ export function buildEntity(raw, following = []) {
     type: t,
     handle: first(raw, 5) || null,
     layer: first(raw, 8) || '0',
+    traza: parseTraza(raw),
     extrusion: { x: firstNum(raw, 210, 0), y: firstNum(raw, 220, 0), z: firstNum(raw, 230, 1) },
   };
   switch (t) {

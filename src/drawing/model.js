@@ -29,6 +29,23 @@ export function bounds(entities) {
   return { min: [Math.min(...points.map(p => p[0])), Math.min(...points.map(p => p[1]))], max: [Math.max(...points.map(p => p[0])), Math.max(...points.map(p => p[1]))] };
 }
 
+// Semántica explícita: qué elemento físico representa cada entidad gráfica y si es fuente de cubicación o solo representación.
+// Un elemento aparece en varias vistas (planta, perfil…) y SOLO UNA entidad de una vista es su fuente medible.
+const ELEMENT_BY_REF = { 'planta/axis': ['eje', 'fuente'], 'perfil/grade': ['eje', 'representacion'], 'planta/cut-aa': ['corte-aa', 'representacion'] };
+function tagElements(views, { length, area }) {
+  const lining = (v) => v.id.startsWith('detalle-');
+  for (const v of views) for (const e of v.entities) {
+    const ref = `${v.id}/${e.id}`; const [elemento, rol] = ELEMENT_BY_REF[ref] || [lining(v) ? 'revestimiento-comparativo' : 'tunel-excavacion', 'representacion'];
+    e.ref = ref; e.element = elemento; e.role = rol;
+  }
+  return [
+    { id: 'eje', tipo: 'alineamiento', unidad: 'm', fuente: 'planta/axis', magnitudes: { longitud_m: length }, vistas: ['planta', 'perfil'] },
+    { id: 'tunel-excavacion', tipo: 'excavacion', unidad: 'm', fuente: null, magnitudes: { longitud_m: length, area_seccion_m2: area }, vistas: ['planta', 'perfil', 'seccion'] },
+    { id: 'revestimiento-comparativo', tipo: 'espesor_geometrico', unidad: 'm', fuente: null, magnitudes: {}, vistas: views.filter(lining).map((d) => d.id) },
+    { id: 'corte-aa', tipo: 'anotacion', unidad: 'm', fuente: null, magnitudes: {}, vistas: ['planta'] },
+  ];
+}
+
 export function tunnelModel({ length = 150, width = 5.5, wall = 2.5, selected = 0.06, project = 'Túnel minero académico', revision = 'R01', date = 'PENDIENTE', institution = 'PENDIENTE', author = 'PENDIENTE' } = {}) {
   if (![length, width, wall, selected].every(Number.isFinite) || length <= 0 || width <= 0 || wall <= 0 || ![0.06, 0.08].includes(selected) || width <= selected * 2) throw new UserError('DATOS_INVALIDOS', 'Dimensiones positivas y alternativa de 0,06 o 0,08 m requeridas.');
   for (const s of [project, revision, date, institution, author]) if (typeof s !== 'string' || s.length > 90 || /[\r\n\u0000-\u001f]/.test(s)) throw new UserError('METADATOS_INVALIDOS', 'Texto de cajetín inválido o demasiado largo.');
@@ -40,7 +57,9 @@ export function tunnelModel({ length = 150, width = 5.5, wall = 2.5, selected = 
   const profile = { id: 'perfil', title: 'Perfil longitudinal', scale: 500, verticalScale: 100, entities: [line('grade', 'EJE', [0, 0], [length, 0]), line('roof', 'EXCAVACION', [0, wall + r], [length, wall + r]), line('portal-start', 'EXCAVACION', [0, 0], [0, wall + r]), line('portal-end', 'EXCAVACION', [length, 0], [length, wall + r])], dimensions: [dim('profile-length', [0, 0], [length, 0], 12), dim('profile-height', [0, 0], [0, wall + r], -14)], labels: stations.map(s => ({ at: [s, 0], dy: 7, text: `0+${String(s).padStart(3, '0')}` })), notes: ['Rasante horizontal hipotética: pendiente 0,00 %. Sin topografía.', 'Datum local 0,00 m arbitrario, NO es cota geográfica.', 'Escala H 1:500 / V 1:100. Exageración vertical 5x.'] };
   const cross = { id: 'seccion', title: 'Sección A-A / 0+075', scale: 50, entities: [...section('outer', 'EXCAVACION', r, wall), ...section('inner', 'INTERIOR', interior, wall)], dimensions: [dim('width', [-r, 0], [r, 0], 12), dim('wall', [r, 0], [r, wall], 10), dim('height', [-r, 0], [-r, wall + r], -12), { id: 'radius', kind: 'radial', center: [0, wall], radius: r, angle: 45, value: r, unit: 'm' }], labels: [], notes: [`Área excavada: ${area.toFixed(4)} m². Área interior: ${quantities.find(q => q.thickness_m === selected).interior_area_m2.toFixed(4)} m².`, `Alternativa representada: ${selected * 100} cm. Sin revestimiento de solera.`] };
   const details = [0.06, 0.08].map(t => ({ id: `detalle-${t * 100}`, title: `Detalle hastial / alternativa ${t * 100} cm`, scale: 10, entities: [line(`outer-${t}`, 'EXCAVACION', [0, 0], [0, 1]), line(`inner-${t}`, `ALTERNATIVA_${t * 100}`, [t, 0], [t, 1])], dimensions: [dim(`thickness-${t}`, [0, 0.5], [t, 0.5], 12)], labels: [], notes: [`Espesor geométrico ${t * 100} cm. No es diseño de sostenimiento.`] }));
-  return { schema: 'tw.drawing/1', unit: 'm', provenance: 'Datos autorizados del ejercicio TW12; hipótesis académicas explícitas', metadata: { project, revision, date, institution, author, reviewer: 'PENDIENTE', approval: 'PENDIENTE', stage: 'REVISIÓN ACADÉMICA', source: 'Modelo TW12', coordinateSystem: 'NO CONFIRMADO' }, quantities, views: [plan, profile, cross, ...details], sheets: [{ id: '01', title: 'Planta general', views: ['planta'] }, { id: '02', title: 'Perfil longitudinal', views: ['perfil'] }, { id: '03', title: 'Sección transversal', views: ['seccion'] }, { id: '04', title: 'Detalles de revestimiento', views: details.map(v => v.id) }], warnings: ['EJERCICIO ACADÉMICO. No apto para construcción.', 'Sin validación geotécnica ni fortificación aprobada.', 'Espesores comparativos; no constituyen diseño estructural.'] };
+  const views = [plan, profile, cross, ...details];
+  const elements = tagElements(views, { length, area });
+  return { schema: 'tw.drawing/1', unit: 'm', elements, provenance: 'Datos autorizados del ejercicio TW12; hipótesis académicas explícitas', metadata: { project, revision, date, institution, author, reviewer: 'PENDIENTE', approval: 'PENDIENTE', stage: 'REVISIÓN ACADÉMICA', source: 'Modelo TW12', coordinateSystem: 'NO CONFIRMADO' }, quantities, views, sheets: [{ id: '01', title: 'Planta general', views: ['planta'] }, { id: '02', title: 'Perfil longitudinal', views: ['perfil'] }, { id: '03', title: 'Sección transversal', views: ['seccion'] }, { id: '04', title: 'Detalles de revestimiento', views: details.map(v => v.id) }], warnings: ['EJERCICIO ACADÉMICO. No apto para construcción.', 'Sin validación geotécnica ni fortificación aprobada.', 'Espesores comparativos; no constituyen diseño estructural.'] };
 }
 
 export function compose(model, { paper = 'A3', orientation = 'landscape', margin = 12 } = {}) {

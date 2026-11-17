@@ -13,6 +13,7 @@ export function buildDrawingDxf(composition) {
   const pairs = list => list.map(([c, v]) => `${c}\n${typeof v === 'number' ? Number(v.toFixed(9)) : v}`).join('\n') + '\n';
   const section = (n, content) => pairs([[0, 'SECTION'], [2, n]]) + content + pairs([[0, 'ENDSEC']]);
   const point = (code, p) => [[code, p[0]], [code + 10, p[1]], [code + 20, p[2] || 0]];
+  const xdata = e => e.ref ? [[1001, 'TANNIA_TRACE'], [1000, `elemento=${e.element}`], [1000, `vista=${e.view}`], [1000, `rol=${e.role}`], [1000, `ref=${e.ref}`]] : [];
   const entity = (kind, owner, layer, extra, layout) => pairs([[0, kind], [5, handle()], [330, owner], [100, 'AcDbEntity'], [8, layer], ...(layout ? [[67, 1], [410, layout]] : []), ...extra]);
   const line = (a, b, owner, layer, layout) => entity('LINE', owner, layer, [[100, 'AcDbLine'], ...point(10, a), ...point(11, b)], layout);
   const text = (value, p, height, owner, layer, layout, center = false) => entity('TEXT', owner, layer, [[100, 'AcDbText'], ...point(10, p), [40, height], [1, textoDxf(value)], [7, 'STANDARD'], [72, center ? 1 : 0], ...point(11, p), [100, 'AcDbText'], [73, 0]], layout);
@@ -21,8 +22,9 @@ export function buildDrawingDxf(composition) {
     const offset = offsets[view.id]; const exaggeration = view.verticalScale ? view.scale / view.verticalScale : 1;
     const p = a => [a[0] + offset[0], a[1] * exaggeration + offset[1]];
     for (const e of view.entities) {
-      if (e.kind === 'line') entities += line(p(e.a), p(e.b), modelBlock, e.layer);
-      else entities += entity('ARC', modelBlock, e.layer, [[100, 'AcDbCircle'], ...point(10, p(e.center)), [40, e.radius], [100, 'AcDbArc'], [50, e.start], [51, e.end]]);
+      const tr = xdata({ ...e, view: view.id });
+      if (e.kind === 'line') entities += entity('LINE', modelBlock, e.layer, [[100, 'AcDbLine'], ...point(10, p(e.a)), ...point(11, p(e.b)), ...tr]);
+      else entities += entity('ARC', modelBlock, e.layer, [[100, 'AcDbCircle'], ...point(10, p(e.center)), [40, e.radius], [100, 'AcDbArc'], [50, e.start], [51, e.end], ...tr]);
     }
     for (const [i, d] of view.dimensions.entries()) {
       const name = `*D${dimensionBlocks.length + 1}`; const block = handle(); const scale = view.scale / 1000; const h = 2.5 * scale;
@@ -62,6 +64,7 @@ export function buildDrawingDxf(composition) {
   let tables = table('LTYPE', [pairs([[0, 'LTYPE'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbLinetypeTableRecord'], [2, 'CONTINUOUS'], [70, 0], [3, 'Continuous'], [72, 65], [73, 0], [40, 0]])]);
   tables += table('LAYER', Object.entries(layers).map(([name, id]) => pairs([[0, 'LAYER'], [5, id], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbLayerTableRecord'], [2, name], [70, 0], [62, LAYERS[name]?.color || 7], [6, 'CONTINUOUS'], [370, Math.round((LAYERS[name]?.weight || 0.18) * 100)]])));
   tables += table('STYLE', [pairs([[0, 'STYLE'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbTextStyleTableRecord'], [2, 'STANDARD'], [70, 0], [40, 0], [41, 1], [50, 0], [71, 0], [42, 2.5], [3, 'Arial.ttf'], [4, '']])]);
+  tables += table('APPID', ['ACAD', 'TANNIA_TRACE'].map(name => pairs([[0, 'APPID'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbRegAppTableRecord'], [2, name], [70, 0]])));
   tables += table('DIMSTYLE', [pairs([[0, 'DIMSTYLE'], [105, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbDimStyleTableRecord'], [2, 'STANDARD'], [70, 0], [40, 1], [41, 0.1], [140, 0.125], [271, 2]])]);
   const blocks = [{ name: '*Model_Space', block: modelBlock, layout: modelLayout }, ...layouts.map((l, i) => ({ ...l, name: `*Paper_Space${i || ''}` })), ...dimensionBlocks];
   tables += table('BLOCK_RECORD', blocks.map(b => pairs([[0, 'BLOCK_RECORD'], [5, b.block], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbBlockTableRecord'], [2, b.name], ...(b.layout ? [[340, b.layout]] : [])])));

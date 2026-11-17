@@ -9,6 +9,7 @@ import { readJson, verificarContencion } from '../project/store.js';
 import { UserError } from '../mcp/util.js';
 import { copiarDentro } from '../project/store.js';
 import { renderPdf } from './render.js';
+import { buildQuantityModel } from './quantity_model.js';
 import { expectedLayouts, verifyLayouts, viewportsFromDxf } from './layouts_check.js';
 
 export class DrawingService {
@@ -29,6 +30,8 @@ export class DrawingService {
     const source = path.join(dir, `${h.head}-planos.dxf`); const copy = path.join(work, 'planos.dxf'); verificarContencion(root, copy);
     if (!fs.existsSync(copy)) copiarDentro(root, source, copy);
     else if (digest(fs.readFileSync(copy)) !== digest(fs.readFileSync(source))) throw new UserError('COPIA_MODIFICADA', 'La copia CAD cambió; se conserva y no se sobrescribe.');
+    const sidecarSrc = path.join(dir, `${h.head}-planos.tannia-modelo.json`); const sidecarCopy = path.join(work, 'planos.tannia-modelo.json');
+    if (fs.existsSync(sidecarSrc) && !fs.existsSync(sidecarCopy)) copiarDentro(root, sidecarSrc, sidecarCopy);
     const composition = readJson(path.join(dir, `${h.head}-composicion.json`), null, { raiz: root });
     return cad.guardarLaminas(project, { dxf: path.relative(root, copy), dwg: path.relative(root, path.join(work, 'planos.dwg')), operacion: `dwg-${h.head}`, composition });
   }
@@ -48,7 +51,7 @@ export class DrawingService {
     add('modelo.json', JSON.stringify(model, null, 2)); add('composicion.json', JSON.stringify(composition, null, 2));
     const dxfText = buildDrawingDxf(composition); const layoutQa = verifyLayouts(viewportsFromDxf(dxfText), expectedLayouts(composition));
     if (!layoutQa.ok) throw new UserError('LAYOUTS_INVALIDOS', 'El DXF generado no cumple la verificación estructural de layouts y viewports.', '', layoutQa);
-    add('planos.dxf', dxfText);
+    add('planos.dxf', dxfText); add('planos.tannia-modelo.json', JSON.stringify(buildQuantityModel(model, dxfText), null, 2));
     for (const sheet of composition.sheets) {
       const pdf = await buildSheetsPdf(composition, sheet.id); const rendered = await renderPdf(pdf);
       if (rendered.length !== 1 || !rendered[0].qa.ok) throw new UserError('RENDER_INVALIDO', 'El PDF renderizado está vacío o fuera del área de página.');

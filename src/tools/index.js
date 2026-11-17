@@ -13,6 +13,7 @@ import { Project, ESTADOS } from '../project/store.js';
 import { readDxfFile, summarize } from '../dxf/inspect.js';
 import { measureDxf } from '../dxf/measure.js';
 import { computeQuantity, REGLAS } from '../quantities/engine.js';
+import { sidecarDe } from '../drawing/quantity_model.js';
 import { computeBudget, validateApu, TIPOS_INSUMO } from '../budget/calc.js';
 import { buildBudgetWorkbook } from '../budget/xlsx.js';
 import { buildMemoriaPdf } from '../report/memoria.js';
@@ -50,6 +51,12 @@ export function escribirSinSobrescribir(destino, contenido) {
   }
 }
 
+/** Modelo autorizado junto al DXF (<nombre>.tannia-modelo.json): archivo regular, sin enlaces, tamaño acotado. Ausente = sin contraste. */
+function leerModeloAutorizado(absDxf) {
+  const f = sidecarDe(absDxf);
+  try { const st = fs.lstatSync(f); if (!st.isFile() || st.isSymbolicLink() || st.size > 4 * 1024 * 1024) return { schema: 'invalido' }; return JSON.parse(fs.readFileSync(f, 'utf8')); }
+  catch (e) { return e.code === 'ENOENT' ? null : { schema: 'invalido' }; }
+}
 export function registerTools(server, { sandbox, log, g, cad, config, detectar }) {
   const reg = (name, def, fn) => { TOOL_NAMES.push(name); server.registerTool(name, def, g(fn)); };
   const P = (name) => new Project(sandbox, name);
@@ -213,7 +220,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   }, async (a) => {
     const pr = P(a.proyecto); const { abs, sha } = srcHash(pr, a.archivo);
     const medicion = measureDxf(readDxfFile(abs), { unidad_confirmada: a.unidad_confirmada });
-    const q = computeQuantity({ medicion, archivo: a.archivo, sha256: sha, capas: a.capas, regla: a.regla, parametros: a.parametros || {}, descuentos: a.descuentos || [], perdida_pct: a.perdida_pct, instancia_bloque: a.instancia_bloque });
+    const q = computeQuantity({ medicion, archivo: a.archivo, sha256: sha, capas: a.capas, regla: a.regla, parametros: a.parametros || {}, descuentos: a.descuentos || [], perdida_pct: a.perdida_pct, instancia_bloque: a.instancia_bloque, modelo: leerModeloAutorizado(abs) });
     const partida = { codigo: a.codigo, descripcion: a.descripcion, apu: a.apu, ...q, creada: new Date().toISOString() };
     upsert(pr, partida);
     return ok(q.estado_revision === 'needs_review' ? 'Partida creada, pero con needs_review: revise antes de usarla.' : 'Partida creada (sin verificar).', partida);
@@ -390,7 +397,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   registerProyectos(reg, { sandbox });
   registerArquitectura(reg, { sandbox, cad });
   if (cicActivo()) registerCic(reg, { sandbox, server, herramientas: () => [...new Set(TOOL_NAMES)] }); // TW-11: desactivado por defecto (72 herramientas)
-  if (process.env.TANNIA_ENGINEERING === 'on') registerDrawing(reg, { sandbox, cad });
+  if (process.env.TANNIA_ENGINEERING === 'on') registerDrawing(reg, { sandbox, cad, server });
 }
 
 // La verificación es el acto de revisión: no invalida el estado (sí invalida cualquier cambio de datos).
