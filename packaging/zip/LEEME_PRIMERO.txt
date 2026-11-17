@@ -1,0 +1,30 @@
+TANNIA WORKSPACE {{VERSION}} — CANDIDATO NO VALIDADO
+====================================================
+
+Qué es: una extensión para Claude Desktop que ayuda a revisar planos (DXF/PDF y AutoCAD en
+Windows), cubicar, preparar APU/presupuestos y entregar archivos aprobados por usted.
+
+ESTADO: candidato de ingeniería. NO ha sido probado todavía en su computador, ni con AutoCAD
+real, ni en Claude Desktop real, ni revisado por un profesional. No lo use para entregas
+profesionales hasta completar la prueba indicada en documentos/LIMITACIONES_Y_ESTADO.md.
+
+INSTALAR (3 pasos, sin consola ni administrador)
+  1. Extraiga TODO este ZIP en una carpeta (clic derecho > Extraer todo).
+  2. Haga doble clic en  INSTALAR.cmd
+     - comprueba Windows de 64 bits, la integridad del paquete y Claude Desktop;
+     - abre la extensión en Claude Desktop: pulse "Instalar", elija la carpeta de
+       proyectos (sugerida: Documentos\Tannia Workspace) y déjela ACTIVADA.
+  3. En una conversación nueva de Claude escriba:
+       Ejecuta el diagnóstico de Tannia Workspace
+
+Requisitos: Windows 10/11 de 64 bits, Claude Desktop instalado con sesión iniciada
+(https://claude.ai/download; necesita Internet para hablar con Claude). No hace falta instalar
+Node.js ni otros programas. AutoCAD completo es opcional (solo para funciones de dibujo).
+
+Privacidad: sus archivos se procesan en su equipo, pero lo que Claude lee de ellos se envía al
+servicio de Claude. No use planos de clientes sin su autorización.
+
+Si algo falla: ejecute DIAGNOSTICO.cmd y lea documentos/RECUPERACION_Y_DESINSTALACION.md.
+Integridad: SHA256SUMS.txt lista la huella de cada archivo. Extensión: {{MCPB}}
+SHA-256 de la extensión: {{SHA_MCPB}}
+Origen: commit {{COMMIT}}
