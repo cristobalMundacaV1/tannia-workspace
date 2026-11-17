@@ -819,6 +819,8 @@ export class AutoCadCom {
         result.inspection = inspection; result.sha256 = sha256File(target.abs); result.autocad_real = 'REQUIERE_REGISTRO_DE_EVIDENCIA';
         const structure = verifyLayouts(inspection.layouts, expected);
         result.verificacion_layouts = structure; result.dwg_validado_autocad_real = false;
+        // PL-08 (issue #32): este gate compara conteos, capas, XDATA y layouts, NO cada coordenada. No se presenta como «fidelidad probada».
+        result.fidelidad_geometrica = { estado: 'NO_VERIFICADA', alcance: 'conteos, capas, cotas, XDATA y layouts', pendiente: 'comparación entidad por entidad (verificarDwg) sobre el DWG reabierto, AUDIT y trazado a PDF en AutoCAD real' };
         if (importado) result.verificacion_importacion = importado.verificacion_importacion;
         return inspection.guardado === true && inspection.unidades === 6 && structure.ok;
       },
