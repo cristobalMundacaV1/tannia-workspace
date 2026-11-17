@@ -319,10 +319,11 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     if (p.estado_revision === 'needs_review' && !resolucion_needs_review) throw new UserError('NEEDS_REVIEW', 'La partida tiene needs_review: indique resolucion_needs_review (qué se revisó y cómo se resolvió).');
     const ex = explicarPartida(p); const cant = `${Number(p.cantidad).toLocaleString('es-CL', { maximumFractionDigits: 3 })} ${p.unidad.replace('m2', 'm²').replace('m3', 'm³')}`;
     // Resumen compacto (prueba UIA real: a 125/150 % la versión con separadores no cabía en la primera pantalla).
-    const lineas = [`Cantidad que va a confirmar: ${cant}`, ...ex.calculo, `Origen: ${ex.origen}${ex.alcance ? ` ${ex.alcance}` : ''}`, ...ex.advertencias.map((a) => `Advertencia: ${a}`), ...(avisoModalidad(pr) ? [`ATENCIÓN: ${avisoModalidad(pr)}`] : []), ...(resolucion_needs_review ? [`Resolución propuesta por el asistente (revísela): ${resolucion_needs_review}`] : [])];
+    const lineas = [`Cantidad que va a confirmar: ${cant}`, ...ex.calculo, `Origen: ${ex.origen}${ex.alcance ? ` ${ex.alcance}` : ''}`, ...ex.advertencias.map((a) => `Advertencia: ${a}`), ...(resolucion_needs_review ? [`Resolución propuesta por el asistente (revísela): ${resolucion_needs_review}`] : [])];
     const ventana = contenidoVentana({
       pregunta: `¿Confirmas que ${p.descripcion} (${p.codigo}) mide ${cant}?`,
-      porque: 'Esta cantidad se usará en el presupuesto. Solo una persona puede confirmar que es correcta.',
+      // Igual que en la ventana de entrega, el aviso de modalidad va en «Por qué»: visible sin que «Qué debes revisar» deje de caber al 150 %.
+      porque: `Esta cantidad se usará en el presupuesto. Solo una persona puede confirmar que es correcta.${avisoModalidad(pr) ? ` ATENCIÓN: ${avisoModalidad(pr)}` : ''}`,
       revisar: lineas, autoriza: `Solo que ${cant} es la cantidad correcta de esta partida. No apruebas el presupuesto ni su entrega: la aprobación de la entrega es un paso posterior y separado.`,
       si_acepta: 'La partida queda confirmada y puede entrar al presupuesto. Si después cambian las medidas, los vanos, la cantidad o el método, tendrás que confirmarla de nuevo (un cambio de precio no la anula).',
       si_rechaza: 'La partida queda sin confirmar y no se puede aprobar la entrega todavía. Si ya tenía una confirmación vigente, esa se mantiene.',
