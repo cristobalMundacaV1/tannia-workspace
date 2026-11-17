@@ -52,3 +52,15 @@ Los paquetes se verifican como cliente MCP desde el bundle desempaquetado.
 
 **Reproducibilidad:** dos compilaciones del mismo SHA dan contenido idéntico (`diff -r` vacío); el hash del `.mcpb` varía por marcas de tiempo del contenedor ZIP. Por eso se publica el hash del contenido. No se declara reproducibilidad byte a byte.
 **CI Windows/Ubuntu sobre 0c74735:** en el momento de este registro, en curso; el resultado se anota en el PR. Ejecución anterior sobre a29cc52: falló (5 pruebas, corregidas en 954780f).
+
+## Corrección P1 de empaquetado Windows (código 6dc6f6a) — reemplaza el candidato 0c74735
+**Defecto reproducido:** el paquete INGENIERÍA 0c74735 declaraba `compatibility.platforms: ["linux"]` (tomaba `process.platform` del constructor), por lo que Claude Desktop en Windows 11 mostraba «Esta extensión requiere Linux». El paquete 0c74735 queda **retirado**.
+**Corrección en el sistema de empaquetado (sin editar manifiestos a mano):** `scripts/lib/destino.mjs` resuelve el destino por `TANNIA_TARGET`; `build.mjs` incluye únicamente el binario nativo del destino, verificado contra el sha512 de `package-lock.json`, y registra `dist/destino.json`; `paquete-prueba.mjs` declara las plataformas desde el destino y se niega si lo construido no coincide o si el binario nativo no es exactamente uno.
+**Regresión:** `test/tw12_empaquetado_destino.test.js` construye en Linux un paquete `win32-x64` y comprueba: manifiesto `["win32"]`, 85 herramientas, solo `canvas-win32-x64-msvc`, binario PE (`MZ`), versión e integridad según lockfile, y el rechazo de un destino distinto.
+**Verificación:** 85 herramientas por cliente MCP desde el bundle desempaquetado (el cliente corre en Linux; el binario Windows no se ejecuta aquí).
+**NO verificado:** instalación en Claude Desktop real sobre Windows 11 y ejecución del binario `skia.win32-x64.msvc.node` en Windows — **PENDIENTE_EXTERNO**. El CI de Windows (runner real) ejecuta la suite con el binario nativo del runner, no con este `.mcpb`.
+
+| Paquete | plataformas | Herramientas | SHA-256 del .mcpb | SHA-256 del contenido |
+|---|---|---|---|---|
+| BASE | win32, darwin, linux (sin dependencia nativa en uso) | 72 | c70fad0ccd546a3f2e812f6a171a32111b1c3a267ffbaf4340ab53d3203f7507 | ver HASHES_CONTENIDO.txt |
+| INGENIERIA-WINDOWS | win32 | 85 | bd8cb38eae2d105ba435d91b50573ef485478e5af43ef3c9977a110e011ea28c | ver HASHES_CONTENIDO.txt |
