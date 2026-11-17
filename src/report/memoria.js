@@ -57,7 +57,8 @@ export function buildMemoriaPdf(data) {
       const B = data.presupuesto;
       H('3. Resumen de presupuesto (CLP)');
       doc.text(`Costo directo: ${clp(B.costo_directo)}`).text(`Gastos generales (${B.config.gastos_generales_pct ?? 'NO DEFINIDO'}%): ${clp(B.gastos_generales)}`).text(`Utilidades (${B.config.utilidades_pct ?? 'NO DEFINIDO'}%): ${clp(B.utilidades)}`).text(`Neto: ${clp(B.neto)}`).text(`IVA (${B.config.iva_pct ?? 'NO DEFINIDO'}%): ${clp(B.iva)}`);
-      doc.font('Helvetica-Bold').text(`TOTAL${B.parcial ? ' PARCIAL (excluye partidas pendientes)' : ''}: ${clp(B.total)}`).font('Helvetica');
+      doc.font('Helvetica-Bold').text(`${B.etiqueta_total && B.etiqueta_total !== 'TOTAL' ? `${B.etiqueta_total}${B.parcial ? '. TOTAL PARCIAL (excluye partidas pendientes)' : ''}` : `TOTAL${B.parcial ? ' PARCIAL (excluye partidas pendientes)' : ''}`}: ${clp(B.total)}`).font('Helvetica');
+      for (const w of B.advertencias || []) doc.fillColor('#C00000').text(`Advertencia: ${w}`, { width: 495 }).fillColor('black');
       doc.text(B.redondeo, { width: 495 });
       if (data.origen_economico) doc.text(`Origen de precios y porcentajes: ${data.origen_economico}`, { width: 495 });
     }

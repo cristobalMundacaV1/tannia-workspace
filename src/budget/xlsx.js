@@ -108,7 +108,7 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   const rUt = pr; sumRow('Utilidades', `ROUND(F${rDir}*PCT_UTILIDAD/100,0)`, B.utilidades);
   const rNeto = pr; sumRow('Neto', `F${rDir}+F${rGG}+F${rUt}`, B.neto, true);
   const rIva = pr; sumRow('IVA', `ROUND(F${rNeto}*PCT_IVA/100,0)`, B.iva);
-  sumRow('TOTAL', `F${rNeto}+F${rIva}`, B.total, true);
+  sumRow(B.etiqueta_total || 'TOTAL', `F${rNeto}+F${rIva}`, B.total, true);
   if (B.parcial) { ws.getRow(pr + 1).getCell(2).value = 'TOTAL PARCIAL: excluye partidas con PENDIENTE.'; ws.getRow(pr + 1).getCell(2).font = { bold: true, color: { argb: 'FFC00000' } }; }
 
   // --- Cubicación (trazabilidad)
