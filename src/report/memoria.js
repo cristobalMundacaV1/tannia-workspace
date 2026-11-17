@@ -1,5 +1,6 @@
 // Memoria de cálculo / informe PDF. Todo dato proviene del proyecto; nada se completa por inferencia.
 import PDFDocument from 'pdfkit/js/pdfkit.standalone.js';
+import { explicarPartida } from '../metodos/explicar.js';
 
 const clp = (n) => (n === null || n === undefined ? 'PENDIENTE' : `$${Math.round(n).toLocaleString('es-CL')}`);
 const num = (n, d = 3) => (n === null || n === undefined ? '—' : Number(n).toLocaleString('es-CL', { minimumFractionDigits: d, maximumFractionDigits: d }));
@@ -42,10 +43,12 @@ export function buildMemoriaPdf(data) {
     for (const p of data.partidas || []) {
       doc.font('Helvetica-Bold').text(`${p.codigo}  ${p.descripcion}`).font('Helvetica');
       doc.text(`Cantidad: ${num(p.cantidad)} ${p.unidad}   ·   Estado: ${p.cantidad_verificada ? 'verificada por una persona' : p.estado_revision === 'needs_review' ? 'NEEDS_REVIEW' : 'NO verificada'}`);
-      if (p.formula) doc.text(`Fórmula: ${p.formula}`, { width: 495 });
-      if (p.fuente) doc.text(`Fuente: ${p.fuente.archivo} · capas ${(p.fuente.capas || []).join(', ')} · unidad confirmada: ${p.fuente.unidad_confirmada || 'no'}`, { width: 495 });
-      for (const s of p.supuestos || []) doc.text(`Supuesto: ${s}`, { width: 495 });
-      for (const w of p.advertencias || []) doc.fillColor('#C00000').text(`Advertencia: ${w}`, { width: 495 }).fillColor('black');
+      const e = explicarPartida(p);
+      for (const l of e.calculo) doc.text(l, { width: 495 });
+      doc.text(`Origen: ${e.origen}`, { width: 495 }); if (e.alcance) doc.text(`Alcance: ${e.alcance}`, { width: 495 });
+      if (p.fuente) doc.text(`Archivo: ${p.fuente.archivo} · capas ${(p.fuente.capas || []).join(', ') || '—'}`, { width: 495 });
+      for (const sp of e.supuestos) doc.text(`Supuesto: ${sp}`, { width: 495 });
+      for (const w of e.advertencias) doc.fillColor('#C00000').text(`Advertencia: ${w}`, { width: 495 }).fillColor('black');
       doc.moveDown(0.4);
       if (doc.y > 720) doc.addPage();
     }
@@ -57,11 +60,19 @@ export function buildMemoriaPdf(data) {
       doc.text(B.redondeo, { width: 495 });
       if (data.origen_economico) doc.text(`Origen de precios y porcentajes: ${data.origen_economico}`, { width: 495 });
     }
-    H('4. Advertencias, pendientes y límites');
-    const adv = [...(data.advertencias || []), ...(data.presupuesto?.bloqueos || [])];
-    if (!adv.length) doc.text('Sin advertencias automáticas. La revisión profesional sigue siendo necesaria.');
-    for (const a of [...new Set(adv)]) doc.text(`• ${a}`, { width: 495 });
-    doc.moveDown().fontSize(9).fillColor('#555555').text('Documento generado por Tannia Workspace como apoyo. Las medidas provienen de la geometría de los archivos indicados; las partidas, parámetros constructivos, precios y la conformidad normativa deben ser revisados y aprobados por un profesional responsable.', { width: 495 });
+    H('4. Pendientes, advertencias y límites');
+    const bloq = [...new Set(data.presupuesto?.bloqueos || [])];
+    const advs = [...new Set([...(data.advertencias || []), ...(data.partidas || []).flatMap((p) => explicarPartida(p).advertencias.map((a) => `${p.codigo}: ${a}`))])];
+    const lims = [...new Set((data.partidas || []).flatMap((p) => explicarPartida(p).limites.map((l) => `${p.codigo}: ${l}`)))];
+    doc.font('Helvetica-Bold').text('4.1 Pendientes que impiden aprobar').font('Helvetica');
+    if (!bloq.length) doc.text('Sin pendientes que bloqueen la entrega.'); for (const a of bloq) doc.text(`• ${a}`, { width: 495 });
+    doc.font('Helvetica-Bold').text('4.2 Advertencias que permanecen').font('Helvetica');
+    if (!advs.length) doc.text('Ninguna.'); for (const a of advs) doc.text(`• ${a}`, { width: 495 });
+    doc.font('Helvetica-Bold').text('4.3 Límites de los métodos empleados').font('Helvetica');
+    if (!lims.length) doc.text('Sin límites adicionales declarados.'); for (const a of lims) doc.text(`• ${a}`, { width: 495 });
+    const tipos = new Set((data.partidas || []).map((p) => explicarPartida(p).tipo_origen));
+    const origenTxt = tipos.size === 1 && tipos.has('manual') ? 'Todas las cantidades fueron proporcionadas en la conversación; ninguna se midió en los planos.' : tipos.size === 1 && tipos.has('geometrico') ? 'Las cantidades se midieron en la geometría de los archivos indicados en cada partida.' : 'Hay cantidades medidas en planos y otras proporcionadas en la conversación; el origen se indica en cada partida.';
+    doc.moveDown().fontSize(9).fillColor('#555555').text(`Documento generado por Tannia Workspace como apoyo. ${origenTxt} Registrar un archivo y comprobar su huella no acredita su autoridad técnica; confirmar una cantidad manual no la convierte en medición geométrica. Partidas, parámetros, precios y conformidad normativa deben ser revisados por un profesional competente.`, { width: 495 }).fillColor('black');
 
     const range = doc.bufferedPageRange();
     for (let i = 0; i < range.count; i++) { doc.switchToPage(range.start + i); doc.fontSize(8).fillColor('#777777').text(`Tannia Workspace · ${data.proyecto} · página ${i + 1} de ${range.count}`, 50, 800, { width: 495, align: 'center', lineBreak: false }); }

@@ -1,0 +1,46 @@
+--- Ventana 1 (respondida por CLIENTE DE PRUEBA, no por una persona) ---
+Verificar cantidad de M1 — Muro eje A
+
+Cantidad que va a confirmar: 10 m²
+
+Superficie del muro: 5 m × 2,4 m = 12 m².
+Descuento por puerta: 1 m × 2 m = 2 m².
+Superficie neta: 12 − 2 = 10 m².
+
+Origen de los datos
+Medidas proporcionadas en la conversación; no medidas en el plano.
+Se descontaron los vanos informados. No se comprobó en el plano si existen otros vanos.
+
+Advertencias
+Cantidad no comprobada en el plano (sin trazabilidad geométrica).
+
+Qué significa confirmar
+Confirma las medidas, los vanos informados y el resultado de esta partida. La aprobación de la entrega es un paso posterior.
+
+Si cambian las medidas, los vanos, la cantidad o el método, deberá confirmarla de nuevo. Un cambio de precio no anula esta confirmación.
+
+Solo usted puede autorizar esto; Claude no puede hacerlo por usted.
+
+--- Ventana 2 (respondida por CLIENTE DE PRUEBA, no por una persona) ---
+Aprobar la entrega del presupuesto y la memoria
+
+Proyecto: Evidencia Cierre
+Revisión de datos: R5
+
+Resumen económico (CLP)
+Costo directo $80.000 · Gastos generales 10% $8.000 · Utilidades 5% $4.000
+Neto $92.000 · IVA 19% $17.480 · TOTAL $109.480
+Precios y porcentajes: origen no acreditado (declarados en la conversación).
+
+Partidas: 1, todas con cantidad confirmada por una persona.
+
+Archivos que se entregarán (exactamente estos):
+  • 05 Presupuestos/Presupuesto R5 20261117-162638.xlsx  (SHA-256 c1536e4f2d6cfb60…)
+  • 06 Informes/Memoria R5 20261117-162638.pdf  (SHA-256 8cdb921b8a58e347…)
+
+Advertencias que permanecen (no impiden aprobar)
+M1: Cantidad no comprobada en el plano (sin trazabilidad geométrica).
+
+Si autoriza, podrá exportar estos archivos a "07 Entregables". Cualquier cambio posterior de cantidades, precios, parámetros u originales anula esta aprobación.
+
+Solo usted puede autorizar esto; Claude no puede hacerlo por usted.

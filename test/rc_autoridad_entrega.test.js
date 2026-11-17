@@ -92,7 +92,7 @@ test('A-02: presupuesto a 100 → cambio a 900 sin regenerar: NO se aprueba ni e
   try {
     const p = await preparar(home, h, 100);
     await h.OK('tannia_partida_verificar', { ...p, codigo: 'P1' });
-    assert.match(c.vistos[0], /Cantidad: 10 m2/);
+    assert.match(c.vistos[0], /Cantidad que va a confirmar: 10 m²/);
     await h.OK('tannia_proyecto_avanzar', { ...p, a_estado: 'borrador' });
     const viejo = await h.OK('tannia_presupuesto_generar', p); await h.OK('tannia_informe_generar', p);
     assert.equal(viejo.total, oraculo(10, 100));

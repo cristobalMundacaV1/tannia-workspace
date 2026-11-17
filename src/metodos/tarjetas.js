@@ -16,7 +16,7 @@ export const TARJETAS = {
     id: 'MC01-muro-area-neta', version: '0.1', estado: 'propuesta', normative_claim: 'none', revisor: 'cubicador/a',
     alcance: 'Muro plano vertical, por tramos rectos, una o dos caras, sin retornos ni zonas curvas.',
     unidad: 'm2', formula: 'Q = caras × Σ(L_i × H) − caras × Σ deducciones según política',
-    entradas: { tramos: 'longitudes L_i en m', altura_m: 'altura H en m', caras: '1 o 2', vanos: 'ancho×alto en m, asignados a un tramo (posición opcional)', politica_descuento: 'descontar_todos | descontar_mayores_a (umbral m2) | no_descontar' },
+    entradas: { tramos: 'longitudes L_i en m', altura_m: 'altura H en m', caras: '1 o 2', vanos: 'ancho×alto en m, asignados a un tramo (posición opcional)', politica_descuento: 'descontar_todos (los vanos INFORMADOS) | descontar_mayores_a (umbral m2) | no_descontar' },
     supuestos: ['altura uniforme por tramo', 'vano completamente contenido en su tramo', 'neto geométrico ≠ cantidad de pago contractual salvo que la política lo establezca'],
     exclusiones: ['retornos/jambas', 'muros curvos', 'encuentros con solape', 'vanos solapados (se rechazan)'],
     oraculos: ['5 × 2,4 − 2 = 10 m²', 'vano fuera del tramo ⇒ rechazo', 'vanos solapados ⇒ rechazo'],

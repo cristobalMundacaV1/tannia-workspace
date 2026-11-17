@@ -1,0 +1,55 @@
+{
+  "schema": "tw.delivery_manifest/1",
+  "id": "ent-6a7f6a9b85a84052",
+  "proyecto": "Evidencia Cierre",
+  "proyecto_id": "182b2c38-5ad7-4a33-b8be-d5ff2906a806",
+  "revision": 5,
+  "revision_id": "R5",
+  "snapshot": "9249df5b4db807b575a66195d358dd0ffbd45e3e6bae2b73865fc328a2c457fe",
+  "archivos": [
+    {
+      "rol": "presupuesto_xlsx",
+      "rel": "05 Presupuestos/Presupuesto R5 20261117-162638.xlsx",
+      "sha256": "c1536e4f2d6cfb60cd0ec0fbf9b43d7f16b5abbd423fc9dc87805f2543b6a95d",
+      "bytes": 11080,
+      "artefacto": "art-be06bef31ca5cb15"
+    },
+    {
+      "rol": "memoria_pdf",
+      "rel": "06 Informes/Memoria R5 20261117-162638.pdf",
+      "sha256": "8cdb921b8a58e347a5c2dafb4340d44e5f9d482eda35250ac1b0ae18e0bc0496",
+      "bytes": 12782,
+      "artefacto": "art-e5240adab43c2213"
+    }
+  ],
+  "resumen": {
+    "total": 109480,
+    "costo_directo": 80000,
+    "moneda": "CLP",
+    "politica_economica": {
+      "gastos_generales_pct": 10,
+      "utilidades_pct": 5,
+      "iva_pct": 19
+    },
+    "partidas": [
+      {
+        "codigo": "M1",
+        "cantidad": 10,
+        "unidad": "m2",
+        "recibo_verificacion": "rec-3801f54b5bc7ca38"
+      }
+    ]
+  },
+  "originales": {
+    "estado": "integros",
+    "verificados": 1
+  },
+  "creado": "2026-11-17T16:26:38.064Z",
+  "aprobacion": {
+    "recibo": "rec-1f07cc0279f6e0c2",
+    "canal": "human_elicitation",
+    "declarado_por": "CLIENTE DE PRUEBA (simulado)",
+    "emitido": "2026-11-17T16:26:38.070Z"
+  },
+  "exportado": "2026-11-17T16:26:38.076Z"
+}

@@ -40,7 +40,7 @@ Add-Type -AssemblyName PresentationFramework
 $data = $env:TANNIA_DLG_DATA | ConvertFrom-Json
 $window = New-Object Windows.Window
 $window.Title = 'Tannia Workspace | Autorización'
-$window.Width = 760; $window.Height = 780; $window.MinWidth = 540; $window.MinHeight = 480
+$window.Width = [Math]::Min(760, [System.Windows.SystemParameters]::WorkArea.Width * 0.9); $window.Height = [Math]::Min(780, [System.Windows.SystemParameters]::WorkArea.Height * 0.9); $window.MinWidth = 540; $window.MinHeight = 480
 $window.WindowStartupLocation = 'CenterScreen'; $window.Background = '#F5F7FA'
 $window.FontFamily = 'Segoe UI'; $window.FontSize = 15
 $root = New-Object Windows.Controls.DockPanel; $root.Margin = '24'
@@ -51,7 +51,7 @@ $review = New-Object Windows.Controls.CheckBox
 $review.Content = $(if ($data.reviewLabel) { [string]$data.reviewLabel } else { 'He revisado el extracto y comprendo las consecuencias.' }); $review.Margin = '0,16,0,12'
 $null = $footer.Children.Add($review)
 $buttons = New-Object Windows.Controls.StackPanel; $buttons.Orientation = 'Horizontal'; $buttons.HorizontalAlignment = 'Right'
-$no = New-Object Windows.Controls.Button; $no.Content = '_No autorizar'; $no.Padding = '18,10'; $no.Margin = '0,0,12,0'; $no.IsCancel = $true; $no.IsDefault = $true
+$no = New-Object Windows.Controls.Button; $no.Content = $(if ($data.rejectLabel) { [string]$data.rejectLabel } else { '_No autorizar' }); $no.Padding = '18,10'; $no.Margin = '0,0,12,0'; $no.IsCancel = $true; $no.IsDefault = $true
 $yes = New-Object Windows.Controls.Button; $yes.Content = $(if ($data.approveLabel) { [string]$data.approveLabel } else { '_Autorizar uso limitado' }); $yes.Padding = '18,10'; $yes.Background = '#163A5F'; $yes.Foreground = 'White'; $yes.IsEnabled = $false
 $null = $buttons.Children.Add($no); $null = $buttons.Children.Add($yes); $null = $footer.Children.Add($buttons)
 $scroll = New-Object Windows.Controls.ScrollViewer; $scroll.VerticalScrollBarVisibility = 'Auto'; $null = $root.Children.Add($scroll)
@@ -73,12 +73,13 @@ if ($data.blocked.Count -gt 0) { Label 'No se puede autorizar todavía' ($data.b
 $details = New-Object Windows.Controls.Expander; $details.Header = 'Ver detalle técnico'; $details.Margin = '0,16,0,8'
 $technical = New-Object Windows.Controls.TextBox; $technical.Text = [string]$data.technical; $technical.IsReadOnly = $true; $technical.TextWrapping = 'Wrap'; $details.Content = $technical; $null = $body.Children.Add($details)
 $review.Add_Checked({ $yes.IsEnabled = ($data.canApprove -eq $true) }); $review.Add_Unchecked({ $yes.IsEnabled = $false })
-$no.Add_Click({ $window.DialogResult = $false; $window.Close() })
-$yes.Add_Click({ if ($review.IsChecked -and $data.canApprove -eq $true) { $window.DialogResult = $true; $window.Close() } })
+$script:res = 'cerrado'
+$no.Add_Click({ $script:res = 'no'; $window.DialogResult = $false; $window.Close() })
+$yes.Add_Click({ if ($review.IsChecked -and $data.canApprove -eq $true) { $script:res = 'si'; $window.DialogResult = $true; $window.Close() } })
 $timer = New-Object Windows.Threading.DispatcherTimer; $timer.Interval = [TimeSpan]::FromSeconds(85)
-$timer.Add_Tick({ $timer.Stop(); $window.DialogResult = $false; $window.Close() })
+$timer.Add_Tick({ $timer.Stop(); $script:res = 'timeout'; $window.DialogResult = $false; $window.Close() })
 $window.Add_ContentRendered({ $null = $no.Focus(); $timer.Start() })
 $window.Add_Closed({ $timer.Stop() })
-$result = $window.ShowDialog()
-if ($result -eq $true) { 'si' } else { 'no' }
+$null = $window.ShowDialog()
+$script:res
 `;

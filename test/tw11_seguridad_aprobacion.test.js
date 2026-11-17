@@ -81,10 +81,10 @@ test('P1: las herramientas MCP no pueden leer, escribir ni importar la carpeta d
 test('canales: elicitación (aceptar/rechazar), diálogo del SO (si/no/no disponible) y archivo — con prioridad y sin fallback tras un rechazo explícito', async () => {
   const home = tmpHome('Tannia ñ can '); const sb = new Sandbox(home); sb.ensureHome(); fs.mkdirSync(path.join(home, 'Proyectos', 'Q'), { recursive: true });
   const crea = (dialogo) => new AprobacionHumana(sb, { dialogo }); let ah = crea(async () => 'si');
-  assert.deepEqual(await ah.decidir('Q', 'x1', { descripcion: 'd', elicitar: async () => ({ action: 'accept', content: { aprobar: true } }) }), { por: 'human_elicitation' });
+  { const r = await ah.decidir('Q', 'x1', { descripcion: 'd', elicitar: async () => ({ action: 'accept', content: { aprobar: true } }) }); assert.equal(r.por, 'human_elicitation'); assert.equal(r.resultado, 'confirmado'); }
   assert.equal((await ah.decidir('Q', 'x2', { descripcion: 'd', elicitar: async () => ({ action: 'decline' }) })).rechazado, true, 'rechazo del cliente: no se prueba otro canal');
   assert.equal((await ah.decidir('Q', 'x3', { descripcion: 'd', elicitar: async () => ({ action: 'accept', content: { aprobar: false } }) })).rechazado, true, 'aceptar la ventana sin marcar «aprobar» es un NO explícito');
-  assert.deepEqual(await ah.decidir('Q', 'x4', { descripcion: 'd' }), { por: 'human_dialog' });
+  { const r = await ah.decidir('Q', 'x4', { descripcion: 'd' }); assert.equal(r.por, 'human_dialog'); assert.equal(r.resultado, 'confirmado'); }
   ah = crea(async () => 'no'); ah.solicitar('Q', 'x5', 'd'); fs.writeFileSync(ah.archivoAprobacion('Q', 'x5'), 'APRUEBO x5\n'); assert.equal((await ah.decidir('Q', 'x5', { descripcion: 'd' })).rechazado, true, 'un «No» explícito del diálogo prevalece sobre un archivo');
   ah = crea(async () => null); assert.deepEqual(await ah.decidir('Q', 'x6', { descripcion: 'd' }), { por: null }); ah.solicitar('Q', 'x6', 'd'); fs.writeFileSync(ah.archivoAprobacion('Q', 'x6'), 'APRUEBO x6\n'); assert.equal((await ah.decidir('Q', 'x6', { descripcion: 'd' })).por, 'human_out_of_band');
   assert.equal((await crea(async () => { throw new Error('sin GUI'); }).decidir('Q', 'x7', { descripcion: 'd' })).por, null, 'un fallo del diálogo no aprueba');
@@ -95,7 +95,7 @@ test('canales: elicitación (aceptar/rechazar), diálogo del SO (si/no/no dispon
     const hostil = '"; Remove-Item -Recurse C:\\ ; "'; assert.equal(await dialogoSO(hostil, { plataforma: 'win32', ejecutar }), 'si'); assert.equal(llamadas[0].cmd, 'powershell.exe'); assert.equal(llamadas[0].env, hostil); assert.ok(!llamadas[0].args.join(' ').includes('Remove-Item'), 'el texto no se inyecta en el script');
     assert.equal(await dialogoSO('m', { plataforma: 'darwin', ejecutar }), 'si'); assert.equal(llamadas[1].cmd, 'osascript'); assert.ok(!llamadas[1].args.join(' ').includes('"m"'));
     assert.equal(await dialogoSO('m', { plataforma: 'linux', ejecutar: (c, a, o, cb) => cb(Object.assign(new Error('x'), { code: 'ENOENT' })) }), null, 'sin zenity: no disponible');
-    assert.equal(await dialogoSO('m', { plataforma: 'win32', ejecutar: (c, a, o, cb) => cb(Object.assign(new Error('t'), { killed: true })) }), 'no', 'tiempo agotado = No');
+    assert.equal(await dialogoSO('m', { plataforma: 'win32', ejecutar: (c, a, o, cb) => cb(Object.assign(new Error('t'), { killed: true })) }), 'timeout', 'tiempo agotado: código propio, nunca aprobación');
     process.env.CI = 'true'; assert.equal(await dialogoSO('m', { plataforma: 'win32', ejecutar }), null, 'en CI no se abre ningún diálogo');
   } finally { if (previo === undefined) delete process.env.CI; else process.env.CI = previo; if (prev2 !== undefined) process.env.TANNIA_SIN_DIALOGO = prev2; }
 });

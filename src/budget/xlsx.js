@@ -2,6 +2,7 @@
 // y se verifican de forma independiente recalculando con LibreOffice en las pruebas.
 import ExcelJS from 'exceljs';
 import { apuUnitCost, computeBudget, TIPOS_INSUMO } from './calc.js';
+import { explicarPartida } from '../metodos/explicar.js';
 
 const CLP = '#,##0';
 const bold = { bold: true };
@@ -22,9 +23,13 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   const nd = 'NO DEFINIDO: se calcula con 0 solo como borrador; indique el valor antes de entregar.';
   wp.addRow(['Gastos generales (%)', B.config.gastos_generales_pct ?? 0, B.config.gastos_generales_pct == null ? nd : 'Editable. Valor indicado explícitamente.']);
   wp.addRow(['Utilidades (%)', B.config.utilidades_pct ?? 0, B.config.utilidades_pct == null ? nd : 'Editable. Valor indicado explícitamente.']);
-  if (origen_economico) wp.addRow(['Origen de precios y porcentajes', origen_economico, 'Tannia no puede acreditar quién aportó estos valores.']);
   wp.addRow(['IVA (%)', B.config.iva_pct ?? 0, B.config.iva_pct == null ? nd : 'Editable. Valor indicado explícitamente; tasa legal vigente: VERIFICAR antes de entregar.']);
   for (const r of [2, 3, 4]) wp.getCell(`B${r}`).fill = fillInput;
+  // Nombres estables: las fórmulas no dependen de la posición de filas informativas (incidente R5–R8: IVA leía texto en B4).
+  wb.definedNames.add('Parametros!$B$2', 'PCT_GG'); wb.definedNames.add('Parametros!$B$3', 'PCT_UTILIDAD'); wb.definedNames.add('Parametros!$B$4', 'PCT_IVA');
+  wp.addRow([]);
+  wp.addRow(['Política económica', 'GG y utilidades sobre costo directo; IVA sobre costo directo + GG + utilidades; cada total redondeado a peso (ROUND).', '']);
+  if (origen_economico) wp.addRow(['Origen de precios y porcentajes', origen_economico, 'Tannia no puede acreditar quién aportó estos valores.']);
 
   // --- APU
   const wa = wb.addWorksheet('APU');
@@ -97,20 +102,20 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
     pr++; return pr - 1;
   };
   const rDir = pr; sumRow('Costo directo', `SUM(F${firstP}:F${lastP})`, B.costo_directo);
-  const rGG = pr; sumRow('Gastos generales', `ROUND(F${rDir}*Parametros!B2/100,0)`, B.gastos_generales);
-  const rUt = pr; sumRow('Utilidades', `ROUND(F${rDir}*Parametros!B3/100,0)`, B.utilidades);
+  const rGG = pr; sumRow('Gastos generales', `ROUND(F${rDir}*PCT_GG/100,0)`, B.gastos_generales);
+  const rUt = pr; sumRow('Utilidades', `ROUND(F${rDir}*PCT_UTILIDAD/100,0)`, B.utilidades);
   const rNeto = pr; sumRow('Neto', `F${rDir}+F${rGG}+F${rUt}`, B.neto, true);
-  const rIva = pr; sumRow('IVA', `ROUND(F${rNeto}*Parametros!B4/100,0)`, B.iva);
+  const rIva = pr; sumRow('IVA', `ROUND(F${rNeto}*PCT_IVA/100,0)`, B.iva);
   sumRow('TOTAL', `F${rNeto}+F${rIva}`, B.total, true);
   if (B.parcial) { ws.getRow(pr + 1).getCell(2).value = 'TOTAL PARCIAL: excluye partidas con PENDIENTE.'; ws.getRow(pr + 1).getCell(2).font = { bold: true, color: { argb: 'FFC00000' } }; }
 
   // --- Cubicación (trazabilidad)
   const wc = wb.addWorksheet('Cubicacion');
   wc.columns = [{ width: 10 }, { width: 36 }, { width: 8 }, { width: 14 }, { width: 50 }, { width: 40 }, { width: 50 }];
-  wc.getRow(1).values = ['Código', 'Partida', 'Unidad', 'Cantidad', 'Fórmula', 'Fuente (archivo · SHA-256 · capas)', 'Supuestos y advertencias'];
+  wc.getRow(1).values = ['Código', 'Partida', 'Unidad', 'Cantidad', 'Cálculo', 'Origen y alcance', 'Advertencias'];
   wc.getRow(1).font = bold; wc.getRow(1).fill = fillHead;
   for (const p of partidas) {
-    wc.addRow([p.codigo, p.descripcion, p.unidad, p.cantidad, p.formula || '', p.fuente ? `${p.fuente.archivo} · ${p.fuente.sha256 || 's/hash'} · ${(p.fuente.capas || []).join(',')}` : 'ingreso manual', [...(p.supuestos || []), ...(p.advertencias || [])].join(' | ')]);
+    const e = explicarPartida(p); wc.addRow([p.codigo, p.descripcion, p.unidad, p.cantidad, e.calculo.join(' '), [e.origen, e.alcance, p.fuente ? `${p.fuente.archivo} · SHA-256 ${p.fuente.sha256 || 's/hash'}` : null].filter(Boolean).join(' '), e.advertencias.join(' | ')]);
   }
   // --- Alertas
   const wl = wb.addWorksheet('Alertas');

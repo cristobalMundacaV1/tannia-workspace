@@ -5,7 +5,8 @@ import { huella } from './canonico.js';
 import { sha256File } from '../security/sandbox.js';
 import { Recibos } from './recibos.js';
 
-const CAMPOS_DE_REVISION_HUMANA = ['version_id', 'cantidad_verificada', 'verificada_por', 'verificada_en', 'resolucion_needs_review', 'verificacion', 'desactualizada'];
+// `apu` es un dato ECONÓMICO: cambiarlo invalida documentos y aprobación de entrega (vía revisión), no la verificación de la CANTIDAD.
+const CAMPOS_DE_REVISION_HUMANA = ['apu', 'version_id', 'cantidad_verificada', 'verificada_por', 'verificada_en', 'resolucion_needs_review', 'verificacion', 'desactualizada'];
 
 /** Contenido de una partida que una verificación respalda (sin los campos de la propia verificación ni el id de versión). */
 export function contenidoPartida(p) {
@@ -48,7 +49,7 @@ export function contenidoRevision(pr) {
   }
   const originales = Object.fromEntries(Object.entries(pr.originales()).map(([k, v]) => [k, v.sha256]));
   const verificaciones = [...verificacionesVigentes(pr, partidas).values()].map((r) => r.id).sort();
-  return { partidas: partidas.map((p) => ({ ...contenidoPartida(p), version_id: p.version_id ?? null })), apus: pr.apus(), config: pr.configGuardada(), calibraciones: pr.calibraciones(), originales, fuentes_actuales: fuentes, verificaciones };
+  return { partidas: partidas.map((p) => ({ ...contenidoPartida(p), apu: p.apu ?? null, version_id: p.version_id ?? null })), apus: pr.apus(), config: pr.configGuardada(), calibraciones: pr.calibraciones(), originales, fuentes_actuales: fuentes, verificaciones };
 }
 
 /** Revisión vigente. Si el contenido cambió (por herramienta o por fuera), crea una revisión nueva con su motivo. */
