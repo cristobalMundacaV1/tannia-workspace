@@ -40,3 +40,15 @@ Estados permitidos: `PASS_AUTOMATIZADO`, `PENDIENTE_EXTERNO`. Nada aquí está a
 
 ## Alcance
 La generación de planos de TW-12 está **especializada en el túnel académico de herradura** (`tunnelModel`). No hay soporte general de proyectos ni de otras geometrías; ampliar requiere modelos y pruebas representativas adicionales.
+
+## Candidato empaquetado (código 0c74735)
+Suite local en 954780f: 414 pruebas, 397 pasan, 0 fallan, 17 omitidas (PowerShell real requiere Windows). `0c74735` solo añade `scripts/build.mjs` (binario nativo win32-x64 verificado contra `package-lock.json`).
+Los paquetes se verifican como cliente MCP desde el bundle desempaquetado.
+
+| Paquete | Herramientas | SHA-256 del .mcpb | SHA-256 del contenido |
+|---|---|---|---|
+| BASE | 72 | cd8191824156f476f13b64fcb2a1cfa9c2449f6e3588d416298f3dd96bcd5cd7 | 1dcb28485393134c21cc0e98d5bb38342c5bb2165fafddcd9e3539e9f985f559 |
+| INGENIERIA (`TANNIA_ENGINEERING=on`) | 85 | e84abd88ac601593194e71dca05902ffb02e4122c42ddc403087414288057276 | 59e6ef5226d07ced121afa8b680e4fcff571c55349960cb99943582135005462 |
+
+**Reproducibilidad:** dos compilaciones del mismo SHA dan contenido idéntico (`diff -r` vacío); el hash del `.mcpb` varía por marcas de tiempo del contenedor ZIP. Por eso se publica el hash del contenido. No se declara reproducibilidad byte a byte.
+**CI Windows/Ubuntu sobre 0c74735:** en el momento de este registro, en curso; el resultado se anota en el PR. Ejecución anterior sobre a29cc52: falló (5 pruebas, corregidas en 954780f).
