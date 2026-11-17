@@ -96,3 +96,11 @@ ZIP de entrega: 3abc666b3ca0be865384ef36316cbdadc511d5869c1f33063e004652271de843
 7. `Dibujo1` sin guardar solo se observa (se lista como `guardado:false`, `con_ruta_en_disco:false`); nunca se abre, activa ni guarda. No se lanza otra instancia (conexión por `GetActiveObject`, sesión estricta).
 **Pruebas nuevas:** `test/tw12_cad_timeout.test.js` (6): proceso real con kill, texto visible/estructurado, apertura tardía, estado incierto persistente y recuperación, `exportar_dwg` con timeout y reanudación, unicidad de la lógica de apertura.
 **Criterio de aceptación NO cumplido todavía:** «identificar la etapa exacta del bloqueo y demostrar apertura y conversión DXF→DWG en AutoCAD 2027 real» requiere la prueba real. Los mocks no acreditan integración. **PENDIENTE_EXTERNO.**
+
+### Candidato con CAD-OPEN-01 (2.ª incidencia), código d8cf79a — reemplaza a 8ff5f95
+Suite local: 431 pruebas, 414 pasan, 0 fallan, 17 omitidas. Paquetes destino win32-x64, 72 y 85 herramientas por cliente MCP.
+| Paquete | SHA-256 del .mcpb |
+|---|---|
+| BASE (72) | 47458bd2502932d77345825caa285a170233e13807977d8d0090ce5088742c17 |
+| INGENIERIA-WINDOWS (85, platforms win32) | 7aa32816059828a84eb012e7fb9f6fa50e4c669ff1983971820fe1b27823bac6 |
+ZIP de entrega: 01683e7fa72b8a84b4a02c550b473eb37a21af9c756056503df06b7a451eaabf.
