@@ -28,6 +28,7 @@ def lanzar(escenario, *extra):
         if f.exists():
             f.unlink()
     proc = subprocess.Popen(["node", str(RAIZ / "scripts" / "gui" / "escenario-ventana.mjs"), escenario, str(json_out), *extra], cwd=RAIZ)
+    VIVOS.append(proc)
     return proc, json_out
 
 
@@ -59,7 +60,10 @@ def textos(w):
 
 
 def control(w, auto_id):
-    return w.child_window(auto_id=auto_id).wrapper_object()
+    for c in w.descendants():
+        if c.element_info.automation_id == auto_id:
+            return c
+    raise AssertionError(f"no se encontró el control {auto_id}")
 
 
 def dentro(w, c):
@@ -78,7 +82,24 @@ def terminar(proc, json_out, timeout=120):
     return json.loads(json_out.read_text(encoding="utf-8"))
 
 
+VIVOS = []
+
+
+def limpiar():
+    """Tras cada caso: ninguna ventana ni proceso de un caso anterior puede contaminar el siguiente."""
+    for w in Desktop(backend="uia").windows(title_re=TITULO, visible_only=False):
+        try:
+            subprocess.run(["taskkill", "/PID", str(w.process_id()), "/F"], capture_output=True, check=False)
+        except Exception:
+            pass
+    while VIVOS:
+        p = VIVOS.pop()
+        if p.poll() is None:
+            p.kill()
+
+
 def caso(nombre, fn):
+    limpiar()
     t0 = time.time()
     try:
         det = fn()
@@ -230,7 +251,7 @@ def c_scroll(escala):
     def f():
         proc, js = lanzar(f"scroll_{escala}", "--escala", escala)
         w = ventana()
-        sv = w.child_window(auto_id="scrollContenido").wrapper_object()
+        sv = control(w, "scrollContenido")
         try:
             sv.iface_scroll.SetScrollPercent(-1, 100)
         except Exception:
@@ -264,6 +285,7 @@ caso("navegación con Tab y confirmación solo con teclado", c_teclado_confirma)
 caso("doble clic en confirmar = un solo recibo", c_doble_clic)
 caso("dos solicitudes simultáneas = una sola ventana", c_concurrencia)
 
+limpiar()
 informe = {"herramienta": "pywinauto (UI Automation, backend uia)", "advertencia": "Autorizaciones SIMULADAS por UI Automation; no son aceptación humana. La escala 125/150 % es escala de diseño WPF (LayoutTransform), no cambio de DPI del sistema.", "casos": resultados, "ok": all(r["ok"] for r in resultados)}
 (SALIDA / "informe-gui.json").write_text(json.dumps(informe, ensure_ascii=False, indent=2), encoding="utf-8")
 sys.exit(0 if informe["ok"] else 1)

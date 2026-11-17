@@ -58,7 +58,7 @@ $scroll = New-Object Windows.Controls.ScrollViewer; $scroll.VerticalScrollBarVis
 $body = New-Object Windows.Controls.StackPanel; $scroll.Content = $body
 function Label($heading, $value) {
   $h = New-Object Windows.Controls.TextBlock; $h.Text = $heading; $h.FontWeight = 'SemiBold'; $h.Foreground = '#163A5F'; $h.Margin = '0,12,0,4'; $null = $body.Children.Add($h)
-  $t = New-Object Windows.Controls.TextBox; $t.Text = [string]$value; $t.IsReadOnly = $true; $t.TextWrapping = 'Wrap'; $t.BorderThickness = '0'; $t.Background = '#F5F7FA'; $t.Foreground = '#17212B'; $t.Padding = '2'; [Windows.Automation.AutomationProperties]::SetName($t, $heading); $null = $body.Children.Add($t)
+  $t = New-Object Windows.Controls.TextBox; $t.Text = [string]$value; $t.IsReadOnly = $true; $t.IsTabStop = $false; $t.TextWrapping = 'Wrap'; $t.BorderThickness = '0'; $t.Background = '#F5F7FA'; $t.Foreground = '#17212B'; $t.Padding = '2'; [Windows.Automation.AutomationProperties]::SetName($t, $heading); $null = $body.Children.Add($t)
 }
 Label 'Acción solicitada' $data.action
 Label 'Proyecto y documento' ($data.project + ' / ' + $data.document)
