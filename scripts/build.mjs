@@ -19,10 +19,26 @@ await build({
   logLevel: 'warning',
 });
 
-// Native raster backend: package the installed platform binary beside the bundle.
+// Native raster backend. TANNIA_TARGET=win32-x64 packages the Windows binary (downloaded by exact lockfile
+// version and verified against the lockfile sha512) so a package built on Linux still works for Tannia on Windows.
 const nativeRoot = path.join(root, 'node_modules', '@napi-rs');
-for (const name of fs.readdirSync(nativeRoot).filter(n => n === 'canvas' || n.startsWith('canvas-'))) {
-  fs.cpSync(path.join(nativeRoot, name), path.join(out, 'server', 'node_modules', '@napi-rs', name), { recursive: true });
+const nativeOut = path.join(out, 'server', 'node_modules', '@napi-rs');
+const target = process.env.TANNIA_TARGET;
+if (target === 'win32-x64') {
+  const crypto = await import('node:crypto'); const cp = await import('node:child_process'); const os = await import('node:os');
+  const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8')).packages['node_modules/@napi-rs/canvas-win32-x64-msvc'];
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-win-canvas-'));
+  cp.execFileSync('npm', ['pack', `@napi-rs/canvas-win32-x64-msvc@${lock.version}`, '--pack-destination', tmp, '--silent'], { stdio: 'inherit', shell: process.platform === 'win32' });
+  const tgz = path.join(tmp, fs.readdirSync(tmp).find(f => f.endsWith('.tgz')));
+  const [algo, expected] = lock.integrity.split('-'); const actual = crypto.createHash(algo).update(fs.readFileSync(tgz)).digest('base64');
+  if (actual !== expected) throw new Error('Integridad del binario win32 no coincide con package-lock.json');
+  cp.execFileSync('tar', ['-xzf', tgz, '-C', tmp], { stdio: 'inherit' });
+  fs.mkdirSync(nativeOut, { recursive: true });
+  fs.cpSync(path.join(root, 'node_modules', '@napi-rs', 'canvas'), path.join(nativeOut, 'canvas'), { recursive: true });
+  fs.cpSync(path.join(tmp, 'package'), path.join(nativeOut, 'canvas-win32-x64-msvc'), { recursive: true });
+  fs.rmSync(tmp, { recursive: true, force: true });
+} else {
+  for (const name of fs.readdirSync(nativeRoot).filter(n => n === 'canvas' || (n.startsWith('canvas-') && (!process.platform || n.includes(process.platform === 'win32' ? 'win32' : process.platform))))) fs.cpSync(path.join(nativeRoot, name), path.join(nativeOut, name), { recursive: true });
 }
 
 fs.writeFileSync(path.join(out, 'server', 'package.json'), '{"type":"commonjs"}\n');
