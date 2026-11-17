@@ -11,3 +11,11 @@ Ejecutar en el equipo de Tannia/PO con una copia de trabajo; nunca sobre origina
 7. Rechazar a propósito una solicitud de consentimiento (Guía hash / https://x.invalid / unknown / licensed): no debe poder aprobarse.
 8. Cambiar el nivel de respuesta (breve/normal/detallado) y confirmar que persiste.
 Resultado esperado hoy: **NO EJECUTADO**. Hasta registrar estas pruebas no se afirma funcionamiento en AutoCAD real.
+
+## Anexo CAD-OPEN-01 (repetir con `Dibujo1.dwg` sin guardar abierto)
+1. Con `Dibujo1` sin guardar, ejecutar `tannia_cad_abrir_copia` sobre la copia DXF de `03 Trabajo`. Registrar el resultado completo incluyendo `structuredContent.detalle` (etapa, hresult, tipo_excepcion, diagnostico.documentos, diagnostico.sin_guardar).
+2. Repetirlo con la copia ya abierta: debe responder `reutilizado:true` sin abrir otra ventana ni instancia.
+3. Con un cuadro de diálogo abierto en AutoCAD: esperar `AUTOCAD_CUADRO_MODAL`; con un comando activo: `AUTOCAD_COMANDO_ACTIVO`. En ambos casos no se abre nada.
+4. Con un DXF corrupto: esperar `DXF_INVALIDO` sin que AutoCAD sea invocado.
+5. Tras una apertura válida, `tannia_planos exportar_dwg`: un único DWG, sin sobrescritura; repetir la misma operación no duplica el guardado.
+6. Si vuelve a fallar con `APERTURA_FALLIDA` o `AUTOCAD_COM_FALLO`, enviar el `detalle` completo: es la evidencia que confirma o descarta la hipótesis de la matriz.

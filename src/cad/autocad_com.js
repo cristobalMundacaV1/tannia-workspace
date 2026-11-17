@@ -22,6 +22,29 @@ import { sha256File } from '../security/sandbox.js';
 import { CadOperations } from './operations.js';
 import { expectedLayouts, verifyLayouts } from '../drawing/layouts_check.js';
 
+/** Diagnóstico del script: solo nombres de documentos y banderas; las rutas absolutas se sanean. */
+function sanitizarDiag(d, nivel = 0) {
+  if (d === null || typeof d === 'boolean' || typeof d === 'number') return d;
+  if (typeof d === 'string') return sanitizar(d, 120);
+  if (nivel > 4) return null;
+  if (Array.isArray(d)) return d.slice(0, 40).map(x => sanitizarDiag(x, nivel + 1));
+  if (typeof d === 'object') return Object.fromEntries(Object.entries(d).slice(0, 40).map(([k, v]) => [String(k).slice(0, 40), sanitizarDiag(v, nivel + 1)]));
+  return null;
+}
+/** Validación en Node ANTES de tocar AutoCAD: distingue un archivo ilegible/inválido de un fallo COM. */
+export function validarArchivoParaApertura(real) {
+  let st; try { st = fs.statSync(real); } catch { throw new UserError('ARCHIVO_NO_LEGIBLE', 'La copia no existe o no se puede leer.', 'Cree de nuevo la copia en 03 Trabajo.', { etapa: 'validar_archivo' }); }
+  if (!st.isFile() || st.size < 16) throw new UserError('ARCHIVO_NO_LEGIBLE', 'La copia está vacía o no es un archivo.', 'Cree de nuevo la copia en 03 Trabajo.', { etapa: 'validar_archivo', bytes: st.size });
+  const fd = fs.openSync(real, 'r'); const head = Buffer.alloc(Math.min(st.size, 64)); const tail = Buffer.alloc(Math.min(st.size, 256));
+  try { fs.readSync(fd, head, 0, head.length, 0); fs.readSync(fd, tail, 0, tail.length, st.size - tail.length); } finally { fs.closeSync(fd); }
+  if (/\.dxf$/i.test(real)) {
+    const h = head.toString('latin1');
+    const texto = /^\s*0\r?\n\s*SECTION\r?\n/.test(h); const binario = h.startsWith('AutoCAD Binary DXF');
+    const fin = /\bEOF\s*$/.test(tail.toString('latin1')) || binario;
+    if (!(texto || binario) || !fin) throw new UserError('DXF_INVALIDO', 'El archivo DXF no tiene una estructura válida (inicio o fin de archivo); no se envió a AutoCAD.', 'Regenere el DXF; el detalle indica qué falta.', { etapa: 'validar_archivo', inicio_valido: texto || binario, fin_valido: fin });
+  } else if (/\.dwg$/i.test(real) && !/^AC10/.test(head.toString('ascii'))) throw new UserError('DWG_INVALIDO', 'El archivo DWG no tiene una cabecera válida.', 'Use otra copia.', { etapa: 'validar_archivo' });
+}
+
 const PS_PRELUDE = `$ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 function Emit($o) {
@@ -31,9 +54,24 @@ function Emit($o) {
 }
 function Inner($ex) { while ($null -ne $ex.InnerException) { $ex = $ex.InnerException }; return $ex }
 function HR($ex) { try { return ('0x{0:X8}' -f [int]$ex.HResult) } catch { return '' } }
+$global:Etapa = $null; $global:Diag = $null
 function Fail($etapa, $err) {
   $ex = Inner $err.Exception
-  Emit @{ ok = $false; etapa = $etapa; hresult = (HR $ex); tipo = $ex.GetType().Name; msg = [string]$ex.Message }
+  $et = if ($global:Etapa) { [string]$global:Etapa } else { $etapa }
+  Emit @{ ok = $false; etapa = $et; hresult = (HR $ex); tipo = $ex.GetType().Name; msg = [string]$ex.Message; diag = $global:Diag }
+}
+# Ocupación de AutoCAD (solo lectura): CMDACTIVE es una máscara (1 comando, 2 transparente, 4 script, 8 cuadro de diálogo, 16 DDE, 32 LISP, 64 ARX).
+function Ocupacion() {
+  $r = @{ quiescente = $null; cmdactive = $null; error_estado = $null }
+  try { $r.quiescente = [bool]$acad.GetAcadState().IsQuiescent } catch { $r.error_estado = (HR (Inner $_.Exception)) }
+  try { $r.cmdactive = [int]$acad.ActiveDocument.GetVariable('CMDACTIVE') } catch { if (-not $r.error_estado) { $r.error_estado = (HR (Inner $_.Exception)) } }
+  return $r
+}
+# Normaliza una ruta sin lanzar excepciones: un dibujo nuevo sin guardar (Dibujo1) no tiene ruta en disco.
+function RutaSegura($p) {
+  $t = [string]$p
+  if ([string]::IsNullOrWhiteSpace($t)) { return $null }
+  try { if (-not [IO.Path]::IsPathRooted($t)) { return $null }; return [IO.Path]::GetFullPath($t).TrimEnd([char]92) } catch { return $null }
 }
 function DNum($v) { if ($null -eq $v) { return $null }; try { return [double]$v } catch { return $null } }
 function DArr($v) { if ($null -eq $v) { return $null }; try { return @([double[]]$v) } catch { return $null } }
@@ -97,8 +135,13 @@ export const SCRIPTS = {
 if ((Get-FileHash -LiteralPath $in.dxf -Algorithm SHA256).Hash -ine $in.sha256_dxf) { Emit @{ ok = $false; codigo = 'DOCUMENTO_MODIFICADO_EXTERNAMENTE' }; exit 0 }
 $d = $null
 for ($i = 0; $i -lt [int]$acad.Documents.Count; $i++) { $candidate = $acad.Documents.Item($i); if ($candidate.FullName -ieq $in.dxf) { $d = $candidate; break } }
+$global:Etapa = 'abrir_documento'
 if ($null -eq $d) { $d = $acad.Documents.Open([string]$in.dxf, $false) }
-if ($d.FullName -ine $in.dxf -or $d.ReadOnly -or -not $d.Saved) { Emit @{ ok = $false; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
+$global:Diag = @{ documento = [string]$d.Name; ruta_documento = [string]$d.FullName; solo_lectura = [bool]$d.ReadOnly; guardado = [bool]$d.Saved }
+if ($d.FullName -ine $in.dxf) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_CAMBIO'; diag = $global:Diag }; exit 0 }
+if ($d.ReadOnly) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'DOCUMENTO_SOLO_LECTURA'; diag = $global:Diag }; exit 0 }
+if (-not $d.Saved) { Emit @{ ok = $false; etapa = 'verificar_documento'; codigo = 'CAMBIOS_SIN_GUARDAR'; diag = $global:Diag }; exit 0 }
+$global:Etapa = 'guardar_como_dwg'
 $d.SetVariable('INSUNITS', 6)
 $d.SaveAs([string]$in.dwg, 64)
 if ($d.FullName -ine $in.dwg -or -not $d.Saved) { Emit @{ ok = $false; codigo = 'GUARDADO_FALLO' }; exit 0 }
@@ -139,13 +182,40 @@ if ($null -ne $o['radio']) { $o['Radius'] = $o['radio'] }
 $tt = DNum $e.TotalAngle; if ($null -ne $tt) { $o['TotalAngle'] = $tt }
 if ($e.ObjectName -eq 'AcDb3dSolid' -or $e.ObjectName -eq 'AcDbRegion') { $vv = DNum $e.Volume; if ($null -ne $vv) { $o['Volume'] = $vv }; $o['Centroid'] = DArr $e.Centroid; $aa = DNum $e.Area; if ($null -ne $aa) { $o['Area'] = $aa } }
 Emit @{ ok = $true; data = $o }`,
-  abrir_copia: `$d = $null
-for ($i = 0; $i -lt [int]$acad.Documents.Count; $i++) {
-  $candidate = $acad.Documents.Item($i)
-  if ([IO.Path]::GetFullPath([string]$candidate.FullName) -ieq [IO.Path]::GetFullPath([string]$in.ruta)) { $d = $candidate; break }
+  abrir_copia: `$global:Etapa = 'preparar'; $global:Diag = @{}
+$oc = Ocupacion; $global:Diag.ocupacion = $oc
+if ($null -ne $oc.cmdactive -and ($oc.cmdactive -band 8)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_CUADRO_MODAL'; diag = $global:Diag }; exit 0 }
+if ($null -ne $oc.cmdactive -and ($oc.cmdactive -band 7)) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_COMANDO_ACTIVO'; diag = $global:Diag }; exit 0 }
+if ($oc.quiescente -eq $false) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'AUTOCAD_OCUPADO'; diag = $global:Diag }; exit 0 }
+$destino = RutaSegura $in.ruta
+if ($null -eq $destino) { Emit @{ ok = $false; etapa = 'preparar'; codigo = 'RUTA_NO_VALIDA' }; exit 0 }
+function BuscarAbierto() {
+  $docs = @(); $hallado = $null; $n = [int]$acad.Documents.Count
+  for ($i = 0; $i -lt $n; $i++) {
+    $nombre = $null; $ruta = $null; $guardado = $null
+    try { $c = $acad.Documents.Item($i); $nombre = [string]$c.Name; $ruta = RutaSegura $c.FullName; $guardado = [bool]$c.Saved
+      if ($null -ne $ruta -and $ruta -ieq $destino) { $hallado = $c } } catch { $nombre = if ($nombre) { $nombre } else { '(ilegible)' } }
+    $docs += @{ nombre = $nombre; con_ruta_en_disco = ($null -ne $ruta); guardado = $guardado }
+  }
+  return @{ doc = $hallado; lista = $docs }
 }
-if ($null -eq $d) { $d = $acad.Documents.Open([string]$in.ruta, $false) }
-Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName } }`,
+$global:Etapa = 'enumerar_documentos'
+$b = BuscarAbierto; $global:Diag.documentos = $b.lista; $global:Diag.sin_guardar = @($b.lista | Where-Object { $_.guardado -eq $false } | ForEach-Object { $_.nombre })
+$d = $b.doc; $reutilizado = ($null -ne $d); $recuperado = $false
+if ($null -eq $d) {
+  $global:Etapa = 'abrir_documento'
+  try { $d = $acad.Documents.Open([string]$in.ruta, $false) }
+  catch {
+    # Una sola comprobación (nunca un segundo Open): AutoCAD a veces lanza tras haber abierto el archivo.
+    $err = $_; $b2 = BuscarAbierto
+    if ($null -ne $b2.doc) { $d = $b2.doc; $recuperado = $true } else { $global:Diag.documentos_tras_error = $b2.lista; throw $err }
+  }
+}
+$global:Etapa = 'verificar_apertura'
+if ((RutaSegura $d.FullName) -ine $destino) { Emit @{ ok = $false; etapa = 'verificar_apertura'; codigo = 'DOCUMENTO_CAMBIO'; diag = $global:Diag }; exit 0 }
+$global:Etapa = 'activar_documento'
+if ($reutilizado -or $recuperado) { $d.Activate() }
+Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName; reutilizado = $reutilizado; recuperado_tras_error = $recuperado; guardado = [bool]$d.Saved; documentos_abiertos = [int]$acad.Documents.Count; sin_guardar = $global:Diag.sin_guardar } }`,
   sesion: `$processes = @(Get-Process -Name acad -ErrorAction SilentlyContinue)
 $busy = -not [bool]$acad.GetAcadState().IsQuiescent
 Emit @{ ok = $true; data = @{ ruta = [string]$doc.FullName; documento = [string]$doc.Name; version = [string]$acad.Version; guardado = [bool]$doc.Saved; solo_lectura = [bool]$doc.ReadOnly; ocupado = $busy; procesos = @($processes | ForEach-Object { $_.Id }); ventana = [string]$acad.HWND; activa = [string]$acad.ActiveDocument.FullName } }`,
@@ -329,8 +399,11 @@ export function buildScript(name, { connect = PS_CONNECT } = {}) {
 // TW12 checks occur in the SAME COM dispatch as the mutation, never by window focus.
 const PS_STRICT = `if ($in.estricto) {
   $ps = @(Get-Process -Name acad -ErrorAction SilentlyContinue)
-  if ($ps.Count -ne 1) { Emit @{ ok = $false; codigo = 'SESION_AMBIGUA' }; exit 0 }
-  if (-not $acad.GetAcadState().IsQuiescent) { Emit @{ ok = $false; codigo = 'AUTOCAD_OCUPADO' }; exit 0 }
+  if ($ps.Count -ne 1) { Emit @{ ok = $false; etapa = 'sesion'; codigo = 'SESION_AMBIGUA'; diag = @{ procesos_acad = @($ps | ForEach-Object { $_.Id }) } }; exit 0 }
+  $oc0 = Ocupacion
+  if ($null -ne $oc0.cmdactive -and ($oc0.cmdactive -band 8)) { Emit @{ ok = $false; etapa = 'sesion'; codigo = 'AUTOCAD_CUADRO_MODAL'; diag = @{ ocupacion = $oc0 } }; exit 0 }
+  if ($null -ne $oc0.cmdactive -and ($oc0.cmdactive -band 7)) { Emit @{ ok = $false; etapa = 'sesion'; codigo = 'AUTOCAD_COMANDO_ACTIVO'; diag = @{ ocupacion = $oc0 } }; exit 0 }
+  if ($oc0.quiescente -eq $false) { Emit @{ ok = $false; etapa = 'sesion'; codigo = 'AUTOCAD_OCUPADO'; diag = @{ ocupacion = $oc0 } }; exit 0 }
   if ($in.escritura) {
     if ($null -eq $doc -or -not $in.ruta_esperada -or $doc.FullName -ine $in.ruta_esperada) { Emit @{ ok = $false; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
     if ($doc.ReadOnly) { Emit @{ ok = $false; codigo = 'DOCUMENTO_SOLO_LECTURA' }; exit 0 }
@@ -492,7 +565,10 @@ export class AutoCadCom {
 
   #errorScript(r, name) {
     const hr = r.hresult ? String(r.hresult) : null;
-    const detalle = { etapa: r.etapa || null, operacion: name, hresult: hr, tipo_excepcion: r.tipo || null, mensaje: r.msg ? sanitizar(r.msg) : null };
+    const detalle = { etapa: r.etapa || null, operacion: name, hresult: hr, tipo_excepcion: r.tipo || null, mensaje: r.msg ? sanitizar(r.msg) : null, ...(r.diag ? { diagnostico: sanitizarDiag(r.diag) } : {}) };
+    if (r.codigo === 'AUTOCAD_CUADRO_MODAL') return new UserError('AUTOCAD_CUADRO_MODAL', 'AutoCAD tiene un cuadro de diálogo abierto; no se abrió nada.', 'Cierre el cuadro de diálogo en AutoCAD y repita.', detalle);
+    if (r.codigo === 'AUTOCAD_COMANDO_ACTIVO') return new UserError('AUTOCAD_COMANDO_ACTIVO', 'AutoCAD tiene un comando en curso; no se abrió nada.', 'Pulse Esc en AutoCAD y repita.', detalle);
+    if (r.codigo === 'RUTA_NO_VALIDA') return new UserError('RUTA_NO_VALIDA', 'La ruta de la copia no es válida para AutoCAD.', 'Use una copia dentro de 03 Trabajo.', detalle);
     if (['SESION_AMBIGUA', 'DOCUMENTO_SOLO_LECTURA', 'DOCUMENTO_MODIFICADO_EXTERNAMENTE', 'AUTOCAD_OCUPADO'].includes(r.codigo)) return new UserError(r.codigo, 'La sesión o el documento no permite esta operación CAD.', 'Revise el estado del documento objetivo antes de continuar.', detalle);
     if (r.codigo === 'AUTOCAD_NO_ABIERTO') {
       const acceso = (r.intentos || []).some((s) => String(s).includes(ACCESO));
@@ -512,6 +588,8 @@ export class AutoCadCom {
     if (GONE.has(up)) return new UserError('AUTOCAD_RPC', 'Se perdió la comunicación con AutoCAD (se cerró o dejó de responder).', 'Verifique que AutoCAD siga abierto y reintente.', detalle);
     if (r.etapa === 'dibujar') return new UserError('DIBUJO_REVERTIDO', 'No se pudo dibujar; se revirtió lo creado en esta operación (sin efectos parciales).', 'Revise el detalle y reintente.', { ...detalle, revertido: !!r.revertido, capa_revertida: !!r.capa_revertida });
     if (r.etapa === 'preparar_capa') return new UserError('CAPA_NO_DISPONIBLE', 'No se pudo crear ni seleccionar la capa; no se dibujó nada.', 'Pruebe otro nombre de capa o revise que el dibujo no esté bloqueado.', detalle);
+    if (['abrir_documento', 'verificar_apertura'].includes(r.etapa) && ['abrir_copia', 'dxf_a_dwg', 'laminas_a_dwg'].includes(name)) return new UserError('APERTURA_FALLIDA', 'AutoCAD no pudo abrir el archivo (apertura DXF/DWG). No se modificó ningún original ni se lanzó otra instancia.', 'Revise el detalle (HRESULT, etapa y documentos abiertos). No se reintentó la apertura.', detalle);
+    if (r.etapa === 'enumerar_documentos' || r.etapa === 'activar_documento') return new UserError('AUTOCAD_COM_FALLO', 'AutoCAD respondió con un error COM al consultar o activar documentos.', 'Revise el detalle; los dibujos sin guardar no se tocaron.', detalle);
     return new UserError('AUTOCAD_ERROR', 'AutoCAD no pudo completar la operación.', 'Revise que el dibujo esté activo y sin comandos en curso; el detalle indica la etapa.', detalle);
   }
 
@@ -639,7 +717,8 @@ export class AutoCadCom {
   async abrirCopia(project, rel) {
     const { abs } = this.sandbox.resolve(project, rel);
     const real = this.#assertWorkCopy(project, abs);
-    return this.#exec('abrir_copia', { ruta: real });
+    validarArchivoParaApertura(real);
+    return this.#exec('abrir_copia', { ruta: real, estricto: true });
   }
 
   async agregarLineas(project, { lineas, capa }) {

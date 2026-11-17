@@ -142,7 +142,7 @@ test('autorización: copia en 03 Trabajo con ó, ñ, espacios y apóstrofo SÍ; 
   const home = tmpHome("'Tannia Workspace ó ñ "); const sb = new Sandbox(home); createProject(sb, "Prueba de integración 'ñ");
   const P = "Prueba de integración 'ñ"; const root = path.join(home, 'Proyectos', P);
   const orig = path.join(root, '02 Originales', 'Dibujo2 - integración.dwg'); const work = path.join(root, '03 Trabajo', "Dibujo2 - copia de trabajo ñ'.dwg");
-  fs.writeFileSync(orig, 'x'); fs.writeFileSync(work, 'x'); fs.writeFileSync(path.join(root, '04 Cubicaciones', 'o.dwg'), 'x'); fs.writeFileSync(path.join(home, 'otro.dwg'), 'x');
+  fs.writeFileSync(orig, 'x'); fs.writeFileSync(work, 'AC1032 synthetic work copy header'); fs.writeFileSync(path.join(root, '04 Cubicaciones', 'o.dwg'), 'x'); fs.writeFileSync(path.join(home, 'otro.dwg'), 'x');
   const calls = [];
   const com = (active, extra = {}) => new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: active, calls, ...extra }) });
   const L = { lineas: [{ x1: 0, y1: 0, x2: 6000, y2: 0 }], capa: 'TW_PRUEBA' };
