@@ -1,0 +1,17 @@
+{
+  "pr": 21,
+  "base": "21b4ae957ccfa7f843dc7f104f1490318d252228",
+  "head": "2f4cdd07a4a24ee76e993bedf56e4e0f02630db2",
+  "diff_stat": " CHANGELOG.md                                       |   6 +\n docs/tw12/EVIDENCE_MATRIX.md                       |  61 ++++\n docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md |  96 +++++++\n src/cad/autocad_com.js                             | 314 ++++++++++++++++++---\n src/cad/dxf_api.js                                 | 128 +++++++++\n src/cad/marcas.js                                  |  47 +++\n src/mcp/util.js                                    |  31 +-\n src/tools/drawing.js                               |   9 +-\n test/helpers_com.js                                |   5 +-\n test/helpers_dxf_import.js                         |  18 ++\n test/tw06_cad.test.js                              |   6 +-\n test/tw09_windows_powershell.test.js               |  23 +-\n test/tw12_cad_open.test.js                         |  51 ++--\n test/tw12_cad_open02.test.js                       | 187 ++++++++++++\n test/tw12_cad_timeout.test.js                      | 103 +++----\n test/tw12_dxf_api_contrato.test.js                 | 164 +++++++++++\n test/tw12_workspace.test.js                        |   4 +-\n test/tw17_persistencia_global.test.js              |   2 +-\n 18 files changed, 1141 insertions(+), 114 deletions(-)\n",
+  "ci_run": 44077443232,
+  "jobs": {
+    "ubuntu-latest": {
+      "id": 134019009549,
+      "conclusion": "success"
+    },
+    "windows-latest": {
+      "id": 134019009703,
+      "conclusion": "success"
+    }
+  }
+}

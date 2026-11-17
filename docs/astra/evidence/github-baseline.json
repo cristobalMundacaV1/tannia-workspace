@@ -1,0 +1,675 @@
+[
+  {
+    "pr": 2,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/2",
+      "number": 2,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Alcance y gobernanza\n- Tannia Workspace: AutoCAD **2D y 3D geométrico**, cubicaciones, presupuestos/APU, documentos, MCP local; sin BIM/IFC.\n- TW-01 DXF 2D es solo la etapa inicial; TW-06A desarrolla geometría 3D.\n- Ninguna funcionalidad ha sido ejecutada o validada todavía; el PR es **documentación y planificación**.\n- No merge sin aceptación explícita del Product Owner.\n\n## Auditoría independiente\n- Auditoría inicial (AUD-01..08) atendida documentalmente en `docs/qa/AUDIT_RESPONSE_2026-11-15.md`.\n- Segunda auditoría: **APROBADO CON OBSERVACIONES** para commit `2d2b7a9123cb`; tres P2 REV2-01..03.\n- Se responde con `docs/qa/REV2_RESPONSE_2026-11-15.md`: instalación provisional TW-00A; piloto 2D TW-07A independiente del 3D; matriz entidad×operación.\n- **Los commits posteriores a `2d2b7a9123cb` requieren nueva revisión**; no atribuir la aprobación anterior a código/docs posteriores.\n\n## Macrofase integral para Claude Code\n- `docs/implementation/TW_FULL_DELIVERY_MACROPHASE.md`: ejecución TW-00A → TW-08, pruebas, instalador y paquete transferible.\n- `CLAUDE.md`: encargo para implementador, avance autónomo y gates.\n- Issue #5 agrupa toda la ejecución; #3 prueba vertical, #1 cubicaciones DXF, #4 geometría 3D.\n\n## Directiva PO\nMaximizar calidad y cobertura con recursos disponibles; **no bloquear por ausencia de AutoCAD en el PC del desarrollador**, sino continuar hasta un RC con evidencia y lista de hardware/validación usuaria pendiente. Sin fingir pruebas ni declarar compatibilidad garantizada.\n\n**Pendiente:** revisión documental actualizada y decisión PO sobre merge. Sin autoaprobación.",
+      "title": "docs: Tannia Workspace 2D/3D scope and audited engineering foundation",
+      "base": "main",
+      "base_sha": "115baec105fff5ffe0fbaf182f40bc62666280be",
+      "head": "feat/project-foundation",
+      "head_sha": "76f7423a0dd254dc49d06e26f8797f3620b2fa63",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "2ac1d3c8524b2956eff136fb33d646716b8d2122",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-15T20:41:17Z",
+      "updated_at": "2026-11-15T21:05:29Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 16,
+      "changed_files": 9,
+      "additions": 384,
+      "deletions": 22,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/2",
+      "display_title": "docs: Tannia Workspace 2D/3D scope and audited engineering foundation"
+    },
+    "ci": {
+      "workflow_runs": []
+    },
+    "diff_stat": " AGENTS.md                                          |  40 ++++++++\n CLAUDE.md                                          |  23 +++++\n README.md                                          |  51 +++++-----\n docs/ARCHITECTURE.md                               |  65 +++++++++++++\n docs/PRODUCT_SCOPE.md                              |  38 ++++++++\n docs/ROADMAP.md                                    |  38 ++++++++\n docs/implementation/TW_FULL_DELIVERY_MACROPHASE.md | 104 +++++++++++++++++++++\n docs/qa/AUDIT_RESPONSE_2026-11-15.md               |  28 ++++++\n docs/qa/REV2_RESPONSE_2026-11-15.md                |  19 ++++\n 9 files changed, 384 insertions(+), 22 deletions(-)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 7,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/7",
+      "number": 7,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Resumen\nImplementación autónoma de la macrofase TW-FULL (issue #5) sobre el head de `feat/project-foundation` (PR #2). **PR apilado: no toca `main` ni la rama del auditor.** Draft para auditoría independiente; sin merge ni publicación.\n\n**Estado: `RC técnico`.** NO \"Validado por Tannia\" y NO validado en AutoCAD real.\n\n## Qué contiene (un commit por fase)\n| Fase | Resultado |\n|---|---|\n| TW-00A | Servidor MCP local (Node/stdio), lector DXF, sandbox de rutas, paquete `.mcpb` empaquetado/validado/desempaquetado/ejecutado en limpio |\n| TW-01 | Medición DXF 2D (líneas, arcos, círculos, polilíneas con arcos, bloques con transformación/arreglos/anidados), unidades bloqueadas hasta confirmar, duplicados, `needs_review` |\n| TW-02 | Reglas de cantidad sin valores por defecto, APU, presupuesto CLP, XLSX con fórmulas (recalculado por LibreOffice == cálculo JS) |\n| TW-03 | PDF vectorial con calibración verificada, escaneados, memoria PDF; OpenTakeoff evaluado (AGPL-3.0, **no incorporado**) |\n| TW-04 | ~30 herramientas MCP, estados con gates, huellas de originales, copias de trabajo, partidas desactualizadas, normativa orientativa |\n| TW-05 | Decisión `.mcpb` sin `.exe`; actualización/rollback/desinstalación/reparación/privacidad de logs probados |\n| TW-06/06A | Adaptador AutoCAD COM (contrato), matriz entidad×operación×backend verificable, mallas 3D con área/volumen verificados |\n| TW-07A/B | Protocolos de piloto 2D/3D preparados (**no ejecutados**) |\n| TW-08 | `scripts/release.mjs` → dossier con hashes, manual de 1 página, limitaciones, riesgos, licencias, handoff |\n\n## Evidencia\n- `docs/qa/EVIDENCE_MATRIX.md`, `docs/qa/TEST_REPORT.md` (53 pruebas: 52 OK, 0 fallas, 1 omitida por correr como root; SHA registrado), `docs/qa/CAD_CAPABILITY_MATRIX.md`.\n- CI en `ubuntu-latest` y `windows-latest`. Durante el desarrollo, Windows reveló y se corrigieron 4 defectos reales (ruta `/D:/…`, `import()` con ruta absoluta, `mcpb.cmd` con espacios, CRLF).\n- La revisión visual del PDF/XLSX renderizados detectó y corrigió símbolos corruptos (`Σ`) en la memoria PDF.\n\n## NO VERIFICADO / pendiente (hardware o usuaria)\n- **AutoCAD real**: todo el backend `autocad_com` está `UNVERIFIED` (probado solo con ejecutor simulado). Volumen de 3DSOLID/REGION/SURFACE no se calcula desde DXF.\n- Instalación desde la interfaz de Claude Desktop; usuario estándar de Windows; rutas >260.\n- DXF/PDF reales de Tannia (solo fixtures sintéticos ezdxf/reportlab); Microsoft Excel real.\n- Piloto 2D (TW-07A) y 3D (TW-07B). Procedimientos: `docs/qa/MANUAL_TESTS_TANNIA_PC.md`.\n- Comportamiento del modelo ante prompt injection (defensas estructurales probadas; el modelo no se midió).\n- `buffers@0.1.1` (transitiva) sin licencia declarada; `uuid` (moderado, vía exceljs) aceptado P3. Ver `docs/KNOWN_LIMITATIONS.md`.\n\n## Decisiones para el Product Owner\nMerge (de #2 y de este PR), distribución del paquete, y reabrir la decisión `.mcpb` vs instalador si falla la prueba en el PC de Tannia.\n\nRefs #5\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z)_",
+      "title": "feat: TW-FULL TW-00A→TW-08 — RC técnico de Tannia Workspace (PR apilado sobre #2)",
+      "base": "feat/project-foundation",
+      "base_sha": "76f7423a0dd254dc49d06e26f8797f3620b2fa63",
+      "head": "claude/trusting-hawking-9mumc1",
+      "head_sha": "e981c516db99bd318c86619c8b0fbcf3e0ad3589",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "86954d421b569b0e5b007da690ee7a4287df72dd",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-15T21:37:58Z",
+      "updated_at": "2026-11-15T23:09:52Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 22,
+      "changed_files": 97,
+      "additions": 38533,
+      "deletions": 0,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/7",
+      "display_title": "feat: TW-FULL TW-00A→TW-08 — RC técnico de Tannia Workspace (PR apilado sobre #2)"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43773297944,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 25,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43773297944/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43773297944/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " .gitattributes                                     |    5 +\n .github/workflows/ci.yml                           |   24 +\n .gitignore                                         |    5 +\n CHANGELOG.md                                       |   25 +\n docs/AUTOCAD_COMPATIBILITY.md                      |   25 +\n docs/KNOWN_LIMITATIONS.md                          |   29 +\n docs/LICENSES.md                                   |  320 ++\n docs/RISKS.md                                      |   16 +\n docs/TANNIA_HANDOFF.md                             |   34 +\n docs/evaluations/THIRD_PARTY_EVALUATION.md         |   17 +\n docs/implementation/PROGRESS.md                    |   18 +\n docs/implementation/TW05_PACKAGING_DECISION.md     |   25 +\n docs/pilot/PILOTO_2D_TW07A.md                      |   21 +\n docs/pilot/PILOTO_3D_TW07B.md                      |   15 +\n docs/qa/CAD_CAPABILITY_MATRIX.md                   |   96 +\n docs/qa/EVIDENCE_MATRIX.md                         |   71 +\n docs/qa/ISSUE_8_FIX.md                             |   28 +\n docs/qa/ISSUE_9_FIX.md                             |   30 +\n docs/qa/MANUAL_TESTS_TANNIA_PC.md                  |   61 +\n docs/qa/TEST_REPORT.md                             |  137 +\n docs/user/INSTALACION.md                           |   29 +\n docs/user/MANUAL_TANNIA.md                         |   29 +\n docs/user/PRIMERA_PRUEBA_AUTOCAD.md                |   35 +\n examples/ejemplo-ficticio/LEEME.txt                |    2 +\n .../ejemplo-ficticio/mediciones_plano_ejemplo.json |  173 +\n examples/ejemplo-ficticio/memoria_BORRADOR.pdf     |  Bin 0 -> 3592 bytes\n .../ejemplo-ficticio/presupuesto_BORRADOR.xlsx     |  Bin 0 -> 10929 bytes\n fixtures/dxf/bloques.dxf                           | 3542 ++++++++++++++\n fixtures/dxf/corrupto.dxf                          |    9 +\n fixtures/dxf/duplicados_abiertas.dxf               | 3368 +++++++++++++\n fixtures/dxf/inyeccion.dxf                         | 3308 +++++++++++++\n fixtures/dxf/malla_3d.dxf                          | 4054 ++++++++++++++++\n fixtures/dxf/mm.dxf                                | 3268 +++++++++++++\n fixtures/dxf/no_es_dxf.dxf                         |  Bin 0 -> 200 bytes\n fixtures/dxf/simple_m.dxf                          | 3388 +++++++++++++\n fixtures/dxf/sin_unidades.dxf                      | 3268 +++++++++++++\n fixtures/dxf/solido_acis.dxf                       | 3276 +++++++++++++\n fixtures/expected.json                             |   42 +\n fixtures/pdf/circulo.pdf                           |  Bin 0 -> 1406 bytes\n fixtures/pdf/corrupto.pdf                          |  Bin 0 -> 30 bytes\n fixtures/pdf/dos_paginas.pdf                       |  Bin 0 -> 1772 bytes\n fixtures/pdf/escaneado.pdf                         |  Bin 0 -> 1827 bytes\n fixtures/pdf/inyeccion.pdf                         |  Bin 0 -> 1488 bytes\n fixtures/pdf/plano_vector_1_100.pdf                |  Bin 0 -> 1514 bytes\n package-lock.json                                  | 5028 ++++++++++++++++++++\n package.json                                       |   30 +\n scripts/build.mjs                                  |   63 +\n scripts/gen-docs.mjs                               |    8 +\n scripts/gen-examples.mjs                           |   37 +\n scripts/licenses.mjs                               |   25 +\n scripts/pack.mjs                                   |   18 +\n scripts/qa-report.mjs                              |   22 +\n scripts/release.mjs                                |   30 +\n src/budget/calc.js                                 |   85 +\n src/budget/xlsx.js                                 |  129 +\n src/cad/autocad_com.js                             |  385 ++\n src/cad/capabilities.js                            |   76 +\n src/cad/detect.js                                  |   51 +\n src/cad/geometry_check.js                          |  101 +\n src/cad/sanitize.js                                |   11 +\n src/config.js                                      |   32 +\n src/dxf/geometry.js                                |  140 +\n src/dxf/inspect.js                                 |   37 +\n src/dxf/measure.js                                 |  224 +\n src/dxf/mesh3d.js                                  |   67 +\n src/dxf/reader.js                                  |  210 +\n src/main.js                                        |   15 +\n src/mcp/util.js                                    |   33 +\n src/normativa/index.js                             |   37 +\n src/pdf/pdf.js                                     |  182 +\n src/project/originals_policy.js                    |   33 +\n src/project/projects.js                            |   29 +\n src/project/store.js                               |  181 +\n src/quantities/engine.js                           |   77 +\n src/report/memoria.js                              |   62 +\n src/security/sandbox.js                            |  128 +\n src/server.js                                      |   25 +\n src/tools/cad.js                                   |   80 +\n src/tools/index.js                                 |  385 ++\n src/version.js                                     |    2 +\n test/helpers.js                                    |   23 +\n test/security.test.js                              |   63 +\n test/tw00a_package.test.js                         |   46 +\n test/tw00a_protocol.test.js                        |   46 +\n test/tw01_dxf.test.js                              |  101 +\n test/tw02_budget.test.js                           |  119 +\n test/tw03_pdf.test.js                              |   75 +\n test/tw03_report.test.js                           |   29 +\n test/tw04_workflow.test.js                         |  120 +\n test/tw05_install.test.js                          |   93 +\n test/tw06_cad.test.js                              |  303 ++\n test/tw06a_3d.test.js                              |   69 +\n test/tw09_windows_powershell.test.js               |  232 +\n test/tw10_config.test.js                           |   43 +\n test/tw11_originals_policy.test.js                 |  123 +\n test/tw12_geometry_check.test.js                   |   47 +\n tools/gen_fixtures.py                              |  130 +\n 97 files changed, 38533 insertions(+)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 11,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/11",
+      "number": 11,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Resumen\nImplementación autónoma de TW-09 sobre `feat/tw-modelo-3d` (HEAD `16a7bd7`). **PR apilado y borrador: no toca `main`, la rama del auditor ni PR #2/#7.** Sin merge ni release.\n\n**Estado: RC técnico parcial. NO validado en AutoCAD real, NO validado en Claude Desktop, NO validado por la usuaria.** Estado por historia: `docs/implementation/TW09_BACKLOG.md` (G8 no alcanzado).\n\n## Qué cambia\n- **Persistencia (P1):** `51→0` con SHA idéntico ya no es `verificada` (verificación global). Causa real del `ModelSpace.Count=0` **no establecida**: instrumentada.\n- **Identidad documental COM:** con ruta esperada se localiza ese documento o se falla (sin `ActiveDocument`); la respuesta confirma la ruta; cero documentos; reintentos solo en lecturas.\n- **Coherencia 2D↔3D por facetas**, semántica formal de vanos, inspección y previsualización pura.\n- **Proyectos:** id estable + migración, `resolver/resumen/importar` (hash, manifiesto, sin sobrescribir), estado honesto de originales.\n- **Versiones transaccionales con exclusión entre procesos** (bloqueo con dueño/latido; **un dueño vivo nunca se interviene**; reconciliación que no toca escrituras vivas; historial bajo bloqueo).\n- **Contención canónica antes de toda escritura** (`.tannia`, id, respaldo, manifiestos, auditoría, `atomicWriteJson`, historiales), con rollback del manifiesto final y destino de importación canónico (symlink/junction, TOCTOU, colisiones de Windows).\n- **Autonomía:** `tannia_encargo_evaluar`, `tannia_politica_autonomia`, instrucciones del servidor, respuestas acotadas.\n\n## Auditoría independiente del PR #11 (rondas 1 y 2)\n`docs/qa/TW09_AUDITORIA_PR11_RESPUESTA.md`: P1 identidad documental COM, P1 concurrencia, P2 destino de importación, **H4** (escrituras anteriores a la validación canónica) y **H5** (bloqueo con dueño vivo y latido vencido) se **confirmaron en código**, se reprodujeron con pruebas que fallaban sobre el baseline y se corrigieron. Lo descartado, lo no establecido y lo que exige hardware está documentado allí.\n\n## Evidencia\n187 pruebas locales (170 pasan, 0 fallan, 17 omitidas = PowerShell real, ejecutadas en CI Windows). CI Windows+Ubuntu verde sobre `fc48937` (código; commits posteriores solo documentación). Matriz: `TW09_EVIDENCE_MATRIX.md`; informe: `TW09_REGRESSION_REPORT.md`.\n\n## Pendiente (hardware/usuaria)\n`docs/qa/PRUEBA_REAL_TW09.md`: instalación en Claude Desktop, adjuntos, construcción y persistencia 3D reales, `AUDIT`, ACL/junctions reales, `Get-Process … StartTime` en Windows real, OneDrive/antivirus con el bloqueo de versiones, aceptación con la usuaria. `AUDIT` automatizado (09-007) pendiente.\n\n## Decisiones para el Product Owner\nMerge de la cadena (#2 → #7 → `feat/tw-modelo-3d` → este PR), distribución del paquete y resultado de la prueba real.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z",
+      "title": "feat: TW-09 — autonomía profesional, gestión de proyectos y confiabilidad CAD (PR apilado, draft)",
+      "base": "feat/tw-modelo-3d",
+      "base_sha": "16a7bd7fb68bf62486f4258a6834e52f82ee2251",
+      "head": "feat/tw09-autonomia",
+      "head_sha": "eb767891fe2dacbb4d3070653b1353ebde245243",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "bf25964ddd8b2315d38fe39d2773a19a98baf841",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-16T12:10:50Z",
+      "updated_at": "2026-11-16T13:52:59Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 19,
+      "changed_files": 53,
+      "additions": 2904,
+      "deletions": 146,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/11",
+      "display_title": "feat: TW-09 — autonomía profesional, gestión de proyectos y confiabilidad CAD (PR apilado, draft)"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43880085863,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 63,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43880085863/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43880085863/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " docs/KNOWN_LIMITATIONS.md                          |  12 +\n .../TW09_AUDITORIA_Y_MACROFASE_FINAL_2026-11-16.md | 257 +++++++++++++++++++++\n docs/implementation/TW09_BACKLOG.md                |  53 +++++\n docs/qa/PRUEBA_REAL_TW09.md                        |  13 ++\n docs/qa/PRUEBA_REAL_TW09_MENSAJE.txt               |   3 +\n docs/qa/REEMPLAZO_INSTALADOR_TW09.md               |  15 ++\n docs/qa/TW09_AUDITORIA_PR11_RESPUESTA.md           |  44 ++++\n docs/qa/TW09_AUDIT_INITIAL.md                      |  22 ++\n docs/qa/TW09_EVIDENCE_MATRIX.md                    |  36 +++\n docs/qa/TW09_INSTALADOR_FIX.md                     |  26 +++\n docs/qa/TW09_REGRESSION_REPORT.md                  |  12 +\n scripts/lib/nombres.mjs                            |  63 +++++\n scripts/lib/verificar_bundle.mjs                   |  58 +++++\n scripts/pack.mjs                                   |   4 +\n scripts/paquete-prueba.mjs                         |  39 ++++\n src/arq3d/desde_anteproyecto.js                    |  67 ++++--\n src/arq3d/geometria.js                             |   3 +-\n src/arq3d/servicio.js                              |  45 ++--\n src/cad/autocad_com.js                             | 157 ++++++++++---\n src/design/inspeccion.js                           |  48 ++++\n src/design/operaciones.js                          |   4 +-\n src/design/servicio.js                             |  60 +++--\n src/mcp/util.js                                    |   8 +-\n src/politica/autonomia.js                          |  82 +++++++\n src/project/gestion.js                             | 162 +++++++++++++\n src/project/projects.js                            |  10 +-\n src/project/store.js                               | 104 +++++++--\n src/project/transaccion.js                         | 198 ++++++++++++++++\n src/server.js                                      |  13 +-\n src/tools/diseno.js                                |  21 ++\n src/tools/index.js                                 |  29 ++-\n src/tools/proyectos.js                             |  50 ++++\n test/helpers_com.js                                |  31 ++-\n test/proc/commit_child.mjs                         |  20 ++\n test/proc/servicio_child.mjs                       |  16 ++\n test/tw06_cad.test.js                              |   2 +-\n test/tw09_windows_powershell.test.js               |  41 +++-\n test/tw15_dwg_confianza.test.js                    |   2 +-\n test/tw16_arq3d.test.js                            |  12 +-\n test/tw17_persistencia_global.test.js              |  88 +++++++\n test/tw18_coherencia_facetas.test.js               |  56 +++++\n test/tw19_vanos_semantica.test.js                  |  76 ++++++\n test/tw20_proyectos.test.js                        | 106 +++++++++\n test/tw21_versiones_transaccion.test.js            |  89 +++++++\n test/tw22_politica_encargos.test.js                |  49 ++++\n test/tw23_seguridad_aislamiento.test.js            |  73 ++++++\n test/tw24_flujo_encargo.test.js                    |  45 ++++\n test/tw25_identidad_documental.test.js             |  83 +++++++\n test/tw26_concurrencia_transacciones.test.js       | 190 +++++++++++++++\n test/tw27_importacion_destino.test.js              |  88 +++++++\n test/tw28_h4_escrituras_canonicas.test.js          | 107 +++++++++\n test/tw29_h5_bloqueo_dueno_vivo.test.js            |  86 +++++++\n test/tw30_paquete_nombres.test.js                  |  72 ++++++\n 53 files changed, 2904 insertions(+), 146 deletions(-)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 12,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/12",
+      "number": 12,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Resumen\nEjecución autónoma de TW-10 (directiva v2, G0→G10) sobre `feat/tw09-autonomia` @ `eb76789` (CI verde en ese SHA). **PR apilado y borrador. Sin merge, release ni despliegue.** No toca `main`, PR #2/#7/#11.\n\n**Estado: `ESPERA_EXTERNA` — candidato técnico completo en lo automatizable. NO validado en AutoCAD real, NO validado en Claude Desktop real, NO validado por Tannia ni por revisión arquitectónica independiente. TW-10 sigue abierta.**\nEstado persistente: `docs/agent-continuity/TW10_STATE.json` · handoff: `TW10_HANDOFF.md` · evidencia: `docs/tw10/TW10_EVIDENCE_MATRIX.md` · protocolo de campo (G10, no ejecutado): `docs/tw10/TW10_FIELD_VALIDATION.md` · candidato: `docs/tw10/TW10_CANDIDATE.md`.\n\n## Qué agrega (`src/architect/`, 11 herramientas `tannia_arq_*`; las 61 de TW-09 intactas)\n- **Brief tipado** del encargo (hechos/deseos/requisitos/incógnitas), sin inventar tamaños, terreno ni presupuesto; una pregunta esencial.\n- **Sitio y norte verdadero** (convención explícita), fuentes con hash/fecha/escala legible, restricciones urbanísticas solo con documento; nunca «cumple».\n- **Motor solar propio** contrastado con NREL SPA (pvlib, solo dev): 149 casos, error máx. 0,024° / 0,006°; IANA/DST de Chile; hemisferios.\n- **Clima EPW** (datos como datos) y caché ERA5 sin red; rosa de vientos regional.\n- **Geometría `scheme/2`**: huella poligonal real (L, C, patio), losa/cubierta 3D sobre la huella (nunca bbox), conversión v1 por copia.\n- **Tres partidos distintos** (compacta, L con patio, dos alas), deterministas por semilla; diversidad por huella + topología (espejo no cuenta).\n- **Análisis**: sol por ray casting, aleros, abrigo de viento regional, recorridos, visuales, privacidad, seguridad de piscina (la visual nunca es seguridad), constructibilidad relativa (sin precios).\n- **Evaluador crítico**: requisitos duros / objetivos / no evaluado, Pareto + sensibilidad, contrafactuales, DecisionLedger, modo crítico.\n- **Publicación**: DXF + SVG + informe con hashes + modelo 3D versionado (DWG real = externo).\n\n## Evidencia automatizada\n278 pruebas locales (261 pasan, 0 fallan, 17 omitidas = PowerShell real, solo CI Windows). CI Windows+Ubuntu verde comprobado en G0, G5, G7/G8 y G9 (`56aef38`, run 43900583395); ver estado para el SHA final. Revisión visual de la hoja comparativa y las sombras corrigió un defecto («en L» bloqueaba alternativas).\n\n## Pendiente (externo)\nAutoCAD 2027 real · Claude Desktop real · taller con Tannia (≥15 encargos) y revisión independiente · decisión del PO. Parciales declarados: generador de patio central; consultas Open-Meteo (ADR).\n\n## Decisiones para el PO\nRevisar ADR de dependencias; autorizar o no consultas Open-Meteo; ejecutar G10; merge de la cadena (#2 → #7 → … → #11 → este PR).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z",
+      "title": "feat: TW-10 — Motor de Razonamiento Arquitectónico Asistido (PR apilado, draft)",
+      "base": "feat/tw09-autonomia",
+      "base_sha": "eb767891fe2dacbb4d3070653b1353ebde245243",
+      "head": "feat/tw10-architectural-reasoning",
+      "head_sha": "64cdec3ba13e98e93ff3ec1d3cf77aafa3934663",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "ab6008d7a5ed21ac90929f36b8cb97a2f7e3f32c",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-16T15:02:49Z",
+      "updated_at": "2026-11-16T19:20:56Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 20,
+      "changed_files": 93,
+      "additions": 23061,
+      "deletions": 5,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/12",
+      "display_title": "feat: TW-10 — Motor de Razonamiento Arquitectónico Asistido (PR apilado, draft)"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43938409507,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 93,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43938409507/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43938409507/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " docs/agent-continuity/TW10_HANDOFF.md              |   30 +\n docs/agent-continuity/TW10_STATE.json              |  136 +\n docs/tw10/INSTRUCCIONES_UNA_PAGINA_TW10.md         |   10 +\n docs/tw10/KNOWN_LIMITATIONS_TW10.md                |    8 +\n docs/tw10/TW10_ADR_DEPENDENCIAS.md                 |   15 +\n docs/tw10/TW10_AUDIT_TRANSFER.md                   |   77 +\n docs/tw10/TW10_CANDIDATE.md                        |    7 +\n ...CONTRATO_CAPA_RAZONAMIENTO_ARQUITECTONICO_V1.md |  250 +\n ...A_EJECUCION_AUTONOMA_DE_EXTREMO_A_EXTREMO_V2.md |  149 +\n docs/tw10/TW10_EVIDENCE_MATRIX.md                  |   79 +\n docs/tw10/TW10_FIELD_FINDINGS_F01_F05.md           |   17 +\n docs/tw10/TW10_FIELD_FINDINGS_F06_F10.md           |   20 +\n docs/tw10/TW10_FIELD_VALIDATION.md                 |   25 +\n ...GACION_Y_AUDITORIA_ARQUITECTONICA_2026-11-16.md |  124 +\n docs/tw10/TW10_LEEME_INICIAR_Y_REANUDAR.md         |   56 +\n docs/tw10/TW10_MATRIZ_COMPATIBILIDAD.md            |   17 +\n docs/tw10/TW10_PROMPT_EJECUCION_AUTONOMA_E2E_V2.md |   37 +\n .../TW10_ROADMAP_MAESTRO_Y_GATES_2026-11-16.md     |  181 +\n docs/tw10/TW10_RUNNER_RESUMIBLE.ps1                |  128 +\n docs/tw10/TW10_STATE_TEMPLATE.json                 |   31 +\n docs/tw10/entrega/EVIDENCIA_TECNICA.md             |   77 +\n docs/tw10/entrega/HALLAZGOS_CAMPO_F01_F05.md       |   17 +\n docs/tw10/entrega/HALLAZGOS_CAMPO_F06_F10.md       |   20 +\n docs/tw10/entrega/INSTALAR_EN_WINDOWS.md           |   14 +\n docs/tw10/entrega/LIMITACIONES_CONOCIDAS.md        |   32 +\n docs/tw10/entrega/MENSAJE_PRUEBA_CLAUDE.txt        |    1 +\n docs/tw10/entrega/PROTOCOLO_PRUEBA_REAL.md         |   93 +\n docs/tw10/entrega/SHA256SUMS.txt                   |    1 +\n docs/tw10/entrega/clima_sintetico_PRUEBA.epw       | 8768 ++++++++++++++++++++\n examples/tw10/LEEME.md                             |    7 +\n examples/tw10/evaluacion-alt-L_con_patio.json      |  783 ++\n examples/tw10/v002-comparacion.svg                 |  590 ++\n .../tw10/v004-alt-L_con_patio-sombras-invierno.svg |    1 +\n .../tw10/v004-alt-compacta-sombras-invierno.svg    |    1 +\n .../tw10/v004-alt-dos_alas-sombras-invierno.svg    |    1 +\n examples/tw10/v004-comparacion.svg                 |  590 ++\n examples/tw10/v006-p001-informe.json               |   77 +\n examples/tw10/v006-p001.dxf                        | 4686 +++++++++++\n examples/tw10/v006-p001.svg                        |  215 +\n fixtures/tw10/solar_oracle.json                    | 1857 +++++\n scripts/ejemplos-tw10.mjs                          |   23 +\n scripts/lib/verificar_bundle.mjs                   |    1 +\n scripts/paquete-prueba.mjs                         |    9 +-\n src/architect/a3d.js                               |   37 +\n src/architect/alternativas.js                      |   96 +\n src/architect/briefing.js                          |  290 +\n src/architect/clima.js                             |   91 +\n src/architect/convertir.js                         |   20 +\n src/architect/derivar_poly.js                      |  162 +\n src/architect/diversidad.js                        |   50 +\n src/architect/evaluacion.js                        |  151 +\n src/architect/habitabilidad.js                     |  131 +\n src/architect/partidos.js                          |  265 +\n src/architect/poligonos.js                         |   77 +\n src/architect/reporte.js                           |   41 +\n src/architect/respuestas.js                        |   89 +\n src/architect/schemas.js                           |  122 +\n src/architect/servicio.js                          |  216 +\n src/architect/sitio.js                             |  105 +\n src/architect/solar.js                             |   97 +\n src/architect/sombras.js                           |  121 +\n src/architect/version.js                           |    1 +\n src/mcp/paquete.js                                 |   17 +\n src/mcp/util.js                                    |    1 +\n src/politica/autonomia.js                          |    6 +\n src/server.js                                      |    1 +\n src/tools/arquitectura.js                          |  141 +\n src/tools/index.js                                 |    8 +-\n test/fixtures_tw10/encargo_los_robles.txt          |    1 +\n .../encargo_los_robles_variante_campo.txt          |    1 +\n test/fixtures_tw10/encargo_rc2_reconstruido.txt    |    3 +\n test/helpers_epw.js                                |   14 +\n test/tw10_escenarios.test.js                       |   93 +\n test/tw10_f_campo2_alternativas.test.js            |   81 +\n test/tw10_f_campo2_brief.test.js                   |   86 +\n test/tw10_f_campo2_mcp.test.js                     |   47 +\n test/tw10_f_campo2_version.test.js                 |   44 +\n test/tw10_f_campo2_visual.test.js                  |   70 +\n test/tw10_f_campo_brief.test.js                    |   87 +\n test/tw10_f_campo_respuestas.test.js               |  110 +\n test/tw10_g0_contratos.test.js                     |   51 +\n test/tw10_g0_estado.test.js                        |   20 +\n test/tw10_g0_regresion.test.js                     |   26 +\n test/tw10_g1_brief.test.js                         |   54 +\n test/tw10_g2_sitio.test.js                         |   52 +\n test/tw10_g3_clima.test.js                         |   52 +\n test/tw10_g3_solar.test.js                         |   57 +\n test/tw10_g4_geometria.test.js                     |   88 +\n test/tw10_g5_partidos.test.js                      |   91 +\n test/tw10_g6_sombras.test.js                       |   85 +\n test/tw10_g7_habitabilidad.test.js                 |   48 +\n test/tw10_g8_evaluacion.test.js                    |  104 +\n test/tw10_g9_mcp.test.js                           |  104 +\n 93 files changed, 23061 insertions(+), 5 deletions(-)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 13,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/13",
+      "number": 13,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Qué es\nExpediente **exclusivamente documental** de TW-11 (`docs/tw11/`), apilado sobre `feat/tw10-architectural-reasoning` (PR #12, borrador). No contiene código, no toca las 72 herramientas ni el instalador.\n\n## Para revisión arquitectónica\n- Matriz de resolución CIC-01…07: `docs/tw11/11_MATRIZ_RESOLUCION_CIC.md`\n- Interpretación propuesta por Claude y validada por el backend (sin clasificador léxico como puerta): doc 02 §0.1\n- Flujo auditable de investigación externa (servidor sin Internet): doc 03 §3b–3c\n- Rigor de métodos de volumen (áreas medias, prismoidal, extrusión, barrido/Pappus) y oráculos: doc 04 §2b\n- Casos A–D reforzados, roles numéricos, evaluación independiente con umbrales absolutos: docs 02 §8 y 06\n- PRs agrupados, GV1 y presupuesto de herramientas medido: doc 08\n\n## Estado\n- Implementación integral **no autorizada**.\n- Nada validado en AutoCAD real ni Claude Desktop real; sin revisor independiente designado (bloquea la aprobación de G10).\n- TW-10/PR #12 conserva sus validaciones externas pendientes.\n- Sin merge ni release.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z)_",
+      "title": "docs(tw11): Construction Intelligence Core — expediente de planificación (revisión arquitectónica R1)",
+      "base": "feat/tw10-architectural-reasoning",
+      "base_sha": "64cdec3ba13e98e93ff3ec1d3cf77aafa3934663",
+      "head": "docs/tw11-construction-intelligence-plan",
+      "head_sha": "e06364e5c3e22862a70e6e7fe3086208e323dff9",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "464fb8d96a95bd05483f494c435afb7a9ddd2185",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-16T19:42:18Z",
+      "updated_at": "2026-11-16T19:42:18Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 2,
+      "changed_files": 13,
+      "additions": 870,
+      "deletions": 0,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/13",
+      "display_title": "docs(tw11): Construction Intelligence Core — expediente de planificación (revisión arquitectónica R1)"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43942111786,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 94,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43942111786/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43942111786/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " docs/tw11/01_AUDITORIA_ARQUITECTONICA.md           |  93 +++++++++++++\n .../02_DISENO_CONSTRUCTION_INTELLIGENCE_CORE.md    | 146 ++++++++++++++++++++\n docs/tw11/03_CONOCIMIENTO_Y_RECUPERACION.md        |  70 ++++++++++\n docs/tw11/04_MOTORES_GEOMETRICO_Y_DE_CALCULO.md    |  83 +++++++++++\n docs/tw11/05_ESPECIALIZACIONES_Y_COMPETENCIAS.md   |  43 ++++++\n ..._CASOS_DE_ACEPTACION_Y_PRUEBAS_ADVERSARIALES.md |  86 ++++++++++++\n docs/tw11/07_ESTRATEGIA_DE_MIGRACION.md            |  24 ++++\n docs/tw11/08_ROADMAP_EJECUTABLE.md                 |  88 ++++++++++++\n docs/tw11/09_RIESGOS_Y_DECISIONES_PO.md            |  27 ++++\n docs/tw11/10_HANDOFF_CLAUDE_CODE.md                |  27 ++++\n docs/tw11/11_MATRIZ_RESOLUCION_CIC.md              |  15 ++\n docs/tw11/README.md                                |  15 ++\n docs/tw11/TW11_STATE_TEMPLATE.json                 | 153 +++++++++++++++++++++\n 13 files changed, 870 insertions(+)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 14,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/14",
+      "number": 14,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Qué es\nPR-1 de TW-11 (apilado sobre el expediente PR #13 → TW-10 PR #12). **Borrador; sin merge ni release.**\n\n## Contenido (G0–G2)\n- Flag `TANNIA_CIC` **apagado por defecto**: con el flag apagado el servidor expone exactamente las 72 herramientas de rc3 (snapshot de esquemas en `fixtures/tw11/tools_baseline.json`).\n- Contratos Zod versionados; motor dimensional (unidad desconocida/incompatible = error).\n- Núcleo geométrico con arcos y huecos; operaciones con contrato y oráculos independientes: polígono, sección en arco/circular, áreas medias, prismoidal, extrusión, barrido (Pappus como caso particular), curva vertical, movimiento de tierras. P01 respetada (sin equivalencias entre métodos de hipótesis distintas).\n- Ledger de claims reproducible y verificador por **roles numéricos** (T10/T10b: 0 falsos bloqueos).\n- Herramientas `tannia_cic_catalogo/calcular/claims/verificar` (solo con el flag).\n\n## Evidencia\nSuite local 340 pruebas (323 pasan, 0 fallan, 17 omitidas = PowerShell real). CI Windows+Ubuntu ✅ en `5982018` (run 43945926639). Ver `docs/tw11/EVIDENCE_MATRIX.md`.\n\n## No validado\nAutoCAD real, Claude Desktop real, revisión profesional, evaluación retenida independiente. Operaciones E2 = verificadas contra oráculos del repositorio, no revisadas por un profesional.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z)_",
+      "title": "feat(tw11): PR-1 Núcleo verificable del CIC (G0–G2) — borrador apilado",
+      "base": "docs/tw11-construction-intelligence-plan",
+      "base_sha": "e06364e5c3e22862a70e6e7fe3086208e323dff9",
+      "head": "feat/tw11-cic-core",
+      "head_sha": "b7302174e6a963a8a9bf78b7a7eff4dc3f09beef",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "d41c37746ce1e3d4e1fcc578193ab03a4be44272",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-16T20:10:33Z",
+      "updated_at": "2026-11-16T20:10:33Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 2,
+      "changed_files": 28,
+      "additions": 1562,
+      "deletions": 2,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/14",
+      "display_title": "feat(tw11): PR-1 Núcleo verificable del CIC (G0–G2) — borrador apilado"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43947020121,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 97,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43947020121/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43947020121/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " docs/tw11/EVIDENCE_MATRIX.md                       |  13 +\n docs/tw11/TW11_ESTADO_Y_PRECISIONES.md             |  13 +\n docs/tw11/TW11_STATE.json                          |  95 ++++++\n docs/tw11/adr/ADR-001-arquitectura-cic.md          |   2 +\n .../tw11/adr/ADR-002-politica-epistemica-claims.md |   2 +\n docs/tw11/adr/ADR-003-sin-red-fuentes-externas.md  |   2 +\n fixtures/tw11/tools_baseline.json                  | 369 +++++++++++++++++++++\n scripts/tw11-baseline.mjs                          |  27 ++\n src/cic/capacidades.js                             |  37 +++\n src/cic/claims.js                                  |  48 +++\n src/cic/especializaciones.js                       |   7 +\n src/cic/flag.js                                    |   3 +\n src/cic/hash.js                                    |   3 +\n src/cic/ops/geometria.js                           |  44 +++\n src/cic/ops/index.js                               |   3 +\n src/cic/ops/registry.js                            |  58 ++++\n src/cic/ops/volumenes.js                           | 106 ++++++\n src/cic/schemas.js                                 | 103 ++++++\n src/cic/store.js                                   |  53 +++\n src/cic/units.js                                   |  46 +++\n src/cic/verificador.js                             |  69 ++++\n src/geo/geom.js                                    |  89 +++++\n src/tools/cic.js                                   |  74 +++++\n src/tools/index.js                                 |   3 +\n test/helpers.js                                    |   4 +-\n test/tw11_g0_contratos.test.js                     |  49 +++\n test/tw11_g1_units_ops.test.js                     | 165 +++++++++\n test/tw11_g2_claims.test.js                        |  77 +++++\n 28 files changed, 1562 insertions(+), 2 deletions(-)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 15,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/15",
+      "number": 15,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Qué es\nPR-2 de TW-11, apilado sobre PR-1 (#14). **Borrador; sin merge ni release.** Solo activo con `TANNIA_CIC=on`.\n\n## Contenido (G3–G4)\n- **Conocimiento (G3):** extractores PDF/DOCX/PPTX/XLSX/MD/TXT con localizadores (página, sección, hoja, diapositiva, línea), ZIP con límites anti-bomba; almacén privado por proyecto; BM25 + sinónimos + RRF con cobertura mínima; licencias (límite de cita), vigencia y reemplazo; «no encontrado» cuando no hay evidencia.\n- **P02:** estados separados registrada ≠ aprobada ≠ contenido disponible ≠ extracto comprobado ≠ cita verificable; la cita se verifica contra el texto almacenado (un hash aislado no valida una cita).\n- **Fuentes externas (ADR-003):** solo como CANDIDATAS; las aprueba una persona (elicitación del cliente o archivo fuera de banda con código que Claude no obtiene por las herramientas); ningún booleano autodeclarado aprueba. Contradicciones expuestas, nunca resueltas en silencio.\n- **Interpretación (G4):** Claude propone, el servidor valida (citas, operaciones, unidades, DAG, permisos); disciplinas informativas sin efecto de acceso (T16); brechas explícitas; encargos incompletos o solo de investigación válidos.\n- **Plan y ejecución:** modos académico/profesional como política de madurez; ejecutor idempotente y reanudable (los pasos de escritura interrumpidos no se reintentan).\n\n## Evidencia\nSuite local 355 pruebas (338 pasan, 0 fallan, 17 omitidas = PowerShell real). CI Windows+Ubuntu ✅ en `3786d1b` (run 43947384730). Ver `docs/tw11/EVIDENCE_MATRIX.md` (se actualiza en PR-3).\n\n## No validado\nClaude Desktop real (la elicitación se probó con un cliente MCP simulado); AutoCAD real; revisión profesional; evaluación retenida independiente.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z)_",
+      "title": "feat(tw11): PR-2 Conocimiento, interpretación y planificación (G3–G4) — borrador apilado",
+      "base": "feat/tw11-cic-core",
+      "base_sha": "b7302174e6a963a8a9bf78b7a7eff4dc3f09beef",
+      "head": "feat/tw11-conocimiento-planificacion",
+      "head_sha": "3786d1b88901b07607066f5d1bea5ccc2c7fe61a",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "a3ec11ca0e0c81e70d00803efd753f295657d510",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-16T20:23:57Z",
+      "updated_at": "2026-11-16T20:23:57Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 1,
+      "changed_files": 17,
+      "additions": 849,
+      "deletions": 6,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/15",
+      "display_title": "feat(tw11): PR-2 Conocimiento, interpretación y planificación (G3–G4) — borrador apilado"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43949373167,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 99,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43949373167/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43949373167/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " src/cic/conocimiento/almacen.js      | 109 +++++++++++++++++++++++++++\n src/cic/conocimiento/extractores.js  |  78 +++++++++++++++++++\n src/cic/conocimiento/indice.js       |  18 +++++\n src/cic/conocimiento/zip.js          |  30 ++++++++\n src/cic/contradicciones.js           |  15 ++++\n src/cic/ejecutor.js                  |  48 ++++++++++++\n src/cic/interpretacion.js            |  83 +++++++++++++++++++++\n src/cic/ops/geometria.js             |  11 +++\n src/cic/politica.js                  |   8 ++\n src/cic/units.js                     |   1 +\n src/tools/cic.js                     | 112 +++++++++++++++++++++++++++-\n src/tools/index.js                   |   2 +-\n test/fixtures_tw11/corpus_tuneles.js |  45 +++++++++++\n test/helpers_tw11.js                 |  27 +++++++\n test/tw11_g1_units_ops.test.js       |   2 +-\n test/tw11_g3_conocimiento.test.js    | 140 +++++++++++++++++++++++++++++++++++\n test/tw11_g4_interpretacion.test.js  | 126 +++++++++++++++++++++++++++++++\n 17 files changed, 849 insertions(+), 6 deletions(-)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 16,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/16",
+      "number": 16,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Qué es\nPR-3 de TW-11, apilado sobre PR-2 (#15). **Borrador; sin merge ni release.** Solo activo con `TANNIA_CIC=on`.\n\n## Contenido\n- **G5:** alineamientos (rectas/arcos), progresivas, perfil con curvas verticales, secciones tipo, TIN con volumen exacto sobre plano (corte/relleno por triángulo); LandXML con reporte de pérdidas (rechaza DOCTYPE/ENTITY); DXF de planta, perfil (exageración vertical declarada) y secciones, releído con lector independiente y ezdxf (auditoría sin errores). Operaciones E2: `geo.sweep.volume_arch`, `geo.section.horseshoe_lined`, `geo.alignment.length`, `geo.tin.volume_to_plane`, restas de áreas/volúmenes.\n- **Entregables:** `tannia_cic_entregable` (memoria MD/PDF + planilla XLSX) generados solo desde claims; la cifra con unidad sin respaldo bloquea la entrega.\n- **GV1:** túnel académico extremo a extremo con antecedentes SINTÉTICOS: citas verificadas, plan con brechas (sostenimiento/geotecnia = profesional), cálculos reproducibles contra fórmulas independientes, planta + perfil + 3 secciones, cubicaciones, memoria y coherencia DXF↔claims↔XLSX↔PDF. Ejemplos en `examples/tw11/gv1_tunel/`.\n\n## Evidencia\nSuite local 363 pruebas (346 pasan, 0 fallan, 17 omitidas = PowerShell real). CI Windows+Ubuntu ✅ en `c264dbc` (run 43949392711).\n\n## No validado\nAutoCAD real, Claude Desktop real, revisión profesional (E3), evaluación retenida. GV1 demuestra funcionalidad con datos sintéticos, no aptitud profesional.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z)_",
+      "title": "feat(tw11): PR-3 Geometría de infraestructura lineal y vertical de túnel (G5 + GV1) — borrador apilado",
+      "base": "feat/tw11-conocimiento-planificacion",
+      "base_sha": "3786d1b88901b07607066f5d1bea5ccc2c7fe61a",
+      "head": "feat/tw11-geometria-tunel",
+      "head_sha": "c264dbc784dca49e29960baa0fbb249e9ff76b9a",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "f3952039c3564507dbb302ecb6ba9808d062a390",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-16T20:52:31Z",
+      "updated_at": "2026-11-16T20:52:31Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 1,
+      "changed_files": 19,
+      "additions": 7674,
+      "deletions": 6,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/16",
+      "display_title": "feat(tw11): PR-3 Geometría de infraestructura lineal y vertical de túnel (G5 + GV1) — borrador apilado"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43954269714,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 101,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43954269714/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43954269714/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " examples/tw11/gv1_tunel/LEEME.md                   |    5 +\n .../T\\303\\272nel OC2-cantidades-v004.xlsx\"         |  Bin 0 -> 11813 bytes\n .../gv1_tunel/T\\303\\272nel OC2-memoria-v004.md\"    |  156 +\n .../gv1_tunel/T\\303\\272nel OC2-memoria-v004.pdf\"   |  Bin 0 -> 12487 bytes\n examples/tw11/gv1_tunel/tunel_oc2.dxf              | 6820 ++++++++++++++++++++\n scripts/ejemplos-tw11.mjs                          |   16 +\n src/cic/conocimiento/almacen.js                    |   12 +-\n src/cic/ejecutor.js                                |   10 +-\n src/cic/entregables.js                             |   78 +\n src/cic/interpretacion.js                          |    4 +-\n src/cic/ops/geometria.js                           |   63 +\n src/cic/store.js                                   |    9 +\n src/geo/dxf_lineal.js                              |   68 +\n src/geo/landxml.js                                 |   42 +\n src/geo/lineal.js                                  |   87 +\n src/tools/cic.js                                   |   70 +\n test/fixtures_tw11/escenario_tunel.js              |   58 +\n test/tw11_g5_geometria_lineal.test.js              |  111 +\n test/tw11_gv1_tunel.test.js                        |   71 +\n 19 files changed, 7674 insertions(+), 6 deletions(-)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 17,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/17",
+      "number": 17,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Qué es\nPR-4 y PR-5 del plan (agrupación funcional revisada, CIC-07): G6, G7 y G8 en un solo PR con **un bloque de evidencia por gate**. Apilado sobre PR-3 (#16). **Borrador; sin merge ni release.** Solo activo con `TANNIA_CIC=on`.\n\n## G6 — Cantidades, presupuesto y programación\n`qty.product`, `qty.apply_loss`, `bud.rollup` (contrastado con el `computeBudget` existente), `sched.duration/cpm/scurve/evm` con soluciones cerradas. **Caso D:** plano (DXF medido) → cantidad → partidas → presupuesto con fórmulas → programa → informe sin transcripción manual; un cambio de dato marca los pasos como `stale` y **bloquea** entregables con base desactualizada. Precios, pérdidas, rendimientos y % siempre aportados (nunca por defecto). Las reglas nuevas de cubicación viven aparte para no alterar el esquema de `tannia_cubicar_dxf` (las 72 intactas).\n\n## G7 — Especializaciones y migración compatible\n6 especializaciones declarativas (túneles, vial, cubicaciones, planificación, vivienda, unidades en altura); carga segura desde disco (T13). Adaptador del enrutador: ≥200 frases, la clasificación existente **no cambia**, solo se agrega una ruta al CIC; ninguna disciplina condiciona el acceso (T16).\n\n## G8 — Edificación transversal\nPrograma independiente de la tipología. Departamento con entrepiso compartido, medianeros sin ventanas, acceso por núcleo común, terraza con borde abierto y sin elementos de lote; mismo programa como casa ⇒ ≥6 diferencias estructurales; oficina y local comercial. DXF releído con lector independiente. **Un plan con brechas no satisface G8: se exigen artefactos geométricos.**\n\n## Evidencia\nSuite local 375 pruebas (358 pasan, 0 fallan, 17 omitidas). CI Windows+Ubuntu: ver run 43954370335 (en curso al abrir este PR).\n\n## No validado\nAutoCAD real, Claude Desktop real, revisión profesional (E3), evaluación retenida.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z)_",
+      "title": "feat(tw11): PR-4/5 Cantidades, programación, especializaciones, migración y departamentos (G6–G8) — borrador apilado",
+      "base": "feat/tw11-geometria-tunel",
+      "base_sha": "c264dbc784dca49e29960baa0fbb249e9ff76b9a",
+      "head": "feat/tw11-cantidades-especializaciones",
+      "head_sha": "dcc658b71f8f560a95cdacb1e6de1eee3b5f05b8",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "38cf13a9ea8d5aec1cd5e3b57ff8999a0b60be45",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-16T20:55:20Z",
+      "updated_at": "2026-11-16T20:55:20Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 1,
+      "changed_files": 37,
+      "additions": 917,
+      "deletions": 31,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/17",
+      "display_title": "feat(tw11): PR-4/5 Cantidades, programación, especializaciones, migración y departamentos (G6–G8) — borrador apilado"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43954746342,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 104,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43954746342/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43954746342/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " docs/tw11/adr/ADR-004-embeddings.md                |   2 +\n docs/tw11/adr/ADR-005-interoperabilidad-abierta.md |   2 +\n docs/tw11/entrega/AUDITORIA_TRANSFER.md            |  27 +++++\n docs/tw11/entrega/INSTALACION_1_PAGINA.md          |  17 +++\n docs/tw11/entrega/LIMITACIONES_CONOCIDAS.md        |  10 ++\n docs/tw11/entrega/PROTOCOLO_CLAUDE_DESKTOP.md      |  15 +++\n fixtures/tw11/eval/dev/dev-001-circulo.json        |  12 +++\n scripts/paquete-prueba.mjs                         |  12 ++-\n scripts/tw11-eval.mjs                              |  68 ++++++++++++\n src/cic/claims.js                                  |   4 +-\n src/cic/edificacion/dxf_unidad.js                  |  48 +++++++++\n src/cic/edificacion/unidad.js                      | 107 +++++++++++++++++++\n src/cic/ejecutor.js                                |   8 +-\n src/cic/enrutador.js                               |  17 +++\n src/cic/entregables.js                             |  34 +++++-\n src/cic/especializaciones.js                       |   1 +\n src/cic/especializaciones/cubicaciones.js          |   8 ++\n src/cic/especializaciones/edificacion.js           |  15 +++\n src/cic/especializaciones/index.js                 |  28 +++++\n src/cic/especializaciones/planificacion.js         |   8 ++\n src/cic/especializaciones/tuneles.js               |  10 ++\n src/cic/especializaciones/vial.js                  |   9 ++\n src/cic/interpretacion.js                          |   2 +-\n src/cic/ops/gestion.js                             |  97 +++++++++++++++++\n src/cic/ops/index.js                               |   1 +\n src/cic/ops/registry.js                            |   7 +-\n src/cic/schemas.js                                 |   2 +-\n src/cic/units.js                                   |   1 +\n src/cic/verificador.js                             |   4 +-\n src/quantities/engine.js                           |  12 ++-\n src/server.js                                      |   6 +-\n src/tools/cic.js                                   |  68 +++++++++---\n src/tools/proyectos.js                             |   4 +-\n test/tw11_g10_eval.test.js                         |  30 ++++++\n test/tw11_g6_cadena.test.js                        | 117 +++++++++++++++++++++\n test/tw11_g7_especializaciones.test.js             |  62 +++++++++++\n test/tw11_g8_departamentos.test.js                 |  73 +++++++++++++\n 37 files changed, 917 insertions(+), 31 deletions(-)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 18,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/18",
+      "number": 18,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Qué es\nPR-6 de TW-11, apilado sobre PR-4/5. **Borrador; sin merge ni release.** Estado global: `ESPERA_VALIDACION_EXTERNA`.\n\n## G9 — Paquete y experiencia\n- `.mcpb` **CIC apagado** (72 herramientas, idéntico a rc3) y **candidato CIC activado** (83), ambos verificados desde el bundle desempaquetado (el verificador usa el entorno EXACTO del manifiesto y no hereda `TANNIA_CIC`).\n- El CIC **no se activa** en el paquete base ni en instalaciones existentes; el candidato CIC tiene otra identidad (`tannia-workspace-tw11-cic`).\n- Línea base D7 medida: `tools/list` 79 386 → 104 578 B (**+31,7 %**, por encima de la propuesta de +25 %: decide la PO). Precisión de selección de herramienta: no medida (requiere Claude Desktop).\n- Instrucciones de una página, protocolo de prueba en Claude Desktop (no ejecutado), limitaciones, expediente de auditoría.\n\n## G10 — Solo el EJECUTOR\n`scripts/tw11-eval.mjs`: umbrales absolutos, hash de compromiso de los casos del revisor, rúbrica de utilidad humana, reproducibilidad y falla dura por valores críticos inventados. **Los casos retenidos no existen en el repositorio. G10 NO está aprobado**: requiere revisor independiente y la decisión de la PO.\n\n## Evidencia\nSuite local 375 pruebas (358 pasan, 0 fallan, 17 omitidas). CI: run 43954614508 (en curso al abrir este PR). Ver `docs/tw11/EVIDENCE_MATRIX.md` y `TW11_STATE.json`.\n\n## Pendientes humanos\nAutoCAD real · Claude Desktop real · evaluación retenida independiente · revisión profesional · taller con Tannia · decisión de aceptación · merge y distribución.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z)_",
+      "title": "feat(tw11): PR-6 Paquete, métricas y ejecutor de evaluación independiente (G9–G10) — borrador apilado",
+      "base": "feat/tw11-cantidades-especializaciones",
+      "base_sha": "dcc658b71f8f560a95cdacb1e6de1eee3b5f05b8",
+      "head": "feat/tw11-paquete-evaluacion",
+      "head_sha": "92d5d198edf41f5756f6f3158ac1ff498ba8241e",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "798921318b012b70aad47a87690b24a03fe9d124",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-16T20:55:26Z",
+      "updated_at": "2026-11-16T20:59:23Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 2,
+      "changed_files": 6,
+      "additions": 565,
+      "deletions": 43,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/18",
+      "display_title": "feat(tw11): PR-6 Paquete, métricas y ejecutor de evaluación independiente (G9–G10) — borrador apilado"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43955418107,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 107,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43955418107/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43955418107/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " docs/tw11/EVIDENCE_MATRIX.md              |  44 +++-\n docs/tw11/TW11_STATE.json                 | 110 +++++---\n docs/tw11/entrega/INSTALACION_1_PAGINA.md |   4 +-\n fixtures/tw11/tools_cic.json              | 424 ++++++++++++++++++++++++++++++\n scripts/lib/verificar_bundle.mjs          |   4 +-\n test/tw11_g9_paquete.test.js              |  22 ++\n 6 files changed, 565 insertions(+), 43 deletions(-)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 19,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/19",
+      "number": 19,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Qué es\nCorrecciones de la auditoría independiente y contrato de comunicación. **Borrador, apilado sobre #18; sin merge, sin release, `main` intacto.** No cambia el alcance del núcleo ni rehace motores.\n\n## Hallazgos (cada uno reproducido con una prueba que fallaba en `92d5d19`; 5/5 fallaban)\n- **H1 (P1)** actualizar/reemplazar/confirmar/retirar sin pérdida de datos (A→B→A, unidades, dimensiones, entregables).\n- **H2 (P1)** retirar/vencer/reemplazar una fuente invalida lo derivado y bloquea entregables (`FUENTE_NO_VIGENTE`).\n- **H3 (P1)** eliminado el booleano autodeclarado; el borrador desactualizado exige consentimiento humano comprobable y sale rotulado, no válido.\n- **H4 (P2)** referencias `psg-*` verificadas contra el pasaje real (existencia, fuente, estado, cita, localizador, contenido).\n- **H5 (P2)** con CIC activo las instrucciones priorizan el enrutamiento transversal; con CIC apagado, idénticas a TW-10.\n\n## Contrato de comunicación\n`tannia_comunicacion` (breve por defecto; global/proyecto; persistente), instrucciones (sin narración, niveles, académico), advertencias críticas agrupadas en el texto y datos estructurados intactos. **La conducta real del modelo NO está verificada**: protocolo C1–C15 para Claude Desktop (`docs/tw11/entrega/PROTOCOLO_COMUNICACION_DESKTOP.md`).\n\n## Evidencia\nSuite local 389 pruebas (372 pasan, 0 fallan, 17 omitidas). D7: 84 herramientas, `tools/list` 107 690 B (+35,7 % vs rc3): decide la PO. CI de este PR: ver checks. PR #17 y #18 ya tenían CI Windows+Ubuntu verde.\n\n## Candidato\nZIP `TW11-entrega-aed57ae.zip` (SHA-256 `5998104f…c917`): `.mcpb` CIC apagado `774d4b45…b762` (72) y CIC activado `88219fa7…75f5` (84). Reemplaza a `cab78cd`.\n\n## Pendientes humanos (no aprobados)\nAutoCAD real, Claude Desktop real, evaluación retenida independiente (G10/G11), revisión profesional, taller con Tannia, decisión de aceptación y D7, merge y distribución.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z)_",
+      "title": "fix(tw11): PR de hardening — H1–H5 y contrato de comunicación — borrador apilado sobre #18",
+      "base": "feat/tw11-paquete-evaluacion",
+      "base_sha": "92d5d198edf41f5756f6f3158ac1ff498ba8241e",
+      "head": "feat/tw11-hardening",
+      "head_sha": "49c2ae8014e6fab842d2a579f93d49e80498d5d7",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "7535331882c03580f5d8a2ab19e84bf31e4ee1ef",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-16T21:14:46Z",
+      "updated_at": "2026-11-16T21:49:40Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 8,
+      "changed_files": 33,
+      "additions": 994,
+      "deletions": 91,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/19",
+      "display_title": "fix(tw11): PR de hardening — H1–H5 y contrato de comunicación — borrador apilado sobre #18"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 43963994268,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 122,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43963994268/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/43963994268/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " docs/tw11/10_HANDOFF_CLAUDE_CODE.md                |   6 +\n docs/tw11/EVIDENCE_MATRIX.md                       |  37 +++++-\n docs/tw11/HARDENING.md                             |  35 ++++++\n docs/tw11/TW11_STATE.json                          |  45 +++++--\n docs/tw11/adr/ADR-003-sin-red-fuentes-externas.md  |  13 +-\n docs/tw11/entrega/INSTALACION_1_PAGINA.md          |   2 +-\n docs/tw11/entrega/LIMITACIONES_CONOCIDAS.md        |   1 +\n docs/tw11/entrega/PILOTO_REAL_TANNIA.md            |  42 +++++++\n docs/tw11/entrega/PROTOCOLO_AUTOCAD_REAL.md        |  17 +++\n docs/tw11/entrega/PROTOCOLO_CAMPO_TW11.md          |  18 +++\n docs/tw11/entrega/PROTOCOLO_CLAUDE_DESKTOP.md      |   2 +-\n .../tw11/entrega/PROTOCOLO_COMUNICACION_DESKTOP.md |  21 ++++\n docs/tw11/entrega/REGISTRO_PRUEBAS_CAMPO.md        |  10 ++\n fixtures/tw11/tools_cic.json                       |  21 ++--\n src/cic/aprobacion_humana.js                       |  66 ++++++++++\n src/cic/comunicacion.js                            |  53 ++++++++\n src/cic/conocimiento/almacen.js                    |  33 +++--\n src/cic/ejecutor.js                                |   4 +-\n src/cic/fusion.js                                  |  49 ++++++++\n src/cic/interpretacion.js                          |  24 +++-\n src/cic/schemas.js                                 |   4 +-\n src/project/gestion.js                             |  12 ++\n src/server.js                                      |  13 +-\n src/tools/cic.js                                   | 122 +++++++++++++-----\n src/tools/proyectos.js                             |   2 +-\n test/tw11_comunicacion.test.js                     |  74 +++++++++++\n test/tw11_g0_contratos.test.js                     |   4 +-\n test/tw11_g3_conocimiento.test.js                  |  16 ++-\n test/tw11_g6_cadena.test.js                        |   2 +-\n test/tw11_g9_paquete.test.js                       |   6 +-\n test/tw11_h_hardening.test.js                      | 138 +++++++++++++++++++++\n test/tw11_seguridad_aprobacion.test.js             | 115 +++++++++++++++++\n test/tw11_seguridad_sec01_sec02.test.js            |  78 ++++++++++++\n 33 files changed, 994 insertions(+), 91 deletions(-)\n",
+    "base_is_ancestor": true
+  },
+  {
+    "pr": 20,
+    "metadata": {
+      "url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/20",
+      "number": 20,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "## Resumen\nRescata el WIP de Astra (`wip/tw12-astra-recovery` @ 6c64f36, NO VALIDADO) sobre el head de #19 (`49c2ae8`), lo audita y lo completa. Apilado sobre #19; sin merge ni release.\n\n## Qué incluye\n- Registro durable de operaciones CAD y controles de sesión COM (`laminas_a_dwg`, `sesion`, inspección de layouts/viewports).\n- Modelo de dibujo independiente de la GUI, composición con escala física exacta, DXF con 4 layouts / 5 viewports / cotas nativas, PDF A3 y render PNG.\n- Gate de legibilidad bloqueante.\n- Trust & Consent UX (confirmación MCP, diálogo nativo con rechazo predeterminado, bloqueo de `Guía hash / https://x.invalid / unknown / licensed`).\n- Auditoría: corte A-A en planta, tabla de revisiones, perfil acotado, etiquetas de cotas cortas, `DNum` en inspección COM, contrato `tw06_cad` actualizado, oráculo independiente ezdxf, archivo espurio eliminado.\n\n## Evidencia\nVer `docs/tw12/EVIDENCE_MATRIX.md`. Pruebas TW-12: 12/12. Suite completa y CI Windows/Ubuntu: ver checks de este PR.\n\n## Pendiente externo (no aprobado)\nAutoCAD 2027 real, Claude Desktop real, revisión visual/profesional humana, revisor independiente, Tannia. Protocolo: `docs/tw12/PROTOCOLO_AUTOCAD_2027_TW12.md`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_01RJgKCVD6LgtoTKrZ8Ap55z)_",
+      "title": "feat(tw12): motor profesional de planos, controlador CAD y Trust & Consent — rescate de Astra auditado (BORRADOR)",
+      "base": "feat/tw11-hardening",
+      "base_sha": "49c2ae8014e6fab842d2a579f93d49e80498d5d7",
+      "head": "feat/tw12-workspace",
+      "head_sha": "21b4ae957ccfa7f843dc7f104f1490318d252228",
+      "head_repo_id": 1459221450,
+      "head_repo_full_name": "cristobalMundacaV1/tannia-workspace",
+      "merge_commit_sha": "c183ce69992b5f9f3188458a8f1c4d6a4db60129",
+      "user": {
+        "login": "cristobalMundacaV1",
+        "name": "cristobalMundacaV1",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/331272247?v=4",
+        "id": 331272247
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-11-17T00:12:47Z",
+      "updated_at": "2026-11-17T02:32:14Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 14,
+      "changed_files": 41,
+      "additions": 2198,
+      "deletions": 60,
+      "display_url": "https://github.com/cristobalMundacaV1/tannia-workspace/pull/20",
+      "display_title": "feat(tw12): motor profesional de planos, controlador CAD y Trust & Consent — rescate de Astra auditado (BORRADOR)"
+    },
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 44003722892,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 148,
+          "jobs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/44003722892/jobs",
+          "logs_url": "https://api.github.com/repos/cristobalMundacaV1/tannia-workspace/actions/runs/44003722892/logs",
+          "workflow_id": 419492314
+        }
+      ]
+    },
+    "diff_stat": " docs/tw12/EVIDENCE_MATRIX.md             | 131 +++++++++++++\n docs/tw12/PROTOCOLO_AUTOCAD_2027_TW12.md |  28 +++\n package-lock.json                        |   6 +-\n package.json                             |   1 +\n scripts/build.mjs                        |  32 +++-\n scripts/lib/destino.mjs                  |  14 ++\n scripts/lib/verificar_bundle.mjs         |   2 +-\n scripts/paquete-prueba.mjs               |  26 ++-\n src/cad/autocad_com.js                   | 320 ++++++++++++++++++++++++++++---\n src/cad/operations.js                    |  58 ++++++\n src/cic/aprobacion_humana.js             |  21 +-\n src/cic/conocimiento/almacen.js          |   5 +-\n src/cic/consent.js                       |  84 ++++++++\n src/drawing/FONT_LICENSE.txt             | 102 ++++++++++\n src/drawing/atribucion.js                |  53 +++++\n src/drawing/dxf.js                       |  79 ++++++++\n src/drawing/font.js                      |   2 +\n src/drawing/layouts_check.js             |  75 ++++++++\n src/drawing/model.js                     |  94 +++++++++\n src/drawing/pdf.js                       | 163 ++++++++++++++++\n src/drawing/quantity_model.js            |  24 +++\n src/drawing/render.js                    |  29 +++\n src/drawing/service.js                   |  73 +++++++\n src/dxf/measure.js                       |   6 +-\n src/dxf/reader.js                        |  12 ++\n src/quantities/engine.js                 |  16 +-\n src/quantities/trazabilidad.js           |  79 ++++++++\n src/tools/cic.js                         |   3 +-\n src/tools/drawing.js                     |  27 +++\n src/tools/index.js                       |  11 +-\n test/tw06_cad.test.js                    |   6 +-\n test/tw09_windows_powershell.test.js     |   2 +-\n test/tw11_g3_conocimiento.test.js        |   6 +-\n test/tw11_h_hardening.test.js            |   4 +-\n test/tw11_seguridad_aprobacion.test.js   |   6 +-\n test/tw12_cad_open.test.js               | 120 ++++++++++++\n test/tw12_cad_timeout.test.js            | 116 +++++++++++\n test/tw12_empaquetado_destino.test.js    |  62 ++++++\n test/tw12_qty_traza.test.js              | 154 +++++++++++++++\n test/tw12_workspace.test.js              | 204 ++++++++++++++++++++\n test/tw17_persistencia_global.test.js    |   2 +-\n 41 files changed, 2198 insertions(+), 60 deletions(-)\n",
+    "base_is_ancestor": true
+  }
+]
