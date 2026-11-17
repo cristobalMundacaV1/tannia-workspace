@@ -125,7 +125,7 @@ def no_verificada(r, codigo):
     assert r["recibos_verificacion"] == 0, r
 
 
-ESPERADO_TEXTO = ["Cantidad que va a confirmar: 10 m²", "5 m × 2,4 m = 12 m²", "Descuento por puerta: 1 m × 2 m = 2 m²", "Superficie neta: 12 − 2 = 10 m²", "no medidas en el plano", "No se comprobó en el plano si existen otros vanos", "sin trazabilidad geométrica", "La aprobación de la entrega es un paso posterior"]
+ESPERADO_TEXTO = ["Cantidad que va a confirmar: 10 m²", "5 m × 2,4 m = 12 m²", "Descuento por puerta: 1 m × 2 m = 2 m²", "Superficie neta: 12 − 2 = 10 m²", "no medidas en el plano", "No se comprobó en el plano si existen otros vanos", "sin trazabilidad geométrica", "la aprobación de la entrega es un paso posterior"]
 
 
 def c_contenido_y_confirmar(escala="1"):
