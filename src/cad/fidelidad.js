@@ -83,52 +83,97 @@ export function coherenciaInterna(e, tol = 1e-6) {
   return out;
 }
 
-// ---------- Fidelidad DXF → DWG (multiconjuntos de firmas) ----------
+// ---------- Fidelidad DXF → DWG (contrato por tipo de entidad; Astra A-03/E07) ----------
+// Contrato de la operación «importar DXF y guardar DWG»: cada entidad conserva tipo, CAPA, geometría y, en polilíneas, la
+// SECUENCIA de vértices (orden y sentido; en cerradas se admite otro vértice inicial), bulges (arcos) y elevación. Dos
+// polilíneas con los mismos vértices pero distinta conectividad NO son equivalentes. Entidades sin comparador (bloques,
+// cotas, sombreados, MTEXT…) o propiedades que AutoCAD no informó dejan el resultado NO CONCLUYENTE: un conteo no acredita.
 const deg = (rad) => ((((rad * 180) / Math.PI) % 360) + 360) % 360;
 const xy = (p) => `${R(p.x ?? p[0])},${R(p.y ?? p[1])}`;
 const ordenar = (...v) => v.sort();
+const B = (b) => R(Number(b) || 0, 6);
 
-/** Firmas esperadas leídas del DXF (verdad de origen). */
+/** Secuencia canónica de vértices: abierta = exacta; cerrada = rotación con inicio mínimo, MISMO sentido (no se invierte). */
+export function secuenciaCanonica(vs, cerrada) {
+  const items = vs.map((v) => `${xy(v)}@${v.b === null ? '?' : B(v.b)}`);
+  if (!cerrada || items.length < 2) return items.join(';');
+  let mejor = null;
+  for (let k = 0; k < items.length; k++) { const rot = [...items.slice(k), ...items.slice(0, k)].join(';'); if (mejor === null || rot < mejor) mejor = rot; }
+  return mejor;
+}
+const elev = (e) => R(Number(e) || 0);
+
+/** Firmas esperadas leídas del DXF (verdad de origen). `sin_comparador` = tipo que esta operación no puede verificar. */
 export function firmasDesdeDxf(dxf) {
   const out = [];
   for (const e of dxf.entities) {
-    if (e.type === 'LINE') out.push({ tipo: 'AcDbLine', capa: e.layer, firma: `LINE|${ordenar(xy(e.a), xy(e.b)).join('|')}` });
-    else if (e.type === 'ARC') out.push({ tipo: 'AcDbArc', capa: e.layer, firma: `ARC|${xy(e.c)}|${R(e.r)}|${R(((e.a0 % 360) + 360) % 360)}|${R(((e.a1 % 360) + 360) % 360)}` });
-    else if (e.type === 'POLYLINE') out.push({ tipo: 'poli', capa: e.layer, firma: `POLY|${e.closed ? 'c' : 'a'}|${e.verts.map((v) => xy(v)).sort().join(';')}` });
-    else if (e.type === 'LWPOLYLINE') out.push({ tipo: 'poli', capa: e.layer, firma: `POLY|${e.closed ? 'c' : 'a'}|${e.verts.map((v) => xy(v)).sort().join(';')}` });
-    else if (e.type === 'TEXT') { const pos = e.just ? e.alin : e.p; out.push({ tipo: 'AcDbText', capa: e.layer, firma: `TEXT|${dxfDecode(e.text)}|${R(e.altura)}|${xy(pos)}` }); }
-    else if (e.type !== 'INSERT') out.push({ tipo: e.type, capa: e.layer, firma: `OTRO|${e.type}` });
+    const capa = e.layer ?? '0';
+    const extrusionNoEstandar = e.extrusion && (Math.abs(e.extrusion.x) > 1e-9 || Math.abs(e.extrusion.y) > 1e-9 || Math.abs(e.extrusion.z - 1) > 1e-9);
+    if (extrusionNoEstandar && e.type !== 'LINE') { out.push({ tipo: e.type, capa, firma: `OCS|${capa}|${e.type}`, sin_comparador: 'sistema de coordenadas de objeto (OCS) no estándar' }); continue; }
+    if (e.type === 'LINE') out.push({ tipo: 'AcDbLine', capa, firma: `LINE|${capa}|${ordenar(xy(e.a), xy(e.b)).join('|')}` });
+    else if (e.type === 'ARC') out.push({ tipo: 'AcDbArc', capa, firma: `ARC|${capa}|${xy(e.c)}|${R(e.r)}|${R(((e.a0 % 360) + 360) % 360)}|${R(((e.a1 % 360) + 360) % 360)}` });
+    else if (e.type === 'CIRCLE') out.push({ tipo: 'AcDbCircle', capa, firma: `CIRCLE|${capa}|${xy(e.c)}|${R(e.r)}` });
+    else if (e.type === 'LWPOLYLINE' || (e.type === 'POLYLINE' && !e.poly3d && !e.polygonMesh && !e.polyface)) {
+      const vs = e.verts.map((v) => ({ x: v.x, y: v.y, b: v.bulge || 0 }));
+      out.push({ tipo: 'poli', capa, firma: `POLY|${capa}|${e.closed ? 'c' : 'a'}|z=${elev(e.elevation)}|${secuenciaCanonica(vs, e.closed)}`, base: `POLY|${capa}|${e.closed ? 'c' : 'a'}|${secuenciaCanonica(vs.map((v) => ({ ...v, b: null })), e.closed)}` });
+    } else if (e.type === 'TEXT') { const pos = e.just ? e.alin : e.p; out.push({ tipo: 'AcDbText', capa, firma: `TEXT|${capa}|${dxfDecode(e.text)}|${R(e.altura)}|${xy(pos)}|${R(((e.rot || 0) % 360 + 360) % 360)}` }); }
+    else out.push({ tipo: e.type, capa, firma: `OTRO|${capa}|${e.type}`, sin_comparador: `la operación no tiene comparador geométrico para ${e.type}` });
   }
   return out;
 }
 
-/** Firmas de lo que AutoCAD informa (lecturas tipadas). */
+/** Firmas de lo que AutoCAD informa (lecturas tipadas). Si falta una propiedad del contrato, la firma queda incompleta. */
 export function firmasDesdeCom(lecturas) {
   const out = []; const ilegibles = [];
   for (const l of lecturas) {
     if (l.error) { ilegibles.push({ handle: l.handle, motivo: l.error }); continue; }
-    if (l.tipo === 'AcDbLine' && l.inicio && l.fin) out.push({ tipo: l.tipo, capa: l.capa, handle: l.handle, firma: `LINE|${ordenar(xy(l.inicio), xy(l.fin)).join('|')}` });
-    else if (l.tipo === 'AcDbArc' && l.centro && l.radio != null) out.push({ tipo: l.tipo, capa: l.capa, handle: l.handle, firma: `ARC|${xy(l.centro)}|${R(l.radio)}|${R(deg(l.angulo_inicio))}|${R(deg(l.angulo_fin))}` });
+    const capa = l.capa ?? '0';
+    if (l.tipo === 'AcDbLine' && l.inicio && l.fin) out.push({ tipo: l.tipo, capa, handle: l.handle, firma: `LINE|${capa}|${ordenar(xy(l.inicio), xy(l.fin)).join('|')}` });
+    else if (l.tipo === 'AcDbArc' && l.centro && l.radio != null) out.push({ tipo: l.tipo, capa, handle: l.handle, firma: `ARC|${capa}|${xy(l.centro)}|${R(l.radio)}|${R(deg(l.angulo_inicio))}|${R(deg(l.angulo_fin))}` });
+    else if (l.tipo === 'AcDbCircle' && l.centro && l.radio != null) out.push({ tipo: l.tipo, capa, handle: l.handle, firma: `CIRCLE|${capa}|${xy(l.centro)}|${R(l.radio)}` });
     else if ((l.tipo === 'AcDbPolyline' || l.tipo === 'AcDb2dPolyline') && l.coordenadas) {
       const paso = l.tipo === 'AcDb2dPolyline' ? 3 : 2; const vs = [];
-      for (let i = 0; i + 1 < l.coordenadas.length; i += paso) vs.push(xy([l.coordenadas[i], l.coordenadas[i + 1]]));
-      out.push({ tipo: 'poli', capa: l.capa, handle: l.handle, firma: `POLY|${l.cerrada ? 'c' : 'a'}|${vs.sort().join(';')}` });
-    } else if ((l.tipo === 'AcDbText') && l.texto != null) out.push({ tipo: l.tipo, capa: l.capa, handle: l.handle, firma: `TEXT|${l.texto}|${R(l.altura ?? 0)}|${xy(posicionEfectiva(l) || [NaN, NaN])}` });
+      for (let i = 0; i + 1 < l.coordenadas.length; i += paso) vs.push({ x: l.coordenadas[i], y: l.coordenadas[i + 1], b: null });
+      const conBulge = Array.isArray(l.bulges) && l.bulges.length === vs.length;
+      if (conBulge) vs.forEach((v, i) => { v.b = l.bulges[i]; });
+      const faltan = [...(conBulge ? [] : ['bulges']), ...(l.elevacion == null ? ['elevacion'] : [])];
+      const c = l.cerrada ? 'c' : 'a';
+      out.push({ tipo: 'poli', capa, handle: l.handle, firma: faltan.length ? null : `POLY|${capa}|${c}|z=${elev(l.elevacion)}|${secuenciaCanonica(vs, l.cerrada)}`, base: `POLY|${capa}|${c}|${secuenciaCanonica(vs.map((v) => ({ ...v, b: null })), l.cerrada)}`, incompleta: faltan.length ? faltan : undefined });
+    } else if ((l.tipo === 'AcDbText') && l.texto != null) out.push({ tipo: l.tipo, capa, handle: l.handle, firma: `TEXT|${capa}|${l.texto}|${R(l.altura ?? 0)}|${xy(posicionEfectiva(l) || [NaN, NaN])}|${R(deg(l.rotacion ?? 0))}` });
     else ilegibles.push({ handle: l.handle, tipo: l.tipo, motivo: 'tipo o propiedades no interpretables' });
   }
   return { firmas: out, ilegibles };
 }
 
-function multiconjunto(lista) { const m = new Map(); for (const f of lista) m.set(f.firma, (m.get(f.firma) || 0) + 1); return m; }
+function multiconjunto(lista, clave = (f) => f.firma) { const m = new Map(); for (const f of lista) { const k = clave(f); m.set(k, (m.get(k) || 0) + 1); } return m; }
 
-/** Compara DXF (esperado) con DWG (informado por COM). */
+/**
+ * Compara DXF (esperado) con DWG (informado por COM) según el contrato. `fiel` solo si TODO lo esperado tiene comparador,
+ * toda lectura fue completa y los multiconjuntos de firmas coinciden exactamente. Estados: fiel | con_diferencias | no_concluyente.
+ */
 export function compararFidelidad(esperadas, informadas) {
-  const a = multiconjunto(esperadas); const b = multiconjunto(informadas);
+  const comparables = esperadas.filter((f) => !f.sin_comparador);
+  const sinComparador = esperadas.filter((f) => f.sin_comparador).map((f) => ({ tipo: f.tipo, capa: f.capa, motivo: f.sin_comparador }));
+  const completas = informadas.filter((f) => f.firma); const incompletas = informadas.filter((f) => !f.firma);
+  const a = multiconjunto(comparables); const b = multiconjunto(completas);
   const faltan = []; const sobran = [];
   for (const [k, n] of a) { const m = b.get(k) || 0; if (m < n) faltan.push({ firma: k, cantidad: n - m }); }
   for (const [k, n] of b) { const m = a.get(k) || 0; if (m < n) sobran.push({ firma: k, cantidad: n - m }); }
+  // Lecturas incompletas: solo pueden «cubrir» un faltante con la misma geometría base; quedan NO VERIFICABLES, nunca fieles.
+  const noVerificables = [];
+  const restantes = [];
+  for (const f of faltan) { const e = comparables.find((x) => x.firma === f.firma); for (let i = 0; i < f.cantidad; i++) restantes.push(e); }
+  const pendientes = [];
+  for (const e of restantes) {
+    const j = incompletas.findIndex((x) => x.base && x.base === e.base);
+    if (j >= 0) { const x = incompletas.splice(j, 1)[0]; noVerificables.push({ handle: x.handle, firma_esperada: e.firma, falta_informar: x.incompleta }); } else pendientes.push(e.firma);
+  }
+  const faltanReales = Object.entries(pendientes.reduce((acc, k) => { acc[k] = (acc[k] || 0) + 1; return acc; }, {})).map(([firma, cantidad]) => ({ firma, cantidad }));
+  for (const x of incompletas) sobran.push({ firma: `${x.base} (lectura incompleta: ${x.incompleta.join(', ')})`, cantidad: 1 });
   const porTipo = (xs) => xs.reduce((acc, x) => { const t = x.firma.split('|')[0]; acc[t] = (acc[t] || 0) + x.cantidad; return acc; }, {});
-  return { esperadas: esperadas.length, informadas: informadas.length, faltan_en_dwg: faltan, sobran_en_dwg: sobran, faltan_por_tipo: porTipo(faltan), sobran_por_tipo: porTipo(sobran), fiel: !faltan.length && !sobran.length };
+  const diferencias = faltanReales.length > 0 || sobran.length > 0;
+  const estado = diferencias ? 'con_diferencias' : (noVerificables.length || sinComparador.length) ? 'no_concluyente' : 'fiel';
+  return { estado, esperadas: esperadas.length, informadas: informadas.length, faltan_en_dwg: faltanReales, sobran_en_dwg: sobran, faltan_por_tipo: porTipo(faltanReales), sobran_por_tipo: porTipo(sobran), no_verificables: noVerificables, sin_comparador: sinComparador, fiel: estado === 'fiel' };
 }
 
 /** Clasifica los textos del DWG frente a lo esperado: exacto, con secuencia \U+ sin decodificar, o corrupto. */

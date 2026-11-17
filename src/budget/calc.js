@@ -49,8 +49,17 @@ export function apuUnitCost(apu) {
  * config: {gastos_generales_pct, utilidades_pct, iva_pct}
  */
 export function computeBudget({ partidas, apus, config }) {
-  const cfg = { gastos_generales_pct: 0, utilidades_pct: 0, iva_pct: 19, ...config };
-  for (const k of ['gastos_generales_pct', 'utilidades_pct', 'iva_pct']) if (!(cfg[k] >= 0 && cfg[k] <= 100)) throw new UserError('DATO_INVALIDO', `${k} debe estar entre 0 y 100.`);
+  // Política económica EXPLÍCITA (Astra A-04/E16): un parámetro no indicado es DESCONOCIDO (null), nunca 0 ni 19 implícitos.
+  // Se calcula un total parcial con 0 para mostrar el avance, pero el presupuesto no puede quedar en estado final.
+  const PARAM = { gastos_generales_pct: 'gastos generales', utilidades_pct: 'utilidades', iva_pct: 'IVA' };
+  const cfg = {}; const noDefinidos = [];
+  for (const k of Object.keys(PARAM)) {
+    const v = config?.[k];
+    if (v === undefined || v === null) { cfg[k] = null; noDefinidos.push(k); continue; }
+    if (!(typeof v === 'number' && v >= 0 && v <= 100)) throw new UserError('DATO_INVALIDO', `${k} debe estar entre 0 y 100.`);
+    cfg[k] = v;
+  }
+  const pct = (k) => cfg[k] ?? 0;
   const apuMap = new Map(apus.map((a) => [a.codigo, a]));
   const bloqueos = [];
   const lineas = partidas.map((p) => {
@@ -70,16 +79,17 @@ export function computeBudget({ partidas, apus, config }) {
   });
   const incompleto = lineas.some((l) => l.total === null);
   const directo = lineas.reduce((a, l) => a + (l.total || 0), 0);
-  const gg = round0(directo * cfg.gastos_generales_pct / 100);
-  const ut = round0(directo * cfg.utilidades_pct / 100);
+  const gg = round0(directo * pct('gastos_generales_pct') / 100);
+  const ut = round0(directo * pct('utilidades_pct') / 100);
   const neto = directo + gg + ut;
-  const iva = round0(neto * cfg.iva_pct / 100);
+  const iva = round0(neto * pct('iva_pct') / 100);
   const total = neto + iva;
+  for (const k of noDefinidos) bloqueos.push(`Parámetro económico no definido: ${PARAM[k]} (%). Indíquelo explícitamente (0 es válido si así se decide); no se supone.`);
   for (const l of lineas) bloqueos.push(...l.problemas);
   return {
     config: cfg, lineas, costo_directo: directo, gastos_generales: gg, utilidades: ut, neto, iva, total,
     moneda: 'CLP', redondeo: 'Cada precio unitario y cada total de partida, GG, utilidades e IVA se redondean a peso entero (ROUND, mitad hacia arriba).',
-    parcial: incompleto, bloqueos: [...new Set(bloqueos)],
+    parametros_no_definidos: noDefinidos, parcial: incompleto || noDefinidos.length > 0, bloqueos: [...new Set(bloqueos)],
     estado_final_posible: bloqueos.length === 0 && partidas.length > 0,
   };
 }

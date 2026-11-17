@@ -96,7 +96,7 @@ test('QTY-01 extremo a extremo (MCP): tannia_planos genera el DXF con su modelo 
     await call(c, 'tannia_proyecto_crear', { nombre: 'Tunel' });
     const g = await call(c, 'tannia_planos', { proyecto: 'Tunel', accion: 'generar_tunel', datos: { length: 150, width: 5.5, wall: 2.5, selected: 0.06 } }); assert.ok(!g.isError, JSON.stringify(data(g)));
     assert.equal(data(g).atribucion.estado, 'PENDIENTE');
-    const dxfRel = `07 Entregables/Planos/${data(g).revision}-planos.dxf`; assert.ok(data(g).files.some(f => f.endsWith('planos.tannia-modelo.json')));
+    const dxfRel = `06 Informes/Planos/${data(g).revision}-planos.dxf`; assert.ok(data(g).files.some(f => f.endsWith('planos.tannia-modelo.json')));
     const r = await call(c, 'tannia_cubicar_dxf', { proyecto: 'Tunel', archivo: dxfRel, unidad_confirmada: 'm', codigo: 'EJE-1', descripcion: 'Eje', capas: ['EJE'], regla: 'directa_longitud' });
     assert.ok(!r.isError, JSON.stringify(data(r))); assert.equal(data(r).cantidad, 150); assert.equal(data(r).estado_revision, 'borrador'); assert.equal(data(r).fuente.trazabilidad.contraste_modelo.estado, 'verificado');
     assert.equal(data(r).fuente.trazabilidad.representaciones_excluidas[0].ref, 'perfil/grade');
@@ -144,10 +144,10 @@ test('CAD-META-01 extremo a extremo (MCP): author propuesto por Claude → autor
     await call(c, 'tannia_proyecto_crear', { nombre: 'T' }); const datos = { length: 150, width: 5.5, wall: 2.5, selected: 0.06, author: 'Ana Pérez' };
     const bad = await call(c, 'tannia_planos', { proyecto: 'T', accion: 'generar_tunel', datos: { ...datos, author: 'cristobal.mundacav@gmail.com' } }); assert.equal(data(bad).error, 'ATRIBUCION_INFERIDA');
     const pend = await call(c, 'tannia_planos', { proyecto: 'T', accion: 'generar_tunel', datos }); assert.equal(data(pend).error, 'ATRIBUCION_REQUIERE_AUTORIZACION');
-    const af = data(pend).detalle.archivo_aprobacion; assert.ok(af.startsWith(path.join(home, '.tannia-config')), 'fuera de Proyectos'); assert.ok(!fs.existsSync(path.join(home, 'Proyectos', 'T', '07 Entregables', 'Planos', 'historial.json')), 'no se generó nada');
+    const af = data(pend).detalle.archivo_aprobacion; assert.ok(af.startsWith(path.join(home, '.tannia-config')), 'fuera de Proyectos'); assert.ok(!fs.existsSync(path.join(home, 'Proyectos', 'T', '06 Informes', 'Planos', 'historial.json')), 'no se generó nada');
     fs.writeFileSync(af, `APRUEBO ${data(pend).detalle.id_consentimiento}\n`);
     const ok = await call(c, 'tannia_planos', { proyecto: 'T', accion: 'generar_tunel', datos }); assert.ok(!ok.isError, JSON.stringify(data(ok))); assert.equal(data(ok).atribucion.autorizada_por, 'human_out_of_band');
-    const dir = path.join(home, 'Proyectos', 'T', '07 Entregables', 'Planos'); const comp = fs.readFileSync(path.join(dir, `${data(ok).revision}-modelo.json`), 'utf8'); assert.match(comp, /"author": "Ana Pérez"/);
+    const dir = path.join(home, 'Proyectos', 'T', '06 Informes', 'Planos'); const comp = fs.readFileSync(path.join(dir, `${data(ok).revision}-modelo.json`), 'utf8'); assert.match(comp, /"author": "Ana Pérez"/);
     for (const f of fs.readdirSync(dir)) if (/\.(json|dxf|csv)$/.test(f)) assert.ok(!/cristobal|gmail|@/i.test(fs.readFileSync(path.join(dir, f), 'utf8')), f);
     const again = await call(c, 'tannia_planos', { proyecto: 'T', accion: 'generar_tunel', datos: { ...datos, length: 120 } }); assert.ok(!again.isError, 'sin nueva autorización'); assert.equal(data(again).atribucion.reutilizada, true);
   } finally { await close(); }

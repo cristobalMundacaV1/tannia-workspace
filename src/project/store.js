@@ -4,6 +4,11 @@ import path from 'node:path';
 import { FOLDERS, sha256File } from '../security/sandbox.js';
 import { UserError } from '../mcp/util.js';
 import { clasificarOriginal, dibujoDelBloqueo } from './originals_policy.js';
+import { huella, idAleatorio } from '../autoridad/canonico.js';
+import { contenidoPartida, revisionVigente } from '../autoridad/revision.js';
+
+/** Parámetros económicos SIN valor por defecto (Astra A-04): ausente = desconocido, nunca 0 ni 19 implícitos. */
+export const CONFIG_ECONOMICA_VACIA = Object.freeze({ gastos_generales_pct: null, utilidades_pct: null, iva_pct: null });
 
 export const ESTADOS = ['nuevo', 'analisis', 'borrador', 'revision', 'aprobado', 'entregable'];
 
@@ -89,13 +94,28 @@ export class Project {
   meta() { return this.leer(this.p('.tannia', 'project.json'), null); }
   saveMeta(m) { this.escribir(this.p('.tannia', 'project.json'), m); }
   partidas() { return this.leer(this.p(FOLDERS.cubicaciones, 'partidas.json'), []); }
-  savePartidas(x, { revisar = false } = {}) { this.escribir(this.p(FOLDERS.cubicaciones, 'partidas.json'), x); if (!revisar) this.invalidateApproval('Se modificaron las partidas.'); }
+  /**
+   * Guarda partidas asignando `version_id`: se conserva solo si el contenido no cambió; cualquier cambio (aunque vuelva a un
+   * valor anterior, A → B → A) crea una versión nueva, de modo que una verificación humana antigua no reaparece.
+   */
+  savePartidas(x, { revisar = false } = {}) {
+    const previas = new Map(this.partidas().map((p) => [p.codigo, { h: huella(contenidoPartida(p)), v: p.version_id }]));
+    const out = x.map((p) => { const prev = previas.get(p.codigo); const h = huella(contenidoPartida(p)); return { ...p, version_id: prev && prev.h === h && prev.v ? prev.v : idAleatorio('pv') }; });
+    this.escribir(this.p(FOLDERS.cubicaciones, 'partidas.json'), out); this.cambio('Se modificaron las partidas.');
+    if (!revisar) this.invalidateApproval('Se modificaron las partidas.');
+  }
   apus() { return this.leer(this.p(FOLDERS.presupuestos, 'apus.json'), []); }
-  saveApus(x) { this.escribir(this.p(FOLDERS.presupuestos, 'apus.json'), x); this.invalidateApproval('Se modificaron los APU.'); }
-  config() { return this.leer(this.p(FOLDERS.presupuestos, 'config.json'), { gastos_generales_pct: 0, utilidades_pct: 0, iva_pct: 19 }); }
-  saveConfig(x) { this.escribir(this.p(FOLDERS.presupuestos, 'config.json'), x); this.invalidateApproval('Se modificó la configuración del presupuesto.'); }
+  saveApus(x) { this.escribir(this.p(FOLDERS.presupuestos, 'apus.json'), x); this.cambio('Se modificaron los APU.'); this.invalidateApproval('Se modificaron los APU.'); }
+  /** Lo guardado tal cual (para la huella de revisión). */
+  configGuardada() { return this.leer(this.p(FOLDERS.presupuestos, 'config.json'), {}); }
+  /** Política económica efectiva: lo no indicado queda null (desconocido). */
+  config() { return { ...CONFIG_ECONOMICA_VACIA, ...this.configGuardada() }; }
+  saveConfig(x) { this.escribir(this.p(FOLDERS.presupuestos, 'config.json'), x); this.cambio('Se modificaron los parámetros económicos.'); this.invalidateApproval('Se modificó la configuración del presupuesto.'); }
   calibraciones() { return this.leer(this.p('.tannia', 'calibraciones.json'), []); }
-  saveCalibraciones(x) { this.escribir(this.p('.tannia', 'calibraciones.json'), x); }
+  saveCalibraciones(x) { this.escribir(this.p('.tannia', 'calibraciones.json'), x); this.cambio('Se modificaron calibraciones de PDF.'); }
+  /** Registra el cambio como revisión nueva si el contenido difiere de la revisión vigente (no crea revisiones vacías). */
+  cambio(motivo) { if (this.meta()) revisionVigente(this, motivo); }
+  revision() { return revisionVigente(this); }
   /** Manifiesto v2 {version, archivos, migrados}. Un manifiesto antiguo (mapa plano) se normaliza en memoria SIN perder hashes. */
   manifiesto() {
     const raw = this.leer(this.p('.tannia', 'originales.json'), {});
@@ -108,7 +128,7 @@ export class Project {
     }
     return { version: 2, archivos, migrados };
   }
-  saveManifiesto(m) { this.escribir(this.p('.tannia', 'originales.json'), m); }
+  saveManifiesto(m) { this.escribir(this.p('.tannia', 'originales.json'), m); this.cambio('Cambió el registro de originales.'); }
   originales() { return this.manifiesto().archivos; }
 
   /** Reparación segura: recrea carpetas faltantes y valida/recupera los JSON internos. No toca originales. */

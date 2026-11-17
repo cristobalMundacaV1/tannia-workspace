@@ -19,9 +19,10 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   const wp = wb.addWorksheet('Parametros');
   wp.columns = [{ width: 34 }, { width: 14 }, { width: 60 }];
   wp.addRow(['Parámetro', 'Valor', 'Nota']).font = bold;
-  wp.addRow(['Gastos generales (%)', B.config.gastos_generales_pct, 'Editable. Sin valor por defecto inventado: 0 si no se indicó.']);
-  wp.addRow(['Utilidades (%)', B.config.utilidades_pct, 'Editable. Sin valor por defecto inventado: 0 si no se indicó.']);
-  wp.addRow(['IVA (%)', B.config.iva_pct, 'Editable. Tasa legal vigente: VERIFICAR antes de entregar.']);
+  const nd = 'NO DEFINIDO: se calcula con 0 solo como borrador; indique el valor antes de entregar.';
+  wp.addRow(['Gastos generales (%)', B.config.gastos_generales_pct ?? 0, B.config.gastos_generales_pct == null ? nd : 'Editable. Valor indicado explícitamente.']);
+  wp.addRow(['Utilidades (%)', B.config.utilidades_pct ?? 0, B.config.utilidades_pct == null ? nd : 'Editable. Valor indicado explícitamente.']);
+  wp.addRow(['IVA (%)', B.config.iva_pct ?? 0, B.config.iva_pct == null ? nd : 'Editable. Valor indicado explícitamente; tasa legal vigente: VERIFICAR antes de entregar.']);
   for (const r of [2, 3, 4]) wp.getCell(`B${r}`).fill = fillInput;
 
   // --- APU

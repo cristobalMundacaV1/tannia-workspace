@@ -106,8 +106,8 @@ function LeerEnt($e, $h) {
     'AcDbLine' { $o.inicio = DArr $e.StartPoint; $o.fin = DArr $e.EndPoint; $o.longitud = DNum $e.Length }
     'AcDbArc' { $o.centro = DArr $e.Center; $o.radio = DNum $e.Radius; $o.angulo_inicio = DNum $e.StartAngle; $o.angulo_fin = DNum $e.EndAngle; $o.longitud_arco = DNum $e.ArcLength; $o.inicio = DArr $e.StartPoint; $o.fin = DArr $e.EndPoint }
     'AcDbCircle' { $o.centro = DArr $e.Center; $o.radio = DNum $e.Radius; $o.area = DNum $e.Area }
-    'AcDbPolyline' { $o.coordenadas = DArr $e.Coordinates; $o.cerrada = DBool $e.Closed; $o.longitud = DNum $e.Length; $o.area = DNum $e.Area }
-    'AcDb2dPolyline' { $o.coordenadas = DArr $e.Coordinates; $o.cerrada = DBool $e.Closed; $o.longitud = DNum $e.Length; $o.area = DNum $e.Area }
+    'AcDbPolyline' { $o.coordenadas = DArr $e.Coordinates; $o.cerrada = DBool $e.Closed; $o.longitud = DNum $e.Length; $o.area = DNum $e.Area; $o.elevacion = DNum $e.Elevation; try { $nb = [int]($e.Coordinates.Length / 2); $bs = New-Object System.Collections.ArrayList; for ($i = 0; $i -lt $nb; $i++) { $null = $bs.Add([double]$e.GetBulge($i)) }; $o.bulges = @($bs) } catch { $o.bulges = $null } }
+    'AcDb2dPolyline' { $o.coordenadas = DArr $e.Coordinates; $o.cerrada = DBool $e.Closed; $o.longitud = DNum $e.Length; $o.area = DNum $e.Area; $o.elevacion = DNum $e.Elevation; try { $nb = [int]($e.Coordinates.Length / 3); $bs = New-Object System.Collections.ArrayList; for ($i = 0; $i -lt $nb; $i++) { $null = $bs.Add([double]$e.GetBulge($i)) }; $o.bulges = @($bs) } catch { $o.bulges = $null } }
     'AcDbText' { $o.texto = [string]$e.TextString; $o.posicion = DArr $e.InsertionPoint; $o.alineacion = DNum $e.Alignment; $o.punto_alineacion = DArr $e.TextAlignmentPoint; $o.altura = DNum $e.Height; $o.rotacion = DNum $e.Rotation }
     'AcDbMText' { $o.texto = [string]$e.TextString; $o.posicion = DArr $e.InsertionPoint; $o.altura = DNum $e.Height; $o.rotacion = DNum $e.Rotation }
     'AcDb3dSolid' { $o.volumen = DNum $e.Volume; $o.centroide = DArr $e.Centroid; $mn = $null; $mx = $null; try { $e.GetBoundingBox([ref]$mn, [ref]$mx); $o.bbox_min = DArr $mn; $o.bbox_max = DArr $mx } catch { } }
@@ -1234,12 +1234,12 @@ export class AutoCadCom {
     const textos = clasificarTextos(dxf.entities.filter((e) => e.type === 'TEXT').map((e) => dxfDecode(e.text)), lect.entidades.filter((e) => e.tipo === 'AcDbText').map((e) => e.texto));
     const inconsistencias = lect.entidades.flatMap((e) => (e.error ? [] : coherenciaInterna(e).map((x) => ({ handle: e.handle, tipo: e.tipo, ...x }))));
     const estructura = verificarEstructura(conteoPorCapa(dxf), resumen);
-    const diferencias = !fid.fiel || !textos.ok || !estructura.ok;
-    const estado = diferencias ? 'con_diferencias' : (inconsistencias.length || ilegibles.length) ? 'no_concluyente' : 'fiel';
+    const diferencias = fid.estado === 'con_diferencias' || !textos.ok || !estructura.ok;
+    const estado = diferencias ? 'con_diferencias' : (fid.estado !== 'fiel' || inconsistencias.length || ilegibles.length) ? 'no_concluyente' : 'fiel';
     return {
       fidelidad: estado, documento: resumen.documento, unidades_insunits: resumen.unidades_insunits,
       entidades: { en_dxf: fid.esperadas, leidas_en_dwg: lect.entidades.length, interpretadas: fid.informadas, ilegibles: ilegibles.length },
-      comparacion_geometrica: { fiel: fid.fiel, faltan_en_dwg: fid.faltan_en_dwg.slice(0, 20), sobran_en_dwg: fid.sobran_en_dwg.slice(0, 20), faltan_por_tipo: fid.faltan_por_tipo, sobran_por_tipo: fid.sobran_por_tipo },
+      comparacion_geometrica: { fiel: fid.fiel, estado: fid.estado, no_verificables: fid.no_verificables.slice(0, 20), sin_comparador: fid.sin_comparador.slice(0, 20), sin_comparador_total: fid.sin_comparador.length, faltan_en_dwg: fid.faltan_en_dwg.slice(0, 20), sobran_en_dwg: fid.sobran_en_dwg.slice(0, 20), faltan_por_tipo: fid.faltan_por_tipo, sobran_por_tipo: fid.sobran_por_tipo },
       textos: { ok: textos.ok, exactos: textos.exactos, con_acentos_correctos: textos.con_acentos_correctos, escape_sin_decodificar: textos.escape_sin_decodificar.slice(0, 10), corruptos: textos.corruptos.slice(0, 10), faltantes: textos.faltantes.slice(0, 10), sobrantes: textos.sobrantes.slice(0, 10) },
       estructura, inconsistencias_internas: inconsistencias.slice(0, 30), inconsistencias_total: inconsistencias.length, ilegibles: ilegibles.slice(0, 20),
       lotes: lect.lotes, tam_lote: lect.tam_lote,

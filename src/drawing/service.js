@@ -15,7 +15,7 @@ import { expectedLayouts, verifyLayouts, viewportsFromDxf } from './layouts_chec
 export class DrawingService {
   constructor(sandbox) { this.sandbox = sandbox; }
   location(project) {
-    const root = this.sandbox.projectRoot(project); const dir = path.join(root, '07 Entregables', 'Planos');
+    const root = this.sandbox.projectRoot(project); const dir = path.join(root, '06 Informes', 'Planos');
     verificarContencion(root, dir); return { root, dir, history: path.join(dir, 'historial.json') };
   }
   status(project) {
@@ -43,7 +43,7 @@ export class DrawingService {
     if (prior?.versiones.some(v => v.id === id)) {
       const integrity = verificarManifiesto(dir, id);
       if (integrity.estado !== 'integra') throw new UserError('ENTREGA_ALTERADA', 'Una revisión existente fue modificada; se conserva para investigar.');
-      return { revision: id, reused: true, folder: '07 Entregables/Planos', files: prior.versiones.find(v => v.id === id).files, ready_for_delivery: false };
+      return { revision: id, reused: true, folder: '06 Informes/Planos', files: prior.versiones.find(v => v.id === id).files, ready_for_delivery: false };
     }
     const all = []; const add = (ext, content) => { const name = `${id}-${ext}`; all.push({ nombre: name, contenido: content }); return name; };
     const pdfQa = []; const sceneQa = composition.sheets.map(s => ({ sheet: s.id, ...validateScene(sceneForSheet(composition, s), s) }));
@@ -68,6 +68,6 @@ export class DrawingService {
     const entry = { id, files: all.map(a => a.nombre), model_sha256: digest(model), status: 'review_candidate', origin: model.provenance };
     const next = { schema: 'tw.drawing.history/1', head: id, versiones: [entry], redo: [] };
     commitConHistorial({ dir, historial: history, id, archivos: all, base: prior?.head || null, nuevo: prior ? null : next, entrada: entry, raiz: root });
-    return { revision: id, files: entry.files, folder: '07 Entregables/Planos', dimensions: verifyDimensions(model), pdf: pdfQa, ready_for_delivery: false, pending: ['PDF generado desde el modelo: no se ha contrastado con un DWG guardado.', 'Revisión visual humana de los PNG', 'AutoCAD 2027 y aprobación profesional'] };
+    return { revision: id, files: entry.files, folder: '06 Informes/Planos', dimensions: verifyDimensions(model), pdf: pdfQa, ready_for_delivery: false, pending: ['PDF generado desde el modelo: no se ha contrastado con un DWG guardado.', 'Revisión visual humana de los PNG', 'AutoCAD 2027 y aprobación profesional'] };
   }
 }

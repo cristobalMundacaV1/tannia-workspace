@@ -49,17 +49,20 @@ export class AprobacionHumana {
     return buf.equals(linea) || buf.equals(Buffer.concat([linea, Buffer.from('\n')])) || buf.equals(Buffer.concat([linea, Buffer.from('\r\n')]));
   }
   /** @returns {por:'human_elicitation'|'human_dialog'|'human_out_of_band'|null, rechazado?} */
-  async decidir(project, id, { descripcion = '', elicitar = null, usarDialogo = true, consentimiento = null } = {}) {
+  async decidir(project, id, { descripcion = '', elicitar = null, usarDialogo = true, consentimiento = null, permitirArchivo = true } = {}) {
     const key = JSON.stringify([this.sandbox.home, project, id]);
     if (activeDecisions.has(key)) return { por: null, en_curso: true };
     activeDecisions.add(key);
-    try { return await this.#decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento }); }
+    try { return await this.#decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento, permitirArchivo }); }
     finally { activeDecisions.delete(key); }
   }
-  async #decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento }) {
+  async #decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento, permitirArchivo }) {
     if (consentimiento?.canApprove === false) return { por: null, bloqueado: true, razones: consentimiento.blocked };
     if (elicitar) { let r = null; try { r = await elicitar(); } catch { r = null; } if (r && r.action === 'accept' && r.content?.aprobar === true) return { por: 'human_elicitation' }; if (r && (r.action === 'decline' || r.action === 'cancel' || (r.action === 'accept' && r.content?.aprobar === false))) return { por: null, rechazado: true }; }
     if (usarDialogo) { let r = null; try { r = await this.dialogo(`¿Autoriza esto?\n\n${descripcion}\n\nSolo usted puede aprobarlo; Claude no puede hacerlo por usted.`, { consentimiento }); } catch { r = null; } if (r === 'si') return { por: 'human_dialog' }; if (r === 'no') return { por: null, rechazado: true }; }
+    // Autorizaciones profesionales (verificar cantidades, aprobar una entrega): el canal de archivo queda DESACTIVADO porque otra
+    // herramienta con acceso al perfil podría crearlo (Astra A-01/E05). Solo cuentan la confirmación del cliente y el diálogo del SO.
+    if (!permitirArchivo) return { por: null };
     const pf = this.#pend(project, id); const af = this.archivoAprobacion(project, id);
     if (fs.existsSync(pf)) {
       let pend = null; try { pend = JSON.parse(fs.readFileSync(pf, 'utf8')); } catch { pend = null; }

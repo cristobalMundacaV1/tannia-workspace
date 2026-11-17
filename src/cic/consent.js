@@ -48,11 +48,11 @@ $window.Content = $root
 $footer = New-Object Windows.Controls.StackPanel
 [Windows.Controls.DockPanel]::SetDock($footer, 'Bottom'); $null = $root.Children.Add($footer)
 $review = New-Object Windows.Controls.CheckBox
-$review.Content = 'He revisado el extracto y comprendo las consecuencias.'; $review.Margin = '0,16,0,12'
+$review.Content = $(if ($data.reviewLabel) { [string]$data.reviewLabel } else { 'He revisado el extracto y comprendo las consecuencias.' }); $review.Margin = '0,16,0,12'
 $null = $footer.Children.Add($review)
 $buttons = New-Object Windows.Controls.StackPanel; $buttons.Orientation = 'Horizontal'; $buttons.HorizontalAlignment = 'Right'
 $no = New-Object Windows.Controls.Button; $no.Content = '_No autorizar'; $no.Padding = '18,10'; $no.Margin = '0,0,12,0'; $no.IsCancel = $true; $no.IsDefault = $true
-$yes = New-Object Windows.Controls.Button; $yes.Content = '_Autorizar uso limitado'; $yes.Padding = '18,10'; $yes.Background = '#163A5F'; $yes.Foreground = 'White'; $yes.IsEnabled = $false
+$yes = New-Object Windows.Controls.Button; $yes.Content = $(if ($data.approveLabel) { [string]$data.approveLabel } else { '_Autorizar uso limitado' }); $yes.Padding = '18,10'; $yes.Background = '#163A5F'; $yes.Foreground = 'White'; $yes.IsEnabled = $false
 $null = $buttons.Children.Add($no); $null = $buttons.Children.Add($yes); $null = $footer.Children.Add($buttons)
 $scroll = New-Object Windows.Controls.ScrollViewer; $scroll.VerticalScrollBarVisibility = 'Auto'; $null = $root.Children.Add($scroll)
 $body = New-Object Windows.Controls.StackPanel; $scroll.Content = $body
@@ -66,7 +66,7 @@ Label 'Procedencia' $data.origin
 Label 'Autor o editor' $data.publisher
 Label 'Fecha y derechos' ($data.date + [Environment]::NewLine + $data.license)
 Label 'Qué está comprobado' $data.verification
-Label 'Extracto para revisar (contenido no confiable)' $data.excerpt
+Label $(if ($data.excerptLabel) { [string]$data.excerptLabel } else { 'Extracto para revisar (contenido no confiable)' }) $data.excerpt
 Label 'Consecuencias de autorizar' $data.consequence
 Label 'Registrar, autorizar y verificar son decisiones diferentes' $data.distinction
 if ($data.blocked.Count -gt 0) { Label 'No se puede autorizar todavía' ($data.blocked -join [Environment]::NewLine) }

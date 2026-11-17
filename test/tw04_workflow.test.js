@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { startClient, call, data, tmpHome, ROOT, FIX } from './helpers.js';
+import { startClientConPersona, PERSONA_SI, call, data, tmpHome, ROOT, FIX } from './helpers.js';
 
 execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'build.mjs')], { cwd: ROOT, stdio: 'pipe' });
 const ENTRIES = { fuente: path.join(ROOT, 'src', 'main.js'), 'bundle .mcpb': path.join(ROOT, 'dist', 'mcpb', 'server', 'index.js') };
@@ -14,7 +14,8 @@ const apu = { codigo: 'A1', descripcion: 'Losa (EJEMPLO TEST)', unidad: 'm3', in
 for (const [label, entry] of Object.entries(ENTRIES)) {
   test(`TW-04 flujo completo de producto [${label}]`, { timeout: 120000 }, async () => {
     const home = tmpHome('Tannia Ñ ');
-    let c = await startClient(home, entry);
+    const personaDiceSi = () => Array.from({ length: 6 }, () => PERSONA_SI());
+    let c = await startClientConPersona(home, entry, personaDiceSi());
     try {
       const T = (name, args) => call(c.client, name, args);
       const E = async (name, args, code) => { const r = await T(name, args); assert.equal(r.isError, true, `${name} debía fallar`); assert.equal(data(r).error, code, `${name}: ${JSON.stringify(data(r))}`); };
@@ -52,7 +53,7 @@ for (const [label, entry] of Object.entries(ENTRIES)) {
       assert.ok(Math.abs(part.cantidad - (20 + Math.PI / 2) * 0.1) < 1e-9); assert.equal(part.cantidad_verificada, false);
       await OK('tannia_apu_definir', { proyecto: 'Casa 1', ...apu });
       await OK('tannia_partida_asignar_apu', { proyecto: 'Casa 1', codigo: '1', apu: 'A1' });
-      await OK('tannia_presupuesto_config', { proyecto: 'Casa 1', gastos_generales_pct: 10, utilidades_pct: 5 });
+      await OK('tannia_presupuesto_config', { proyecto: 'Casa 1', gastos_generales_pct: 10, utilidades_pct: 5, iva_pct: 19 });
       await OK('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'borrador' });
       const pres = await OK('tannia_presupuesto_generar', { proyecto: 'Casa 1' });
       assert.equal(pres.estado_final_posible, false); // cantidad sin verificar
@@ -60,26 +61,29 @@ for (const [label, entry] of Object.entries(ENTRIES)) {
       await OK('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'revision' });
       await E('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'aprobado', aprobado_por: 'Tannia', confirmo_revision_profesional: true }, 'GATE_NO_CUMPLIDO'); // sin verificar
       await E('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'aprobado' }, 'GATE_NO_CUMPLIDO');
-      await OK('tannia_partida_verificar', { proyecto: 'Casa 1', codigo: '1', verificada_por: 'Tannia' });
+      await OK('tannia_partida_verificar', { proyecto: 'Casa 1', codigo: '1', verificada_por: 'Tannia' }); // la PERSONA confirma en la ventana del cliente
+      assert.equal((await OK('tannia_proyecto_estado', { proyecto: 'Casa 1' })).estado, 'borrador', 'verificar cambia la revisión: los archivos deben regenerarse');
+      await OK('tannia_presupuesto_generar', { proyecto: 'Casa 1' });
       await OK('tannia_informe_generar', { proyecto: 'Casa 1' });
+      await OK('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'revision' });
       await E('tannia_entregable_exportar', { proyecto: 'Casa 1' }, 'NO_APROBADO');
 
       // reinicio del servidor: el estado persiste
-      await c.close(); c = await startClient(home, entry);
+      await c.close(); c = await startClientConPersona(home, entry, personaDiceSi());
       const st = await OK('tannia_proyecto_estado', { proyecto: 'Casa 1' });
       assert.equal(st.estado, 'revision'); assert.equal(st.partidas, 1);
 
-      await OK('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'aprobado', aprobado_por: 'Tannia', confirmo_revision_profesional: true });
+      await OK('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'aprobado' });
       // cambiar datos invalida la aprobación
-      await OK('tannia_presupuesto_config', { proyecto: 'Casa 1', iva_pct: 19 });
+      await OK('tannia_presupuesto_config', { proyecto: 'Casa 1', utilidades_pct: 6 });
       assert.equal((await OK('tannia_proyecto_estado', { proyecto: 'Casa 1' })).estado, 'borrador');
-      await OK('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'revision' });
       await OK('tannia_presupuesto_generar', { proyecto: 'Casa 1' });
       await OK('tannia_informe_generar', { proyecto: 'Casa 1' });
-      await OK('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'aprobado', aprobado_por: 'Tannia', confirmo_revision_profesional: true });
+      await OK('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'revision' });
+      await OK('tannia_proyecto_avanzar', { proyecto: 'Casa 1', a_estado: 'aprobado' });
       const ex = await OK('tannia_entregable_exportar', { proyecto: 'Casa 1' });
       assert.equal(ex.archivos.length, 2);
-      assert.ok(fs.existsSync(path.join(home, 'Proyectos', 'Casa 1', '07 Entregables', 'HUELLAS-SHA256.txt')));
+      assert.ok(fs.existsSync(path.join(home, 'Proyectos', 'Casa 1', ex.carpeta, 'HUELLAS-SHA256.txt')));
 
       // PDF: calibrar y medir con partida guardada
       const tr = await OK('tannia_pdf_trazos', { proyecto: 'Casa 1', archivo: '02 Originales/planta.pdf', pagina: 1 });
