@@ -24,7 +24,7 @@ export async function pedirAutorizacionHumana({ sandbox, server, proyecto, clave
     publisher: 'No aplica', date: new Date().toISOString().slice(0, 10), license: 'No aplica', verification: 'El servidor comprobó huellas, revisión vigente y bloqueos antes de mostrar esta ventana.',
     excerpt: resumen, excerptLabel: 'Qué está autorizando', consequence: consecuencia,
     distinction: 'Autorizar registra SU decisión profesional. No certifica cumplimiento normativo ni reemplaza la firma de un profesional responsable.',
-    canApprove: true, blocked: [], technical: '',
+    canApprove: true, blocked: [], technical: '', layout: 'autorizacion',
     // Solo para el ejecutor de pruebas de interfaz (variables de entorno del proceso, nunca argumentos del modelo):
     ...(Number(process.env.TANNIA_GUI_PRUEBA_TIMEOUT_S) > 0 ? { timeoutS: Number(process.env.TANNIA_GUI_PRUEBA_TIMEOUT_S) } : {}), ...(Number(process.env.TANNIA_GUI_PRUEBA_ESCALA) > 0 ? { scale: Number(process.env.TANNIA_GUI_PRUEBA_ESCALA) } : {}), approveLabel: etiquetaAprobar, rejectLabel: etiquetaRechazar, reviewLabel: etiquetaRevision,
   };

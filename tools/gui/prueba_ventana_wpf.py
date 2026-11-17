@@ -140,6 +140,9 @@ def c_contenido_y_confirmar(escala="1"):
         for c in (si, no, chk):
             assert c.is_visible() and dentro(w, c), f"control fuera de la ventana: {c.window_text()}"
         assert not si.is_enabled(), "Autorizar debe estar deshabilitado hasta marcar la casilla"
+        res = control(w, "txtResumen")
+        sv = control(w, "scrollContenido").rectangle(); rr = res.rectangle()
+        assert rr.top >= sv.top and rr.bottom <= sv.bottom, f"el resumen no cabe en la primera pantalla (escala {escala}): {rr} vs {sv}"
         img = captura(w, f"ventana_escala_{escala.replace('.', '_')}")
         chk.click_input()
         time.sleep(0.3)
@@ -267,6 +270,24 @@ def c_scroll(escala):
     return f
 
 
+def c_entrega():
+    proc, js = lanzar("entrega")
+    w = ventana()
+    assert "Verificar cantidad de M1" in textos(w)
+    control(w, "chkRevisado").click_input(); time.sleep(0.3); control(w, "btnAutorizar").click_input()
+    assert esperar_sin_ventana(30)
+    w2 = ventana(120)
+    t2 = textos(w2)
+    for e in ["Aprobar la entrega", "Revisión de datos: R", "TOTAL $109.480", "Neto $92.000", "IVA 19% $17.480", "origen no acreditado", "Presupuesto R", "Memoria R", "Advertencias que permanecen", "sin trazabilidad geométrica"]:
+        assert e in t2, f"ventana de entrega sin «{e}»"
+    img = captura(w2, "ventana_aprobacion_entrega")
+    control(w2, "chkRevisado").click_input(); time.sleep(0.3); control(w2, "btnAutorizar").click_input()
+    r = terminar(proc, js, timeout=180)
+    assert r["total"] == 109480, r
+    assert r["resultados"][1]["aprobacion"] == "confirmado" and r["resultados"][2]["archivos"] == 2, r
+    return {"captura": img, "total": r["total"], "exportacion": r["resultados"][2], "autorizacion": "SIMULADA"}
+
+
 if os.name != "nt":
     print("Requiere Windows con escritorio interactivo.")
     sys.exit(2)
@@ -284,6 +305,7 @@ caso("error técnico (proceso de la ventana terminado)", c_error_tecnico)
 caso("navegación con Tab y confirmación solo con teclado", c_teclado_confirma)
 caso("doble clic en confirmar = un solo recibo", c_doble_clic)
 caso("dos solicitudes simultáneas = una sola ventana", c_concurrencia)
+caso("ventana de aprobación de ENTREGA: contenido, captura, aprobación y exportación", c_entrega)
 
 limpiar()
 informe = {"herramienta": "pywinauto (UI Automation, backend uia)", "advertencia": "Autorizaciones SIMULADAS por UI Automation; no son aceptación humana. La escala 125/150 % es escala de diseño WPF (LayoutTransform), no cambio de DPI del sistema.", "casos": resultados, "ok": all(r["ok"] for r in resultados)}
