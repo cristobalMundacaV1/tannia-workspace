@@ -1,0 +1,149 @@
+{
+  "noHumanChannel": true,
+  "oldBudgetTotal": 1190,
+  "expectedNewTotal": 10710,
+  "exported": {
+    "archivos": [
+      {
+        "archivo": "07 Entregables/Presupuesto 20261117-122208.xlsx",
+        "sha256": "e7a65ec45fe204b5163b7820e8084f7b81b19cee2e9eda7a6daf06d2e415ba57"
+      },
+      {
+        "archivo": "07 Entregables/Memoria 20261117-122208.pdf",
+        "sha256": "fdd58d78215decc32d98550d35aa4cd75587362149e6e4f36497f9e39bcf9e6f"
+      }
+    ]
+  },
+  "log": [
+    {
+      "name": "tannia_proyecto_crear",
+      "result": {
+        "nombre": "Auditoria",
+        "carpetas": [
+          "01 Antecedentes",
+          "02 Originales",
+          "03 Trabajo",
+          "04 Cubicaciones",
+          "05 Presupuestos",
+          "06 Informes",
+          "07 Entregables"
+        ],
+        "ruta_local": "/tmp/astra-audit-j9fHft/Proyectos/Auditoria"
+      }
+    },
+    {
+      "name": "tannia_originales_registrar",
+      "result": {
+        "nuevos": [
+          "02 Originales/plano.dxf"
+        ],
+        "cambiados": [],
+        "ignorados": [],
+        "advertencias": [],
+        "migrados_de_versiones_anteriores": [],
+        "permisos_restaurados": [],
+        "total": 1
+      }
+    },
+    {
+      "name": "tannia_proyecto_avanzar",
+      "result": {
+        "estado": "analisis"
+      }
+    },
+    {
+      "name": "tannia_partida_manual",
+      "result": {
+        "codigo": "P",
+        "descripcion": "Medicion ficticia auditoria",
+        "unidad": "m2",
+        "cantidad": 10,
+        "apu": "A",
+        "regla": "manual",
+        "formula": "ingreso manual: fixture auditoria",
+        "fuente": null,
+        "supuestos": [
+          "Cantidad ingresada por la usuaria. Origen: fixture auditoria"
+        ],
+        "advertencias": [
+          "Sin trazabilidad geométrica."
+        ],
+        "estado_revision": "borrador",
+        "cantidad_verificada": false,
+        "creada": "2026-11-17T12:22:08.429Z"
+      }
+    },
+    {
+      "name": "tannia_apu_definir",
+      "result": {
+        "codigo": "A",
+        "problemas": []
+      }
+    },
+    {
+      "name": "tannia_partida_verificar",
+      "result": {
+        "codigo": "P",
+        "verificada_por": "NOMBRE_SUPLANTADO_SIN_PERSONA"
+      }
+    },
+    {
+      "name": "tannia_proyecto_avanzar",
+      "result": {
+        "estado": "borrador"
+      }
+    },
+    {
+      "name": "tannia_presupuesto_generar",
+      "result": {
+        "archivo": "05 Presupuestos/Presupuesto 20261117-122208.xlsx",
+        "total": 1190,
+        "parcial": false,
+        "estado_final_posible": true,
+        "pendientes": []
+      }
+    },
+    {
+      "name": "tannia_informe_generar",
+      "result": {
+        "archivo": "06 Informes/Memoria 20261117-122208.pdf",
+        "bytes": 3410,
+        "sha256": "fdd58d78215decc32d98550d35aa4cd75587362149e6e4f36497f9e39bcf9e6f"
+      }
+    },
+    {
+      "name": "tannia_apu_definir",
+      "result": {
+        "codigo": "A",
+        "problemas": []
+      }
+    },
+    {
+      "name": "tannia_proyecto_avanzar",
+      "result": {
+        "estado": "revision"
+      }
+    },
+    {
+      "name": "tannia_proyecto_avanzar",
+      "result": {
+        "estado": "aprobado"
+      }
+    },
+    {
+      "name": "tannia_entregable_exportar",
+      "result": {
+        "archivos": [
+          {
+            "archivo": "07 Entregables/Presupuesto 20261117-122208.xlsx",
+            "sha256": "e7a65ec45fe204b5163b7820e8084f7b81b19cee2e9eda7a6daf06d2e415ba57"
+          },
+          {
+            "archivo": "07 Entregables/Memoria 20261117-122208.pdf",
+            "sha256": "fdd58d78215decc32d98550d35aa4cd75587362149e6e4f36497f9e39bcf9e6f"
+          }
+        ]
+      }
+    }
+  ]
+}
