@@ -1,0 +1,15 @@
+warning: in the working copy of 'test/tw11_h_hardening.test.js', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'test/tw11_seguridad_aprobacion.test.js', CRLF will be replaced by LF the next time Git touches it
+ package-lock.json                      |   6 [32m+[m[31m-[m
+ package.json                           |   1 [32m+[m
+ scripts/build.mjs                      |   8 [32m+++[m
+ scripts/lib/verificar_bundle.mjs       |   2 [32m+[m[31m-[m
+ scripts/paquete-prueba.mjs             |  13 [32m++[m[31m--[m
+ src/cad/autocad_com.js                 | 105 [32m++++++++++++++++++++++++++++++++[m[31m-[m
+ src/cic/aprobacion_humana.js           |  21 [32m+++++[m[31m--[m
+ src/cic/conocimiento/almacen.js        |   5 [32m+[m[31m-[m
+ src/tools/cic.js                       |   3 [32m+[m[31m-[m
+ src/tools/index.js                     |   2 [32m+[m
+ test/tw11_h_hardening.test.js          |   4 [32m+[m[31m-[m
+ test/tw11_seguridad_aprobacion.test.js |   2 [32m+[m[31m-[m
+ 12 files changed, 150 insertions(+), 22 deletions(-)

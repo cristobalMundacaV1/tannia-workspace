@@ -27,7 +27,7 @@ function esquemasInvalidos(tools) {
 
 /** @returns { ok, problemas[], datos } — nunca lanza por un fallo del paquete: lo informa. */
 /** Entorno EXACTO del manifiesto (como lo daría Claude Desktop): ${user_config.carpeta_tannia} → carpeta de prueba; no se hereda TANNIA_CIC del entorno de quien verifica. */
-function entornoDelManifiesto(cfg, home) { const base = { ...process.env }; delete base.TANNIA_CIC; const env = { ...base, TANNIA_HOME: home }; for (const [k, v] of Object.entries(cfg.env || {})) env[k] = String(v).replace('${user_config.carpeta_tannia}', home); return env; }
+function entornoDelManifiesto(cfg, home) { const base = { ...process.env }; delete base.TANNIA_CIC; delete base.TANNIA_ENGINEERING; const env = { ...base, TANNIA_HOME: home }; for (const [k, v] of Object.entries(cfg.env || {})) env[k] = String(v).replace('${user_config.carpeta_tannia}', home); return env; }
 export async function verificarBundle(mcpbPath, { esperadas } = {}) {
   const problemas = []; const datos = { archivo: path.basename(mcpbPath), sha256: sha(mcpbPath), bytes: fs.statSync(mcpbPath).size };
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'Verif bundle ñ '));

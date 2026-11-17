@@ -10,6 +10,7 @@ import { FuenteSchema, PasajeSchema } from '../schemas.js';
 import { sha256 } from '../hash.js';
 import { extraer } from './extractores.js';
 import { AprobacionHumana } from '../aprobacion_humana.js';
+import { sourceConsent, consentText } from '../consent.js';
 import { Indice, norm, tokens } from './indice.js';
 
 const RAIZ = 'Conocimiento';
@@ -67,7 +68,9 @@ export class Conocimiento {
   /** Decisión de una PERSONA: por elicitación (UI del cliente) o archivo fuera de banda. Un parámetro de la herramienta NUNCA basta. */
   async decidir(project, id, { elicitar } = {}) {
     const reg = this.#leerFuente(project, id); if (reg.state !== 'candidate') throw new UserError('FUENTE_NO_CANDIDATA', `La fuente ${id} está "${reg.state}": solo una candidata puede aprobarse.`);
-    const sol = this.#desafio(project, reg).aprobacion_fuera_de_banda; const d = await this.aprob.decidir(project, id, { descripcion: `Aprobar la fuente «${reg.title}» como citable.\nOrigen: ${reg.origin.path_or_url || '(sin URL)'}\nClase ${reg.class} · carácter ${reg.binding} · licencia ${reg.license.status}\nAprobar NO significa que su contenido haya sido verificado.`, elicitar: elicitar ? () => elicitar(reg) : null });
+    const consentimiento = sourceConsent(project, reg, this.#pasajes(project, id));
+    if (!consentimiento.canApprove) return { estado: 'candidate', bloqueado: true, razones: consentimiento.blocked, pendiente_aprobacion_humana: false };
+    const sol = this.#desafio(project, reg).aprobacion_fuera_de_banda; const d = await this.aprob.decidir(project, id, { descripcion: consentText(consentimiento), consentimiento, elicitar: elicitar ? () => elicitar(reg, consentimiento) : null });
     if (d.rechazado) { this.#log(project, { accion: 'rechazada_por_persona', id }); reg.state = 'rejected'; reg.approval = { approved: false, by: 'none', at: ahora() }; this.#w(project, this.#rel('fuentes', `${id}.json`), reg); return { estado: 'rejected', por: 'human' }; }
     if (!d.por) return { estado: 'candidate', pendiente_aprobacion_humana: true, instrucciones: `Se necesita la aprobación de una persona; Claude NO puede darla. Ella puede confirmarla en la ventana del cliente o en el diálogo del sistema, o crear ${sol.archivo_aprobacion} con la línea «${sol.formato}» (carpeta de configuración de Tannia Workspace, fuera de los proyectos).` };
     reg.state = 'registered'; reg.approval = { approved: true, by: d.por, at: ahora() }; this.#w(project, this.#rel('fuentes', `${id}.json`), reg); this.#log(project, { accion: 'aprobada', id, por: d.por }); this.cache.delete(project);

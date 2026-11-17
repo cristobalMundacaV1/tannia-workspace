@@ -390,6 +390,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   registerProyectos(reg, { sandbox });
   registerArquitectura(reg, { sandbox, cad });
   if (cicActivo()) registerCic(reg, { sandbox, server, herramientas: () => [...new Set(TOOL_NAMES)] }); // TW-11: desactivado por defecto (72 herramientas)
+  if (process.env.TANNIA_ENGINEERING === 'on') registerDrawing(reg, { sandbox, cad });
 }
 
 // La verificación es el acto de revisión: no invalida el estado (sí invalida cualquier cambio de datos).
@@ -413,3 +414,4 @@ import { registerProyectos } from './proyectos.js';
 import { registerArquitectura } from './arquitectura.js';
 import { registerCic } from './cic.js';
 import { cicActivo } from '../cic/flag.js';
+import { registerDrawing } from './drawing.js';

@@ -1,0 +1,109 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { tmpHome } from './helpers.js';
+import { Sandbox } from '../src/security/sandbox.js';
+import { createProject } from '../src/project/projects.js';
+import { CadOperations } from '../src/cad/operations.js';
+import { AutoCadCom, SCRIPTS, buildScript } from '../src/cad/autocad_com.js';
+import { tunnelModel, compose, verifyDimensions } from '../src/drawing/model.js';
+import { sceneForSheet, validateScene, buildSheetsPdf, verifyPdf } from '../src/drawing/pdf.js';
+import { renderPdf } from '../src/drawing/render.js';
+import { buildDrawingDxf } from '../src/drawing/dxf.js';
+import { DrawingService } from '../src/drawing/service.js';
+import { sourceConsent, CONSENT_WPF } from '../src/cic/consent.js';
+import { AprobacionHumana } from '../src/cic/aprobacion_humana.js';
+
+function environment() { const home = tmpHome('TW12 ñ '); const sb = new Sandbox(home); createProject(sb, 'Piloto'); return { home, sb, root: sb.projectRoot('Piloto') }; }
+
+test('TW12 journal: repeat, conflict, partial write, corrupt/missing checkpoint never replay', async () => {
+  const { root } = environment(); const journal = new CadOperations(root); let writes = 0;
+  const op = { id: 'lineas-01', intent: { route: 'own.dwg', version: 1 }, preflight: async () => ({}), apply: async () => { writes++; return { handles: ['ABC'] }; }, verify: async () => true };
+  await journal.run(op); assert.equal((await journal.run(op)).reused, true); assert.equal(writes, 1);
+  await assert.rejects(journal.run({ ...op, intent: { changed: true } }), { code: 'OPERACION_CONFLICTO' });
+  const partial = { ...op, id: 'partial', verify: async () => false };
+  await assert.rejects(journal.run(partial), { code: 'CAD_VERIFICACION_FALLIDA' });
+  await assert.rejects(journal.run(partial), { code: 'ESCRITURA_INCIERTA' }); assert.equal(writes, 2);
+  fs.writeFileSync(journal.file('partial'), '{'); await assert.rejects(journal.run(partial), { code: 'CHECKPOINT_DANADO' });
+  fs.unlinkSync(journal.file('partial')); await assert.rejects(journal.run(partial), { code: 'ESCRITURA_INCIERTA' }); assert.equal(writes, 2);
+  for (const id of ['../escape', 'CON', 'LPT1', '']) assert.throws(() => journal.status(id), { code: 'OPERACION_ID_INVALIDA' });
+});
+
+test('TW12 journal holds the project lock across asynchronous CAD calls', async () => {
+  const { root } = environment(); let release; const wait = new Promise(r => { release = r; });
+  const a = new CadOperations(root); const b = new CadOperations(root);
+  const op = { id: 'a', intent: {}, preflight: async () => ({}), apply: async () => { await wait; return {}; }, verify: async () => true };
+  const running = a.run(op); await new Promise(r => setImmediate(r));
+  await assert.rejects(b.run({ ...op, id: 'b' }), { code: 'CAD_OPERACION_EN_CURSO' }); release(); await running;
+});
+
+test('TW12 strict session rejects wrong route, multiple processes, read-only, busy and closed target', async () => {
+  const { sb, root } = environment(); const rel = '03 Trabajo/copia.dwg'; const file = path.join(root, rel); fs.writeFileSync(file, 'AC1032 fake test fixture');
+  const baseline = { ruta: file, procesos: [123], ocupado: false, solo_lectura: false, guardado: true };
+  for (const [patch, code] of [[{ ruta: path.join(root, 'otro.dwg') }, 'DOCUMENTO_DISTINTO'], [{ procesos: [1, 2] }, 'SESION_AMBIGUA'], [{ ocupado: true }, 'AUTOCAD_OCUPADO'], [{ solo_lectura: true }, 'DOCUMENTO_SOLO_LECTURA'], [{ guardado: false }, 'CAMBIOS_SIN_GUARDAR']]) {
+    let calls = 0; const cad = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async () => { calls++; return JSON.stringify({ ok: true, data: { ...baseline, ...patch } }); } });
+    await assert.rejects(cad.lineasRecuperables('Piloto', { archivo: rel, operacion: `test${calls}${code}`, lineas: [{ x1: 0, y1: 0, x2: 1, y2: 1 }] }), { code }); assert.equal(calls, 1);
+  }
+  const closed = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async () => JSON.stringify({ ok: false, codigo: 'DOCUMENTO_NO_ABIERTO' }) });
+  await assert.rejects(closed.sesion('Piloto', rel), { code: 'DOCUMENTO_NO_ABIERTO' });
+  assert.match(SCRIPTS.abrir_copia, /Documents\.Item/); assert.ok(SCRIPTS.abrir_copia.indexOf('Documents.Item') < SCRIPTS.abrir_copia.indexOf('Documents.Open'));
+  const script = buildScript('agregar_lineas'); for (const text of ['ReadOnly', 'Get-FileHash', 'IsQuiescent', 'ruta_esperada']) assert.ok(script.includes(text));
+});
+
+test('TW12 pilot physical oracle: 5.5m at 1:50 = 110mm; exact areas, 4 sheets, independent bounds', () => {
+  const model = tunnelModel(); const c = compose(model); assert.equal(c.sheets.length, 4);
+  const v = c.sheets[2].views[0]; assert.equal((v.bounds.max[0] - v.bounds.min[0]) * v.transform.sx, 110);
+  assert.ok(Math.abs(model.quantities[0].excavation_area_m2 - (5.5 * 2.5 + Math.PI * 2.75 ** 2 / 2)) < 1e-9);
+  assert.equal(model.quantities[0].excavation_volume_m3, model.quantities[0].excavation_area_m2 * 150);
+  assert.equal(verifyDimensions(model).ok, true); model.views[2].dimensions[0].value = 6; assert.equal(verifyDimensions(model).ok, false);
+  assert.throws(() => compose(tunnelModel(), { orientation: 'portrait' }), { code: 'VISTA_NO_CABE' });
+  for (const paper of ['A2', 'A1']) for (const orientation of ['landscape', 'portrait']) assert.equal(compose(tunnelModel(), { paper, orientation }).sheets.length, 4);
+});
+
+test('TW12 blocking legibility regressions: tiny section, overlap, corrupt glyph, wrong scale/region and clipped viewport', () => {
+  const base = compose(tunnelModel());
+  for (const s of base.sheets) assert.deepEqual(validateScene(sceneForSheet(base, s), s).issues, []);
+  const s = structuredClone(base.sheets[2]); const normal = sceneForSheet(base, s);
+  const collision = [...normal, { ...normal.find(e => e.kind === 'text') }]; assert.equal(validateScene(collision, s).ok, false);
+  const glyph = structuredClone(normal); glyph.find(e => e.kind === 'text').value = 'Secci?n'; assert.equal(validateScene(glyph, s).ok, false);
+  const geom = [...normal, { kind: 'text', value: 'Texto superpuesto', x: 155, y: 130, size: 2.5, maxWidth: 60 }];
+  assert.equal(validateScene(geom, s).ok, false);
+  for (const mutate of [v => { v.viewport.scale /= 100; }, v => { v.viewport.center[0] += 1000; }, v => { v.viewport.width = 10; }, v => { v.scale = 50000; }]) {
+    const bad = structuredClone(s); mutate(bad.views[0]); assert.equal(validateScene(normal, bad).ok, false);
+  }
+});
+
+test('TW12 PDF: rendered four physical A3 sheets, text and vector content survive reopening', async () => {
+  const c = compose(tunnelModel()); const pdf = await buildSheetsPdf(c); const pages = await renderPdf(pdf);
+  assert.equal(pages.length, 4); assert.ok(pages.every(p => p.qa.ok && p.png.length > 10000));
+  const qa = await verifyPdf(pdf, c.sheets); assert.equal(qa.ok, true); assert.equal(qa.pages, 4);
+  assert.equal((await verifyPdf(await buildSheetsPdf(c, '01'), [c.sheets[2]])).ok, false, 'wrong sheet must fail even though valid PDF');
+  const dxf = buildDrawingDxf(c); assert.match(dxf, /\$INSUNITS\n70\n6/); assert.equal((dxf.match(/0\nVIEWPORT\n/g) || []).length, 5); assert.equal((dxf.match(/0\nDIMENSION\n/g) || []).length, 8);
+});
+
+test('TW12 service preserves originals, emits immutable PDF/DXF/PNG revisions and detects alteration', async () => {
+  const { sb, root } = environment(); const original = path.join(root, '02 Originales', 'origen.dwg'); fs.writeFileSync(original, 'synthetic original');
+  const svc = new DrawingService(sb); const first = await svc.generate('Piloto'); assert.equal(first.ready_for_delivery, false);
+  assert.equal(first.files.filter(f => /lamina.*\.pdf$/.test(f)).length, 4); assert.equal(first.files.filter(f => /\.png$/.test(f)).length, 4);
+  assert.equal((await svc.generate('Piloto')).reused, true); assert.equal(fs.readFileSync(original, 'utf8'), 'synthetic original');
+  assert.equal(svc.status('Piloto').integrity.estado, 'integra');
+  fs.appendFileSync(path.join(root, first.folder, first.files[0]), 'tampered');
+  await assert.rejects(svc.generate('Piloto'), { code: 'ENTREGA_ALTERADA' });
+});
+
+test('TW12 trust: invalid pilot cannot reach any approval channel, no generic MessageBox or model secret', async () => {
+  const bad = { id: 'source-test', title: 'Guía hash', state: 'candidate', origin: { path_or_url: 'https://x.invalid' }, content: { available: true }, license: { status: 'licensed', quote_limit_chars: 300 } };
+  const consent = sourceConsent('Piloto', bad, [{ text: 'Extracto aportado sin evidencia suficiente.' }]);
+  assert.equal(consent.canApprove, false); assert.ok(consent.blocked.length >= 2); assert.match(consent.publisher, /no informado/);
+  const { sb } = environment(); let attempts = 0; const ah = new AprobacionHumana(sb, { dialogo: async () => { attempts++; return 'si'; } });
+  assert.equal((await ah.decidir('Piloto', 'test', { consentimiento: consent, elicitar: async () => { attempts++; return { action: 'accept', content: { aprobar: true } }; } })).bloqueado, true); assert.equal(attempts, 0);
+  assert.ok(!CONSENT_WPF.includes('MessageBox')); assert.match(CONSENT_WPF, /IsCancel = \$true/); assert.match(CONSENT_WPF, /IsEnabled = \$false/); assert.match(CONSENT_WPF, /AutomationProperties/);
+});
+
+test('TW12 consent deduplicates simultaneous windows; close/decline never falls back to approve', async () => {
+  const { sb } = environment(); let release; const waiting = new Promise(r => { release = r; }); let windows = 0;
+  const ah = new AprobacionHumana(sb, { dialogo: async () => { windows++; return waiting; } });
+  const first = ah.decidir('Piloto', 'same'); await new Promise(r => setImmediate(r));
+  assert.equal((await ah.decidir('Piloto', 'same')).en_curso, true); assert.equal(windows, 1); release('no'); assert.equal((await first).rechazado, true);
+});

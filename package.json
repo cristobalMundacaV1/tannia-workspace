@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
+    "@napi-rs/canvas": "0.1.100",
     "exceljs": "4.4.0",
     "pdfjs-dist": "5.4.149",
     "pdfkit": "0.17.2",

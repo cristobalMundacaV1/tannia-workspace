@@ -119,10 +119,10 @@ test('H4: referencias psg-*: pasaje correcto, inexistente, fuente retirada, cita
   const { Sandbox } = await import('../src/security/sandbox.js'); const { createProject } = await import('../src/project/projects.js'); const { Conocimiento } = await import('../src/cic/conocimiento/almacen.js'); const { validarInterpretacion } = await import('../src/cic/interpretacion.js'); const { InterpretacionSchema } = await import('../src/cic/schemas.js'); const crypto = await import('node:crypto');
   const home2 = tmpHome('Tannia ñ psg '); const sb = new Sandbox(home2); sb.ensureHome(); createProject(sb, 'PP'); const K = new Conocimiento(sb);
   const pr = K.proponerFuente('PP', { titulo: 'Guía hash', url: 'https://x.invalid', extracto: 'Texto literal de la guía de prueba para hash.', almacenamiento: 'hash_only', licencia: 'licensed' });
-  fs.writeFileSync(K.aprob.archivoAprobacion('PP', pr.fuente.id), `APRUEBO ${pr.fuente.id}\n`); assert.equal((await K.decidir('PP', pr.fuente.id)).estado, 'registered');
+  fs.writeFileSync(K.aprob.archivoAprobacion('PP', pr.fuente.id), `APRUEBO ${pr.fuente.id}\n`); const blocked = await K.decidir('PP', pr.fuente.id); assert.equal(blocked.estado, 'candidate'); assert.equal(blocked.bloqueado, true); assert.ok(blocked.razones.length >= 2);
   const pas = JSON.parse(fs.readFileSync(path.join(home2, 'Proyectos', 'PP', '03 Trabajo', 'Conocimiento', 'pasajes', `${pr.fuente.id}.json`), 'utf8'))[0]; assert.equal(pas.text, null);
   const v = validarInterpretacion(InterpretacionSchema.parse({ schema: 'tw.cic.interpretation/1', mode: 'professional', restatement: 'x', intents: [{ kind: 'plan', text: 'p' }], antecedents: [{ ref: pas.id, quote: 'Texto literal de la guía de prueba para hash.' }] }), { modo: 'professional', herramientas: [], conocimiento: K, proyecto: 'PP' });
-  assert.equal(v.antecedentes[0].verificacion, 'content_not_available'); assert.equal(v.issues.filter((i) => i.kind === 'unverified_citation').length, 1); void crypto;
+  assert.equal(v.antecedentes[0].verificacion, 'source_not_approved'); assert.equal(v.issues.filter((i) => i.kind === 'unverified_citation').length, 1); void crypto;
 });
 
 test('H5: con TANNIA_CIC=on las instrucciones priorizan el enrutamiento transversal (túnel/canal/departamento no se tratan como vivienda); con CIC apagado se conservan las de TW-10', async () => {

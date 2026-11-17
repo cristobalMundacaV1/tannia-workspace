@@ -15,8 +15,15 @@ await build({
   entryPoints: [path.join(root, 'src', 'main.js')],
   outfile: path.join(out, 'server', 'index.js'),
   bundle: true, platform: 'node', format: 'cjs', target: 'node18', minify: false, legalComments: 'none',
+  external: ['@napi-rs/canvas'],
   logLevel: 'warning',
 });
+
+// Native raster backend: package the installed platform binary beside the bundle.
+const nativeRoot = path.join(root, 'node_modules', '@napi-rs');
+for (const name of fs.readdirSync(nativeRoot).filter(n => n === 'canvas' || n.startsWith('canvas-'))) {
+  fs.cpSync(path.join(nativeRoot, name), path.join(out, 'server', 'node_modules', '@napi-rs', name), { recursive: true });
+}
 
 fs.writeFileSync(path.join(out, 'server', 'package.json'), '{"type":"commonjs"}\n');
 const { createServer } = await import(pathToFileURL(path.join(root, 'src', 'server.js')).href);
@@ -55,6 +62,7 @@ const manifest = {
   compatibility: { platforms: ['win32', 'darwin', 'linux'], runtimes: { node: '>=18.0.0' } },
 };
 fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest, null, 2));
+fs.copyFileSync(path.join(root, 'src', 'drawing', 'FONT_LICENSE.txt'), path.join(out, 'FONT_LICENSE.txt'));
 for (const f of ['LICENSE-THIRD-PARTY.txt']) if (fs.existsSync(path.join(root, f))) fs.copyFileSync(path.join(root, f), path.join(out, f));
 // Reproducibilidad: fechas fijas para que el .mcpb sea idéntico bit a bit con las mismas entradas.
 const FIXED = new Date('2026-01-01T00:00:00Z');

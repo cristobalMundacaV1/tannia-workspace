@@ -19,6 +19,7 @@ import { compararLecturas, coherenciaInterna, firmasDesdeDxf, firmasDesdeCom, co
 import { parseDxf } from '../dxf/reader.js';
 import { dxfDecode } from '../design/salidas.js';
 import { sha256File } from '../security/sandbox.js';
+import { CadOperations } from './operations.js';
 
 const PS_PRELUDE = `$ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -85,12 +86,32 @@ if ($in.ruta_esperada) {
   if ($null -eq $doc) { Emit @{ ok = $false; etapa = 'documento_activo'; codigo = 'SIN_DOCUMENTO' }; exit 0 }
 }
 `;
-export const SIN_DOCUMENTO_PREVIO = new Set(['construir_3d', 'abrir_copia', 'dxf_a_dwg', 'estado']);
+export const SIN_DOCUMENTO_PREVIO = new Set(['construir_3d', 'abrir_copia', 'dxf_a_dwg', 'estado', 'laminas_a_dwg']);
 // Solo las lecturas pueden reintentarse si AutoCAD está ocupado: una escritura repetida podría duplicar o alterar el dibujo.
 export const REINTENTO_SEGURO = new Set(['estado', 'listar', 'medir', 'leer_lote', 'enumerar', 'resumen']);
 
 // Cuerpos estáticos: los datos del usuario viajan SOLO en $in, nunca interpolados en el script.
 export const SCRIPTS = {
+  laminas_a_dwg: `if (Test-Path -LiteralPath $in.dwg) { Emit @{ ok = $false; codigo = 'DESTINO_EXISTE' }; exit 0 }
+if ((Get-FileHash -LiteralPath $in.dxf -Algorithm SHA256).Hash -ine $in.sha256_dxf) { Emit @{ ok = $false; codigo = 'DOCUMENTO_MODIFICADO_EXTERNAMENTE' }; exit 0 }
+$d = $null
+for ($i = 0; $i -lt [int]$acad.Documents.Count; $i++) { $candidate = $acad.Documents.Item($i); if ($candidate.FullName -ieq $in.dxf) { $d = $candidate; break } }
+if ($null -eq $d) { $d = $acad.Documents.Open([string]$in.dxf, $false) }
+if ($d.FullName -ine $in.dxf -or $d.ReadOnly -or -not $d.Saved) { Emit @{ ok = $false; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
+$d.SetVariable('INSUNITS', 6)
+$d.SaveAs([string]$in.dwg, 64)
+if ($d.FullName -ine $in.dwg -or -not $d.Saved) { Emit @{ ok = $false; codigo = 'GUARDADO_FALLO' }; exit 0 }
+Emit @{ ok = $true; data = @{ ruta = [string]$d.FullName; guardado = [bool]$d.Saved } }`,
+  inspeccionar_laminas: `$layouts = @()
+for ($i = 0; $i -lt [int]$doc.Layouts.Count; $i++) {
+  $layout = $doc.Layouts.Item($i); if ($layout.ModelType) { continue }; $views = @()
+  for ($j = 0; $j -lt [int]$layout.Block.Count; $j++) {
+    $e = $layout.Block.Item($j)
+    if ($e.ObjectName -eq 'AcDbViewport') { $views += @{ centro_papel = DArr $e.Center; escala = [double]$e.CustomScale; ancho = [double]$e.Width; alto = [double]$e.Height; bloqueado = [bool]$e.DisplayLocked; objetivo = DArr $e.Target } }
+  }
+  $layouts += @{ nombre = [string]$layout.Name; viewports = $views }
+}
+Emit @{ ok = $true; data = @{ ruta = [string]$doc.FullName; guardado = [bool]$doc.Saved; layouts = $layouts; unidades = $doc.GetVariable('INSUNITS') } }`,
   estado: `$nd = [int]$acad.Documents.Count
 if ($null -eq $doc) { try { $doc = $acad.ActiveDocument } catch { $doc = $null } }
 if ($null -eq $doc) { Emit @{ ok = $true; data = @{ version = [string]$acad.Version; nombre = [string]$acad.Name; progid = $usado; documento = $null; ruta = $null; guardado = $null; documentos = $nd; sin_documento = $true } }; exit 0 }
@@ -117,8 +138,16 @@ if ($null -ne $o['radio']) { $o['Radius'] = $o['radio'] }
 $tt = DNum $e.TotalAngle; if ($null -ne $tt) { $o['TotalAngle'] = $tt }
 if ($e.ObjectName -eq 'AcDb3dSolid' -or $e.ObjectName -eq 'AcDbRegion') { $vv = DNum $e.Volume; if ($null -ne $vv) { $o['Volume'] = $vv }; $o['Centroid'] = DArr $e.Centroid; $aa = DNum $e.Area; if ($null -ne $aa) { $o['Area'] = $aa } }
 Emit @{ ok = $true; data = $o }`,
-  abrir_copia: `$d = $acad.Documents.Open([string]$in.ruta, $false)
+  abrir_copia: `$d = $null
+for ($i = 0; $i -lt [int]$acad.Documents.Count; $i++) {
+  $candidate = $acad.Documents.Item($i)
+  if ([IO.Path]::GetFullPath([string]$candidate.FullName) -ieq [IO.Path]::GetFullPath([string]$in.ruta)) { $d = $candidate; break }
+}
+if ($null -eq $d) { $d = $acad.Documents.Open([string]$in.ruta, $false) }
 Emit @{ ok = $true; data = @{ documento = [string]$d.Name; ruta = [string]$d.FullName } }`,
+  sesion: `$processes = @(Get-Process -Name acad -ErrorAction SilentlyContinue)
+$busy = -not [bool]$acad.GetAcadState().IsQuiescent
+Emit @{ ok = $true; data = @{ ruta = [string]$doc.FullName; documento = [string]$doc.Name; version = [string]$acad.Version; guardado = [bool]$doc.Saved; solo_lectura = [bool]$doc.ReadOnly; ocupado = $busy; procesos = @($processes | ForEach-Object { $_.Id }); ventana = [string]$acad.HWND; activa = [string]$acad.ActiveDocument.FullName } }`,
   leer_lote: `$res = @()
 foreach ($h in $in.handles) {
   try { $e = $doc.HandleToObject([string]$h); $res += (LeerEnt $e $h) }
@@ -293,8 +322,22 @@ Emit @{ ok = $true; data = @{ handles = $handles; capa_creada = $creada } }`,
 
 export function buildScript(name, { connect = PS_CONNECT } = {}) {
   if (!SCRIPTS[name]) throw new Error(`script desconocido ${name}`);
-  return `${PS_PRELUDE}${connect}${SIN_DOCUMENTO_PREVIO.has(name) ? '' : PS_DOC}try {\n${SCRIPTS[name]}\n} catch { Fail 'operacion_${name}' $_; exit 0 }\n`;
+  return `${PS_PRELUDE}${connect}${SIN_DOCUMENTO_PREVIO.has(name) ? '' : PS_DOC}try {\n${PS_STRICT}\n${SCRIPTS[name]}\n} catch { Fail 'operacion_${name}' $_; exit 0 }\n`;
 }
+
+// TW12 checks occur in the SAME COM dispatch as the mutation, never by window focus.
+const PS_STRICT = `if ($in.estricto) {
+  $ps = @(Get-Process -Name acad -ErrorAction SilentlyContinue)
+  if ($ps.Count -ne 1) { Emit @{ ok = $false; codigo = 'SESION_AMBIGUA' }; exit 0 }
+  if (-not $acad.GetAcadState().IsQuiescent) { Emit @{ ok = $false; codigo = 'AUTOCAD_OCUPADO' }; exit 0 }
+  if ($in.escritura) {
+    if ($null -eq $doc -or -not $in.ruta_esperada -or $doc.FullName -ine $in.ruta_esperada) { Emit @{ ok = $false; codigo = 'DOCUMENTO_CAMBIO' }; exit 0 }
+    if ($doc.ReadOnly) { Emit @{ ok = $false; codigo = 'DOCUMENTO_SOLO_LECTURA' }; exit 0 }
+    if (-not $doc.Saved) { Emit @{ ok = $false; codigo = 'CAMBIOS_SIN_GUARDAR' }; exit 0 }
+    $hash = (Get-FileHash -LiteralPath $in.ruta_esperada -Algorithm SHA256).Hash
+    if ($hash -ine $in.sha256_esperado) { Emit @{ ok = $false; codigo = 'DOCUMENTO_MODIFICADO_EXTERNAMENTE' }; exit 0 }
+  }
+}`;
 
 const MARCA = /TANNIA_OUT:([A-Za-z0-9+/=]+)/g;
 
@@ -449,6 +492,7 @@ export class AutoCadCom {
   #errorScript(r, name) {
     const hr = r.hresult ? String(r.hresult) : null;
     const detalle = { etapa: r.etapa || null, operacion: name, hresult: hr, tipo_excepcion: r.tipo || null, mensaje: r.msg ? sanitizar(r.msg) : null };
+    if (['SESION_AMBIGUA', 'DOCUMENTO_SOLO_LECTURA', 'DOCUMENTO_MODIFICADO_EXTERNAMENTE', 'AUTOCAD_OCUPADO'].includes(r.codigo)) return new UserError(r.codigo, 'La sesión o el documento no permite esta operación CAD.', 'Revise el estado del documento objetivo antes de continuar.', detalle);
     if (r.codigo === 'AUTOCAD_NO_ABIERTO') {
       const acceso = (r.intentos || []).some((s) => String(s).includes(ACCESO));
       return new UserError(acceso ? 'AUTOCAD_ACCESO_DENEGADO' : 'AUTOCAD_NO_ABIERTO',
@@ -471,6 +515,61 @@ export class AutoCadCom {
   }
 
   async estado() { return this.#exec('estado'); }
+
+  async guardarLaminas(project, { dxf, dwg, operacion, composition }) {
+    const source = this.sandbox.resolve(project, dxf); const target = this.sandbox.resolveWritable(project, dwg);
+    const input = this.#assertWorkCopy(project, source.abs);
+    if (!isInside(path.join(target.root, FOLDERS.trabajo), target.abs) || !/\.dwg$/i.test(target.abs)) throw new UserError('DESTINO_INVALIDO', 'El DWG debe estar en la zona de trabajo CAD.');
+    const expected = composition.sheets.map(s => ({ name: `TW12-${s.id}`, scales: s.views.map(v => v.viewport.scale) }));
+    const hash = sha256File(input);
+    return new CadOperations(target.root).run({
+      id: operacion, intent: { tipo: 'laminas_dwg_v1', source: input, sha256: hash, target: target.abs, expected },
+      preflight: async () => { if (fs.existsSync(target.abs)) throw new UserError('DESTINO_EXISTE', 'El DWG ya existe; no se sobrescribe.'); return { source_sha256: hash }; },
+      apply: () => this.#exec('laminas_a_dwg', { dxf: input, dwg: target.abs, sha256_dxf: hash, estricto: true }),
+      verify: async result => {
+        confirmarRuta(result, target.abs, 'guardar_laminas');
+        if (!fs.existsSync(target.abs) || fs.readFileSync(target.abs).subarray(0, 4).toString('ascii') !== 'AC10') return false;
+        const inspection = confirmarRuta(await this.#exec('inspeccionar_laminas', { ruta_esperada: target.abs, estricto: true }), target.abs, 'inspeccionar_laminas');
+        result.inspection = inspection; result.sha256 = sha256File(target.abs); result.autocad_real = 'REQUIERE_REGISTRO_DE_EVIDENCIA';
+        return inspection.guardado === true && inspection.unidades === 6 && expected.every(s => {
+          const actual = inspection.layouts?.find(l => l.nombre === s.name);
+          return actual && s.scales.every(scale => actual.viewports.some(v => v.bloqueado === true && Math.abs(v.escala - scale) < 1e-8));
+        });
+      },
+    });
+  }
+
+  async sesion(project, archivo) {
+    const { abs } = this.sandbox.resolve(project, archivo);
+    const ruta = this.#assertWorkCopy(project, abs);
+    const state = confirmarRuta(await this.#exec('sesion', { ruta_esperada: ruta, estricto: true }), ruta, 'sesion');
+    if (!Array.isArray(state.procesos) || state.procesos.length !== 1) throw new UserError('SESION_AMBIGUA', 'No se pudo identificar una única sesión CAD.');
+    if (state.ocupado !== false) throw new UserError('AUTOCAD_OCUPADO', 'AutoCAD no está disponible para operar.');
+    return { ...state, sha256: sha256File(ruta) };
+  }
+
+  async lineasRecuperables(project, { archivo, operacion, lineas, capa }) {
+    if (!Array.isArray(lineas) || lineas.length < 1 || lineas.length > 100 || lineas.some(l => ['x1', 'y1', 'x2', 'y2'].some(k => !Number.isFinite(l?.[k])))) throw new UserError('DATO_INVALIDO', 'Indique entre 1 y 100 líneas con coordenadas finitas.');
+    if (capa && !LAYER.test(capa)) throw new UserError('DATO_INVALIDO', 'Capa inválida.');
+    const { abs, root } = this.sandbox.resolve(project, archivo); const ruta = this.#assertWorkCopy(project, abs);
+    return new CadOperations(root).run({
+      id: operacion, intent: { ruta, lineas, capa: capa || null, tipo: 'lineas' },
+      preflight: async () => {
+        const s = await this.sesion(project, archivo);
+        if (s.solo_lectura !== false) throw new UserError('DOCUMENTO_SOLO_LECTURA', 'Documento sin permiso de escritura confirmado.');
+        if (s.guardado !== true) throw new UserError('CAMBIOS_SIN_GUARDAR', 'Guarde sus cambios antes de iniciar la operación.');
+        return s;
+      },
+      apply: s => this.#exec('agregar_lineas', { ruta_esperada: ruta, lineas, capa: capa || null, estricto: true, escritura: true, sha256_esperado: s.sha256 }),
+      verify: async r => {
+        if (r.handles?.length !== lineas.length) return false;
+        const read = await this.leerLote(r.handles, { ruta });
+        if (read.entidades.length !== lineas.length) return false;
+        const correct = read.entidades.every((e, i) => e.tipo === 'AcDbLine' && e.inicio && e.fin && Math.abs(e.inicio[0] - lineas[i].x1) < 1e-8 && Math.abs(e.inicio[1] - lineas[i].y1) < 1e-8 && Math.abs(e.fin[0] - lineas[i].x2) < 1e-8 && Math.abs(e.fin[1] - lineas[i].y2) < 1e-8);
+        return correct && (await this.sesion(project, archivo)).guardado === true;
+      },
+    });
+  }
   /** Estado exigiendo un dibujo abierto (las operaciones sobre el dibujo no tienen sentido con AutoCAD abierto y cero documentos). */
   async #estadoDoc() {
     const st = await this.estado();

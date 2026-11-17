@@ -7,17 +7,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
+import { CONSENT_WPF } from './consent.js';
 
 const TIMEOUT_DIALOGO_MS = 90_000;
+const activeDecisions = new Set();
 const seguro = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'x';
 
 /** Diálogo nativo Sí/No. Devuelve 'si' | 'no' | null (no disponible o sin respuesta). El texto va por variable de entorno/argv, nunca interpolado en un script. */
-export function dialogoSO(mensaje, { plataforma = process.platform, ejecutar = execFile, timeoutMs = TIMEOUT_DIALOGO_MS } = {}) {
+export function dialogoSO(mensaje, { plataforma = process.platform, ejecutar = execFile, timeoutMs = TIMEOUT_DIALOGO_MS, consentimiento = null } = {}) {
   if (process.env.CI || process.env.TANNIA_SIN_DIALOGO === '1') return Promise.resolve(null);
   return new Promise((resolve) => {
     const fin = (err, out) => { if (err) return resolve(err.killed || err.code === 'ETIMEDOUT' ? 'no' : null); resolve(out); };
-    const opts = { timeout: timeoutMs, windowsHide: false, env: { ...process.env, TANNIA_DLG_MSG: mensaje } };
-    if (plataforma === 'win32') ejecutar('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "Add-Type -AssemblyName PresentationFramework; $r=[System.Windows.MessageBox]::Show($env:TANNIA_DLG_MSG,'Tannia Workspace — se necesita su confirmación','YesNo','Warning'); if($r -eq 'Yes'){'si'}else{'no'}"], opts, (e, o) => fin(e, e ? null : (String(o).trim() === 'si' ? 'si' : 'no')));
+    const data = consentimiento || { action: mensaje, project: 'Proyecto indicado en la solicitud', document: 'Ver solicitud', origin: 'Solicitud del servidor', publisher: 'No informado', date: 'No informada', license: 'No aplica', verification: 'Requiere su revisión', excerpt: mensaje, consequence: 'Autoriza únicamente la acción descrita.', distinction: 'Autorizar no verifica la veracidad del contenido.', canApprove: true, blocked: [], technical: '' };
+    const opts = { timeout: timeoutMs, windowsHide: true, env: { ...process.env, TANNIA_DLG_MSG: mensaje, TANNIA_DLG_DATA: JSON.stringify(data) } };
+    if (plataforma === 'win32') ejecutar('powershell.exe', ['-NoProfile', '-STA', '-NonInteractive', '-EncodedCommand', Buffer.from(CONSENT_WPF, 'utf16le').toString('base64')], opts, (e, o) => fin(e, e ? null : (String(o).trim() === 'si' ? 'si' : 'no')));
     else if (plataforma === 'darwin') ejecutar('osascript', ['-e', 'on run argv', '-e', 'set r to button returned of (display dialog (system attribute "TANNIA_DLG_MSG") with title "Tannia Workspace" buttons {"No", "Sí"} default button "No" with icon caution)', '-e', 'if r is "Sí" then return "si"', '-e', 'return "no"', '-e', 'end run'], opts, (e, o) => fin(e, e ? null : (String(o).trim() === 'si' ? 'si' : 'no')));
     else ejecutar('zenity', ['--question', '--title=Tannia Workspace', '--text', mensaje, '--ok-label=Sí', '--cancel-label=No', '--width=480'], opts, (e) => { if (!e) return resolve('si'); resolve(e.code === 1 ? 'no' : null); });
   });
@@ -46,9 +49,17 @@ export class AprobacionHumana {
     return buf.equals(linea) || buf.equals(Buffer.concat([linea, Buffer.from('\n')])) || buf.equals(Buffer.concat([linea, Buffer.from('\r\n')]));
   }
   /** @returns {por:'human_elicitation'|'human_dialog'|'human_out_of_band'|null, rechazado?} */
-  async decidir(project, id, { descripcion = '', elicitar = null, usarDialogo = true } = {}) {
+  async decidir(project, id, { descripcion = '', elicitar = null, usarDialogo = true, consentimiento = null } = {}) {
+    const key = JSON.stringify([this.sandbox.home, project, id]);
+    if (activeDecisions.has(key)) return { por: null, en_curso: true };
+    activeDecisions.add(key);
+    try { return await this.#decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento }); }
+    finally { activeDecisions.delete(key); }
+  }
+  async #decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento }) {
+    if (consentimiento?.canApprove === false) return { por: null, bloqueado: true, razones: consentimiento.blocked };
     if (elicitar) { let r = null; try { r = await elicitar(); } catch { r = null; } if (r && r.action === 'accept' && r.content?.aprobar === true) return { por: 'human_elicitation' }; if (r && (r.action === 'decline' || r.action === 'cancel' || (r.action === 'accept' && r.content?.aprobar === false))) return { por: null, rechazado: true }; }
-    if (usarDialogo) { let r = null; try { r = await this.dialogo(`¿Autoriza esto?\n\n${descripcion}\n\nSolo usted puede aprobarlo; Claude no puede hacerlo por usted.`); } catch { r = null; } if (r === 'si') return { por: 'human_dialog' }; if (r === 'no') return { por: null, rechazado: true }; }
+    if (usarDialogo) { let r = null; try { r = await this.dialogo(`¿Autoriza esto?\n\n${descripcion}\n\nSolo usted puede aprobarlo; Claude no puede hacerlo por usted.`, { consentimiento }); } catch { r = null; } if (r === 'si') return { por: 'human_dialog' }; if (r === 'no') return { por: null, rechazado: true }; }
     const pf = this.#pend(project, id); const af = this.archivoAprobacion(project, id);
     if (fs.existsSync(pf)) {
       let pend = null; try { pend = JSON.parse(fs.readFileSync(pf, 'utf8')); } catch { pend = null; }
