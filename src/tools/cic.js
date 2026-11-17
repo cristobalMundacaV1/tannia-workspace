@@ -1,6 +1,7 @@
 // Herramientas MCP del Construction Intelligence Core (TW-11). Solo se registran con TANNIA_CIC=on (por defecto apagado: 72 herramientas).
 // El código calcula y verifica; Claude interpreta, propone y explica. Esquemas planos; respuestas compactas.
 import { z } from 'zod';
+import { consentText } from '../cic/consent.js';
 import { ok, UserError } from '../mcp/util.js';
 import { ejecutarOperacion, listarOperaciones, obtenerOperacion, OpError } from '../cic/ops/index.js';
 import { construirRegistro, NIVELES } from '../cic/capacidades.js';
@@ -150,7 +151,7 @@ export function registerCic(reg, { sandbox, server, herramientas }) {
       case 'decidir_fuente': {
         if (!a.id) throw new UserError('FALTA_ID', 'Indique el id de la fuente.');
         const cap = server?.server?.getClientCapabilities?.()?.elicitation;
-        const elicitar = cap ? (reg2) => server.server.elicitInput({ message: `¿Aprueba esta fuente como citable?\n\nTítulo: ${reg2.title}\nOrigen: ${reg2.origin.path_or_url || '(sin URL)'}\nClase: ${reg2.class} · Carácter: ${reg2.binding} · Licencia: ${reg2.license.status}\nExtracto aportado por Claude (${reg2.content.chars} caracteres, SIN verificar por el servidor).\n\nAprobar NO significa que su contenido haya sido verificado.`, requestedSchema: { type: 'object', properties: { aprobar: { type: 'boolean', title: 'Aprobar esta fuente' } }, required: ['aprobar'] } }) : null;
+        const elicitar = cap && ('form' in cap || Object.keys(cap).length === 0) ? (_reg, consent) => server.server.elicitInput({ message: consentText(consent), requestedSchema: { type: 'object', properties: { aprobar: { type: 'boolean', title: 'He revisado el extracto y autorizo su uso limitado', default: false } }, required: ['aprobar'] } }) : null;
         const r = await K.decidir(p, a.id, { elicitar });
         return ok(r.estado === 'registered' ? `Fuente ${a.id} aprobada por una persona (${r.por}).` : r.estado === 'rejected' ? `La persona rechazó la fuente ${a.id}.` : `La fuente ${a.id} sigue CANDIDATA: se necesita la aprobación de una persona.`, r);
       }

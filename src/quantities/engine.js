@@ -1,6 +1,7 @@
 // Cantidades: separa medida geométrica -> partida -> regla constructiva -> cantidad -> revisión.
 // Ningún parámetro constructivo (altura, espesor, pérdida) tiene valor por defecto: si falta, se pide.
 import { UserError } from '../mcp/util.js';
+import { clasificarFuentes, validarModelo } from './trazabilidad.js';
 
 export const UNIDADES_PARTIDA = ['m', 'm2', 'm3', 'un', 'kg', 'gl', 'ml', 'jornada', 'hh'];
 
@@ -31,7 +32,7 @@ const positive = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
  * mediciones: resultado de measureDxf (con unidad confirmada).
  * Devuelve la partida con cantidad, fórmula visible, trazabilidad y estado.
  */
-export function computeQuantity({ medicion, archivo, sha256, capas, regla, parametros = {}, descuentos = [], perdida_pct, instancia_bloque }) {
+export function computeQuantity({ medicion, archivo, sha256, capas, regla, parametros = {}, descuentos = [], perdida_pct, instancia_bloque, modelo = null }) {
   const R = TODAS[regla];
   if (!R) throw new UserError('REGLA_DESCONOCIDA', `Regla "${regla}" no existe.`, `Reglas: ${Object.keys(TODAS).join(', ')}.`);
   if (medicion.unidades.conversion !== 'aplicada') {
@@ -42,10 +43,14 @@ export function computeQuantity({ medicion, archivo, sha256, capas, regla, param
   }
   if (perdida_pct !== undefined && !(perdida_pct >= 0 && perdida_pct <= 100)) throw new UserError('DATO_INVALIDO', 'perdida_pct debe estar entre 0 y 100.');
   const f = medicion.unidades.factor_a_metros;
-  const usadas = medicion.mediciones.filter((m) => capas.includes(m.capa) && m.estado !== 'duplicada' && (R.magnitud === 'conteo' ? false : m.magnitud === R.magnitud));
+  const candidatas = medicion.mediciones.filter((m) => capas.includes(m.capa) && m.estado !== 'duplicada' && (R.magnitud === 'conteo' ? false : m.magnitud === R.magnitud));
+  const dimC = R.magnitud === 'area' ? f * f : R.magnitud === 'volumen' ? f * f * f : f;
+  const { modelo: modeloOk, problema: problemaModelo } = validarModelo(modelo, sha256);
+  const tr = R.magnitud === 'conteo' ? null : clasificarFuentes(candidatas, { modelo: modeloOk, problemaModelo: modelo ? problemaModelo : null, dim: dimC });
+  const usadas = tr ? tr.usadas : [];
   const ids = usadas.map((m) => m.id);
-  const warnings = [];
-  let needsReview = !!medicion.necesita_revision && false;
+  const warnings = tr ? [...tr.avisos] : [];
+  let needsReview = !!(tr && tr.revision);
   let base = 0;
   if (R.magnitud === 'conteo') {
     const inst = medicion.mediciones.filter((m) => capas.includes(m.capa) && m.tipo_geometria === 'INSERT' && m.estado !== 'duplicada' && (!instancia_bloque || m.bloque_nombre === instancia_bloque));
@@ -77,7 +82,8 @@ export function computeQuantity({ medicion, archivo, sha256, capas, regla, param
   return {
     unidad: R.unidad, cantidad: q, cantidad_geometrica_base: base, regla,
     formula: formula.join(' '), parametros, descuentos, perdida_pct: perdida_pct ?? null,
-    fuente: { archivo, sha256: sha256 || null, capas, mediciones: ids, unidad_confirmada: medicion.unidades.confirmadas },
+    fuente: { archivo, sha256: sha256 || null, capas, mediciones: ids, unidad_confirmada: medicion.unidades.confirmadas,
+      ...(tr ? { trazabilidad: { ...tr.resumen, representaciones_excluidas: tr.representaciones, ambiguas_no_sumadas: [...tr.ambiguas, ...tr.desconocidas], posibles_copias_sin_semantica: tr.posiblesCopias, contraste_modelo: tr.contraste } } : {}) },
     supuestos, advertencias: warnings,
     estado_revision: needsReview ? 'needs_review' : 'borrador',
     cantidad_verificada: false, // solo una persona la marca como verificada

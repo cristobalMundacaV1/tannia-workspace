@@ -51,7 +51,7 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
     if (items.length >= MAX_ITEMS) throw Object.assign(new Error('demasiadas'), { code: 'DEMASIADAS_ENTIDADES' });
     items.push({
       id: nextId++, tipo_geometria: tipo, capa: e.layer, handle: e.handle, bloque: path.length ? path.join(' > ') : null,
-      magnitud: kind, valor, formula, estado: 'ok', advertencias: [], ...extra,
+      magnitud: kind, valor, formula, estado: 'ok', advertencias: [], traza: e.traza || null, ...extra,
     });
     return items[items.length - 1];
   };
@@ -70,6 +70,7 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
       case 'LINE': {
         const a = apply(T, e.a), b = apply(T, e.b);
         const it = add(e, path, 'longitud', 'LINE', dist3(a, b), 'distancia(P1,P2)');
+        { let v = [b.x - a.x, b.y - a.y, b.z - a.z]; const k = v.find((c) => Math.abs(c) > 1e-9); if (k < 0) v = v.map((c) => -c); it.forma = `L|${v.map(f6).join(',')}`; }
         dupCheck(it, `L|${[`${f6(a.x)},${f6(a.y)},${f6(a.z)}`, `${f6(b.x)},${f6(b.y)},${f6(b.z)}`].sort().join('|')}`);
         return;
       }
@@ -79,6 +80,7 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
         const r = e.r * sim; const c = apply(T, e.c);
         const key = `C|${f6(c.x)},${f6(c.y)}|${f6(r)}`;
         const a = add(e, path, 'area', 'CIRCLE', Math.PI * r * r, `π·r² con r=${r}`);
+        a.forma = `C|${f6(r)}`;
         const p = add(e, path, 'perimetro', 'CIRCLE', 2 * Math.PI * r, `2·π·r con r=${r}`);
         if (dupCheck(a, key)) { p.estado = 'duplicada'; p.advertencias.push('Duplicada: excluida.'); } else seen.set(`${e.layer}|perimetro|${key}`, p.id);
         return;
@@ -88,6 +90,7 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
         if (sim === null) { review(add(e, path, 'longitud', 'ARC', null, 'r·Δθ'), 'Escala no uniforme: arco no soportado.'); return; }
         const sweep = arcSweep(e.a0, e.a1); const r = e.r * sim; const c = apply(T, e.c);
         const it = add(e, path, 'longitud', 'ARC', r * sweep, `r·Δθ con r=${r}, Δθ=${(sweep * 180 / Math.PI).toFixed(6)}°`);
+        it.forma = `A|${f6(r)}|${f6(mirrored ? -e.a1 : e.a0)}|${f6(mirrored ? -e.a0 : e.a1)}`;
         const lo = mirrored ? -e.a1 : e.a0; const hi = mirrored ? -e.a0 : e.a1;
         dupCheck(it, `A|${f6(c.x)},${f6(c.y)}|${f6(r)}|${f6(lo)}|${f6(hi)}`);
         return;
@@ -118,6 +121,7 @@ export function measureDxf(dxf, { unidad_confirmada } = {}) {
           if (selfIntersects(verts, true)) { review(ar, 'Autointersección: el área neta no es confiable.'); review(per, 'Autointersección.'); }
         } else {
           const it = add(e, path, 'longitud', e.type, L, 'Σ longitud de segmentos', { vertices: verts.length, abierta: true });
+          it.forma = polyKey(verts.map((v) => ({ x: v.x - verts[0].x, y: v.y - verts[0].y, bulge: v.bulge })), false);
           if (dupCheck(it, key)) return;
           const a = verts[0], b = verts[verts.length - 1];
           if (verts.length > 2 && Math.hypot(a.x - b.x, a.y - b.y) < TOL_CLOSE * Math.max(1, L)) review(it, 'Polilínea abierta con extremos coincidentes: ¿debía estar cerrada? No se calculó área.');
