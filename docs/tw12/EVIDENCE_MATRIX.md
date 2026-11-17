@@ -121,3 +121,11 @@ ZIP de entrega: 01683e7fa72b8a84b4a02c550b473eb37a21af9c756056503df06b7a451eaabf
 **Corrección:** `src/drawing/atribucion.js`. `author` e `institution` solo llegan al cajetín y a las propiedades del PDF si una **persona** lo autoriza por un canal que el modelo no controla (confirmación MCP → diálogo del sistema → archivo fuera de Proyectos, el contrato TW-11). Cualquier campo (`author`, `institution`, `revision`, `date`) con correo o URL se rechaza (`ATRIBUCION_INFERIDA`). Sin dato personal, el rótulo queda `PENDIENTE` y no se pide nada. Si el texto coincide con el nombre de cuenta/equipo, la solicitud lo advierte. La autorización de un mismo texto se registra en `<home>/.tannia-config/atribuciones/` (fuera de los proyectos) y no se vuelve a pedir; un texto distinto sí. La descripción de `tannia_planos` instruye a no deducir esos datos. Sin parámetro que el modelo pueda usar para autoaprobar.
 **Limitaciones (CAD-META-01):** el servidor no ve la cuenta de Claude ni el correo del usuario: no puede reconocer un nombre derivado de ellos, solo exigir que una persona lo confirme y rechazar formas de correo/URL. AutoCAD puede registrar por sí mismo el usuario de Windows (p. ej. «último guardado por») al crear el DWG; Tannia no lo controla ni lo verifica aquí (PENDIENTE_EXTERNO). Las revisiones históricas y los originales no se modifican: la corrección actúa sobre generaciones nuevas.
 **Pruebas:** `test/tw12_qty_traza.test.js` (12): defecto, sin dependencia de capas, ambigüedad, independientes, heredados, contraste (6 casos), semántica incompleta, E2E MCP de cubicación, atribución (correo/URL, rechazo, autorización, reutilización, texto distinto, cuenta del equipo, E2E con archivo fuera de banda y verificación de que el correo no aparece en ningún artefacto).
+
+### Candidato con QTY-01 + CAD-META-01, código 6fb08e5 — reemplaza a d8cf79a
+Suite local: 443 pruebas, 426 pasan, 0 fallan, 17 omitidas. Paquetes win32-x64, 72 y 85 herramientas por cliente MCP.
+| Paquete | SHA-256 del .mcpb |
+|---|---|
+| BASE (72) | e9e26ebf1b084050883b738f25302800aacd689ebb1d82851c5af9984e086b7e |
+| INGENIERIA-WINDOWS (85, platforms win32) | 606387f8bb61947bbd42b70d638237e63f78325db67e351b8b22de57b8dd492a |
+ZIP de entrega: 0f1c9a3bbba9febd90ac62e9df6d1b136600163b7a0f59e8d7c8675f75b91b35.
