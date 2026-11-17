@@ -7,7 +7,7 @@ const near = (a, b, t) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a
 
 export function expectedLayouts(composition) {
   return composition.sheets.map(s => ({
-    name: `TW12-${s.id}`, size: s.size,
+    name: `${composition.model?.metadata?.code || 'TW12'}-${s.id}`, size: s.size,
     viewports: s.views.map((v, i) => {
       const off = [0, composition.model.views.findIndex(x => x.id === v.id) * 1000];
       const ex = v.verticalScale ? v.scale / v.verticalScale : 1;

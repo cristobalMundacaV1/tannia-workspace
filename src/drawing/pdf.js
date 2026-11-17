@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit/js/pdfkit.standalone.js';
 import { openPdf } from '../pdf/pdf.js';
 import { UserError } from '../mcp/util.js';
-import { LAYERS, verifyDimensions } from './model.js';
+import { capasDe, prefijoDe, verifyDimensions } from './model.js';
 import { drawingFont } from './font.js';
 
 export const PT = 72 / 25.4;
@@ -63,7 +63,7 @@ export function sceneForSheet(composition, sheet) {
   const colW = b.width / 3;
   for (let i = 1; i < 3; i++) addLine([b.x + colW * i, b.y], [b.x + colW * i, b.y + b.height]);
   const cols = [
-    [`Institución: ${meta.institution}`, `Proyecto: ${meta.project}`, 'Especialidad: obras civiles', `Plano: ${sheet.title}`, `Código: TW12-${sheet.id} / ${composition.sheets.length}`, `Origen: ${meta.source}`, `Coordenadas: ${meta.coordinateSystem}`],
+    [`Institución: ${meta.institution}`, `Proyecto: ${meta.project}`, `Especialidad: ${meta.specialty || 'obras civiles'}`, `Plano: ${sheet.title}`, `Código: ${prefijoDe(composition.model)}-${sheet.id} / ${composition.sheets.length}`, `Origen: ${meta.source}`, `Coordenadas: ${meta.coordinateSystem}`],
     [`Elaborado: ${meta.author}`, `Revisado: ${meta.reviewer}`, `Aprobado: ${meta.approval}`, 'Asignatura / docente: PENDIENTE', 'Firma: no incorporada', `Etapa: ${meta.stage}`, `Formato: ${sheet.paper}; modelo: m; papel: mm`],
     [`Revisión: ${meta.revision}`, `Fecha: ${meta.date}`, 'Cambio: emisión para revisión', 'Responsable revisión: PENDIENTE', 'Estado aprobación: PENDIENTE', `Escalas: ${[...new Set(sheet.views.map(v => `1:${v.scale}`))].join(' / ')}`, 'Imprimir a 100 %, sin ajustar a página'],
   ];
@@ -135,7 +135,7 @@ export function buildSheetsPdf(composition, onlyId = null) {
     sheets.forEach((sheet, index) => {
       doc.addPage({ size: sheet.size.map(v => v * PT), margin: 0 });
       for (const e of scenes[index]) {
-        doc.save(); const layer = LAYERS[e.layer] || { weight: 0.18 }; doc.lineWidth(layer.weight * PT).strokeColor('black').fillColor('black');
+        doc.save(); const layer = capasDe(composition.model)[e.layer] || { weight: 0.18 }; doc.lineWidth(layer.weight * PT).strokeColor('black').fillColor('black');
         if (layer.dash) doc.dash(layer.dash[0] * PT, { space: layer.dash[1] * PT });
         if (e.kind === 'line') doc.moveTo(e.a[0] * PT, e.a[1] * PT).lineTo(e.b[0] * PT, e.b[1] * PT).stroke();
         if (e.kind === 'path') { e.points.forEach((p, i) => doc[i ? 'lineTo' : 'moveTo'](p[0] * PT, p[1] * PT)); doc.stroke(); }
@@ -147,7 +147,7 @@ export function buildSheetsPdf(composition, onlyId = null) {
   });
 }
 
-export async function verifyPdf(buffer, expectedSheets) {
+export async function verifyPdf(buffer, expectedSheets, { prefijo = 'TW12', marca = 'EJERCICIO ACADÉMICO' } = {}) {
   const { doc: pdf } = await openPdf(buffer); const issues = [];
   try {
     if (pdf.numPages !== expectedSheets.length) issues.push('page_count');
@@ -155,7 +155,7 @@ export async function verifyPdf(buffer, expectedSheets) {
       const page = await pdf.getPage(i); const view = page.getViewport({ scale: 1 }); const sheet = expectedSheets[i - 1];
       if (Math.abs(view.width / PT - sheet.size[0]) > 0.1 || Math.abs(view.height / PT - sheet.size[1]) > 0.1) issues.push(`paper_${i}`);
       const content = await page.getTextContent(); const text = content.items.map(x => x.str).join(' ');
-      if (text.length < 150 || !text.includes(`TW12-${sheet.id}`) || !text.includes('EJERCICIO ACADÉMICO') || /\uFFFD|\?/.test(text)) issues.push(`content_${i}`);
+      if (text.length < 150 || !text.includes(`${prefijo}-${sheet.id}`) || !text.includes(marca) || /\uFFFD|\?/.test(text)) issues.push(`content_${i}`);
       const ops = await page.getOperatorList(); if (ops.fnArray.length < 50) issues.push(`empty_${i}`);
     }
     return { ok: !issues.length, issues, pages: pdf.numPages, visual_review: 'PENDING_RENDER_AND_HUMAN_REVIEW', origin: 'drawing_model_not_saved_DWG' };

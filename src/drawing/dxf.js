@@ -1,14 +1,14 @@
 // ASCII DXF with real-unit model geometry, native dimensions and independent layouts.
 // Unicode is encoded using the existing DXF encoder. No script or user code executes.
 import { textoDxf } from '../design/salidas.js';
-import { LAYERS } from './model.js';
+import { capasDe, prefijoDe } from './model.js';
 import { sceneForSheet } from './pdf.js';
 
 export function buildDrawingDxf(composition) {
   let next = 256; const handle = () => (next++).toString(16).toUpperCase();
   const root = handle(); const dictionary = handle(); const modelBlock = handle(); const modelLayout = handle();
-  const layers = Object.fromEntries([...Object.keys(LAYERS), 'PAPEL', 'MODEL_DIMS'].map(n => [n, handle()]));
-  const layouts = composition.sheets.map(s => ({ sheet: s, block: handle(), layout: handle(), name: `TW12-${s.id}` }));
+  const layers = Object.fromEntries([...Object.keys(capasDe(composition.model)), 'PAPEL', 'MODEL_DIMS'].map(n => [n, handle()]));
+  const layouts = composition.sheets.map(s => ({ sheet: s, block: handle(), layout: handle(), name: `${prefijoDe(composition.model)}-${s.id}` }));
   const offsets = Object.fromEntries(composition.model.views.map((v, i) => [v.id, [0, i * 1000]]));
   const pairs = list => list.map(([c, v]) => `${c}\n${typeof v === 'number' ? Number(v.toFixed(9)) : v}`).join('\n') + '\n';
   const section = (n, content) => pairs([[0, 'SECTION'], [2, n]]) + content + pairs([[0, 'ENDSEC']]);
@@ -62,7 +62,7 @@ export function buildDrawingDxf(composition) {
   }
   const table = (name, records) => pairs([[0, 'TABLE'], [2, name], [5, handle()], [100, 'AcDbSymbolTable'], [70, records.length]]) + records.join('') + pairs([[0, 'ENDTAB']]);
   let tables = table('LTYPE', [pairs([[0, 'LTYPE'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbLinetypeTableRecord'], [2, 'CONTINUOUS'], [70, 0], [3, 'Continuous'], [72, 65], [73, 0], [40, 0]])]);
-  tables += table('LAYER', Object.entries(layers).map(([name, id]) => pairs([[0, 'LAYER'], [5, id], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbLayerTableRecord'], [2, name], [70, 0], [62, LAYERS[name]?.color || 7], [6, 'CONTINUOUS'], [370, Math.round((LAYERS[name]?.weight || 0.18) * 100)]])));
+  tables += table('LAYER', Object.entries(layers).map(([name, id]) => pairs([[0, 'LAYER'], [5, id], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbLayerTableRecord'], [2, name], [70, 0], [62, capasDe(composition.model)[name]?.color || 7], [6, 'CONTINUOUS'], [370, Math.round((capasDe(composition.model)[name]?.weight || 0.18) * 100)]])));
   tables += table('STYLE', [pairs([[0, 'STYLE'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbTextStyleTableRecord'], [2, 'STANDARD'], [70, 0], [40, 0], [41, 1], [50, 0], [71, 0], [42, 2.5], [3, 'Arial.ttf'], [4, '']])]);
   tables += table('APPID', ['ACAD', 'TANNIA_TRACE'].map(name => pairs([[0, 'APPID'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbRegAppTableRecord'], [2, name], [70, 0]])));
   tables += table('DIMSTYLE', [pairs([[0, 'DIMSTYLE'], [105, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbDimStyleTableRecord'], [2, 'STANDARD'], [70, 0], [40, 1], [41, 0.1], [140, 0.125], [271, 2]])]);
