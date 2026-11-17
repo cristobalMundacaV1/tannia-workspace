@@ -15,6 +15,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci
+      - name: Motor de recálculo XLSX (LibreOffice) para pruebas sin caché
+        if: runner.os == 'Linux'
+        run: command -v soffice || (sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libreoffice-calc)
       - run: npm test
       - run: npm run build
       - run: npm run pack
@@ -68,3 +71,22 @@ jobs:
           path: |
             artefacto/verificacion-zip-windows.json
             artefacto/prueba-instalador-windows.json
+  # Interfaz REAL: ventana WPF abierta por el servidor MCP y accionada con Windows UI Automation (pywinauto).
+  # Autorizaciones SIMULADAS por automatización; no son aceptación humana.
+  gui-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: npm ci
+      - run: python -m pip install pywinauto==0.6.9 pillow==11.0.0
+      - name: Prueba UI Automation de la ventana WPF
+        run: python tools/gui/prueba_ventana_wpf.py dist/gui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tannia-gui-ventana-wpf
+          path: dist/gui

@@ -1,0 +1,2992 @@
+
+> tannia-workspace@0.2.0-rc.1 test:ci
+> node --test --test-concurrency=1 --test-reporter=tap "test/*.test.js"
+
+TAP version 13
+# Subtest: migración: proyecto de versión anterior aprobado → respaldo byte a byte, aprobación sin recibo anulada, entregables heredados intactos, idempotente y reversible
+ok 1 - migración: proyecto de versión anterior aprobado → respaldo byte a byte, aprobación sin recibo anulada, entregables heredados intactos, idempotente y reversible
+  ---
+  duration_ms: 1783.193187
+  type: 'test'
+  ...
+# Subtest: MC01 muros/vanos: oráculos analíticos y rechazos topológicos
+ok 2 - MC01 muros/vanos: oráculos analíticos y rechazos topológicos
+  ---
+  duration_ms: 1.681806
+  type: 'test'
+  ...
+# Subtest: MC02 losas: 20 m² − 2 m² × 0,1 m = 1,8 m³; huecos y zonas inválidos se rechazan
+ok 3 - MC02 losas: 20 m² − 2 m² × 0,1 m = 1,8 m³; huecos y zonas inválidos se rechazan
+  ---
+  duration_ms: 1.180018
+  type: 'test'
+  ...
+# Subtest: MC04 conteo físico: 3 puertas en planta + 3 en elevación = 3 (no 6); leyenda excluida; sin identidad ⇒ needs_review
+ok 4 - MC04 conteo físico: 3 puertas en planta + 3 en elevación = 3 (no 6); leyenda excluida; sin identidad ⇒ needs_review
+  ---
+  duration_ms: 1.213691
+  type: 'test'
+  ...
+# Subtest: MethodCard por MCP: la partida guarda método, entradas con origen y fórmula sustituida; un supuesto la deja en needs_review
+ok 5 - MethodCard por MCP: la partida guarda método, entradas con origen y fórmula sustituida; un supuesto la deja en needs_review
+  ---
+  duration_ms: 899.070075
+  type: 'test'
+  ...
+# Subtest: procedimientos Desktop (prompts MCP), referencias normativas y diagnóstico de canales humanos
+ok 6 - procedimientos Desktop (prompts MCP), referencias normativas y diagnóstico de canales humanos
+  ---
+  duration_ms: 861.920731
+  type: 'test'
+  ...
+# Subtest: A-01 [BASE]: nombre/booleano del modelo NO verifica ni aprueba; sin canal humano no hay aprobación
+ok 7 - A-01 [BASE]: nombre/booleano del modelo NO verifica ni aprueba; sin canal humano no hay aprobación
+  ---
+  duration_ms: 1001.928534
+  type: 'test'
+  ...
+# Subtest: A-01 [CIC]: nombre/booleano del modelo NO verifica ni aprueba; sin canal humano no hay aprobación
+ok 8 - A-01 [CIC]: nombre/booleano del modelo NO verifica ni aprueba; sin canal humano no hay aprobación
+  ---
+  duration_ms: 865.551437
+  type: 'test'
+  ...
+# Subtest: A-01 [INGENIERIA]: nombre/booleano del modelo NO verifica ni aprueba; sin canal humano no hay aprobación
+ok 9 - A-01 [INGENIERIA]: nombre/booleano del modelo NO verifica ni aprueba; sin canal humano no hay aprobación
+  ---
+  duration_ms: 975.346945
+  type: 'test'
+  ...
+# Subtest: A-02: presupuesto a 100 → cambio a 900 sin regenerar: NO se aprueba ni exporta el archivo viejo; regenerado y aprobado, se entrega 10.710 (oráculo)
+ok 10 - A-02: presupuesto a 100 → cambio a 900 sin regenerar: NO se aprueba ni exporta el archivo viejo; regenerado y aprobado, se entrega 10.710 (oráculo)
+  ---
+  duration_ms: 1068.855897
+  type: 'test'
+  ...
+# Subtest: cambios DESPUÉS de aprobar (precio, archivo editado fuera, original) invalidan la entrega; rechazo humano no aprueba
+ok 11 - cambios DESPUÉS de aprobar (precio, archivo editado fuera, original) invalidan la entrega; rechazo humano no aprueba
+  ---
+  duration_ms: 984.610177
+  type: 'test'
+  ...
+# Subtest: A → B → A: volver al mismo contenido NO revive verificaciones ni aprobaciones antiguas
+ok 12 - A → B → A: volver al mismo contenido NO revive verificaciones ni aprobaciones antiguas
+  ---
+  duration_ms: 997.007403
+  type: 'test'
+  ...
+# Subtest: exportación transaccional: si una copia no coincide, no queda carpeta de entrega ni temporal; no se sobrescribe una entrega
+ok 13 - exportación transaccional: si una copia no coincide, no queda carpeta de entrega ni temporal; no se sobrescribe una entrega
+  ---
+  duration_ms: 7.289837
+  type: 'test'
+  ...
+# Subtest: aceptación de cierre: flujo completo M1 manual → APU → resultados de ventana → Excel recalculado → aprobación → exportación → cambios
+ok 14 - aceptación de cierre: flujo completo M1 manual → APU → resultados de ventana → Excel recalculado → aprobación → exportación → cambios
+  ---
+  duration_ms: 4009.368779
+  type: 'test'
+  ...
+# Subtest: E2E MC01 «descontar_todos» + MC02: ventana, Excel, PDF y manifiesto coinciden; recálculo real
+ok 15 - E2E MC01 «descontar_todos» + MC02: ventana, Excel, PDF y manifiesto coinciden; recálculo real
+  ---
+  duration_ms: 3957.102986
+  type: 'test'
+  ...
+# Subtest: E2E MC01 «descontar_mayores_a» + MC02: ventana, Excel, PDF y manifiesto coinciden; recálculo real
+ok 16 - E2E MC01 «descontar_mayores_a» + MC02: ventana, Excel, PDF y manifiesto coinciden; recálculo real
+  ---
+  duration_ms: 4089.880094
+  type: 'test'
+  ...
+# Subtest: E2E MC01 «no_descontar» + MC02: ventana, Excel, PDF y manifiesto coinciden; recálculo real
+ok 17 - E2E MC01 «no_descontar» + MC02: ventana, Excel, PDF y manifiesto coinciden; recálculo real
+  ---
+  duration_ms: 4130.997121
+  type: 'test'
+  ...
+# Subtest: reproducción A-03: cuadrado vs polilínea cruzada con los MISMOS vértices ⇒ con_diferencias (antes: fiel)
+ok 18 - reproducción A-03: cuadrado vs polilínea cruzada con los MISMOS vértices ⇒ con_diferencias (antes: fiel)
+  ---
+  duration_ms: 2.033664
+  type: 'test'
+  ...
+# Subtest: reproducción A-03: cambio de capa A → B con la misma geometría ⇒ con_diferencias (antes: fiel)
+ok 19 - reproducción A-03: cambio de capa A → B con la misma geometría ⇒ con_diferencias (antes: fiel)
+  ---
+  duration_ms: 0.429285
+  type: 'test'
+  ...
+# Subtest: contrato de polilínea: otro vértice inicial en cerrada es equivalente; sentido invertido, orden abierto, bulge y elevación NO
+ok 20 - contrato de polilínea: otro vértice inicial en cerrada es equivalente; sentido invertido, orden abierto, bulge y elevación NO
+  ---
+  duration_ms: 0.950081
+  type: 'test'
+  ...
+# Subtest: lectura COM: con bulges y elevación informados se verifica; sin ellos el resultado es NO CONCLUYENTE, nunca fiel
+ok 21 - lectura COM: con bulges y elevación informados se verifica; sin ellos el resultado es NO CONCLUYENTE, nunca fiel
+  ---
+  duration_ms: 1.414018
+  type: 'test'
+  ...
+# Subtest: entidades sin comparador (bloque, cota, sombreado) ⇒ no_concluyente aunque el conteo coincida
+ok 22 - entidades sin comparador (bloque, cota, sombreado) ⇒ no_concluyente aunque el conteo coincida
+  ---
+  duration_ms: 0.19932
+  type: 'test'
+  ...
+# Subtest: OCS no estándar (extrusión distinta de +Z) no se compara como si fuera plano
+ok 23 - OCS no estándar (extrusión distinta de +Z) no se compara como si fuera plano
+  ---
+  duration_ms: 1.198212
+  type: 'test'
+  ...
+# Subtest: líneas, arcos, círculos y textos: capa y geometría forman parte del contrato; rotación de texto también
+ok 24 - líneas, arcos, círculos y textos: capa y geometría forman parte del contrato; rotación de texto también
+  ---
+  duration_ms: 1.279386
+  type: 'test'
+  ...
+# Subtest: secuencia canónica: determinista e independiente del vértice inicial en cerradas
+ok 25 - secuencia canónica: determinista e independiente del vértice inicial en cerradas
+  ---
+  duration_ms: 0.221485
+  type: 'test'
+  ...
+# Subtest: R7-1/2: un documento BORRADOR no puede entrar en una entrega; el candidato aprobado se exporta con los MISMOS bytes y sin marca de borrador
+ok 26 - R7-1/2: un documento BORRADOR no puede entrar en una entrega; el candidato aprobado se exporta con los MISMOS bytes y sin marca de borrador
+  ---
+  duration_ms: 1061.358115
+  type: 'test'
+  ...
+# Subtest: R7-3/6: el PDF separa originales registrados de fuentes geométricas por partida y declara «origen no acreditado» de precios y porcentajes
+ok 27 - R7-3/6: el PDF separa originales registrados de fuentes geométricas por partida y declara «origen no acreditado» de precios y porcentajes
+  ---
+  duration_ms: 908.605456
+  type: 'test'
+  ...
+# Subtest: R7-4/5: estado de verificación único (sin campo contradictorio en disco) y auditoría de recibos: integridad, canal, identidad declarada, vigencia y consumo, sin exponer la clave
+ok 28 - R7-4/5: estado de verificación único (sin campo contradictorio en disco) y auditoría de recibos: integridad, canal, identidad declarada, vigencia y consumo, sin exponer la clave
+  ---
+  duration_ms: 1003.303676
+  type: 'test'
+  ...
+# Subtest: R7-7: proyecto separado — aprobar, cambiar el precio y exportar con la aprobación anterior: bloqueado; y A → B → A tras aprobar: bloqueado
+ok 29 - R7-7: proyecto separado — aprobar, cambiar el precio y exportar con la aprobación anterior: bloqueado; y A → B → A tras aprobar: bloqueado
+  ---
+  duration_ms: 1038.524136
+  type: 'test'
+  ...
+# Subtest: R8: no_descontar mantiene 12 m² y nunca presenta un descuento inexistente
+ok 30 - R8: no_descontar mantiene 12 m² y nunca presenta un descuento inexistente
+  ---
+  duration_ms: 18.163913
+  type: 'test'
+  ...
+# Subtest: R8: descontar_mayores_a descuenta puerta, pero no rejilla menor al umbral
+ok 31 - R8: descontar_mayores_a descuenta puerta, pero no rejilla menor al umbral
+  ---
+  duration_ms: 0.777958
+  type: 'test'
+  ...
+# Subtest: R8: descontar_todos conserva la explicación de ambos descuentos
+ok 32 - R8: descontar_todos conserva la explicación de ambos descuentos
+  ---
+  duration_ms: 1.062969
+  type: 'test'
+  ...
+# Subtest: Skills (.claude/skills) al día con src/procedimientos
+ok 33 - Skills (.claude/skills) al día con src/procedimientos
+  ---
+  duration_ms: 92.682431
+  type: 'test'
+  ...
+# Subtest: rutas maliciosas rechazadas (traversal, absolutas, UNC, ADS, reservados)
+ok 34 - rutas maliciosas rechazadas (traversal, absolutas, UNC, ADS, reservados)
+  ---
+  duration_ms: 6.526554
+  type: 'test'
+  ...
+# Subtest: symlink hacia fuera del proyecto es rechazado
+ok 35 - symlink hacia fuera del proyecto es rechazado
+  ---
+  duration_ms: 4.2502
+  type: 'test'
+  ...
+# Subtest: proyecto enlazado fuera de Proyectos y carpetas no-proyecto rechazados
+ok 36 - proyecto enlazado fuera de Proyectos y carpetas no-proyecto rechazados
+  ---
+  duration_ms: 4.058852
+  type: 'test'
+  ...
+# Subtest: escritura: originales y antecedentes denegados; trabajo permitido
+ok 37 - escritura: originales y antecedentes denegados; trabajo permitido
+  ---
+  duration_ms: 5.750769
+  type: 'test'
+  ...
+# Subtest: sha256File estable
+ok 38 - sha256File estable
+  ---
+  duration_ms: 6.231762
+  type: 'test'
+  ...
+# Subtest: TW-00A: .mcpb se empaqueta, valida y funciona desde instalación limpia
+ok 39 - TW-00A: .mcpb se empaqueta, valida y funciona desde instalación limpia
+  ---
+  duration_ms: 9327.637837
+  type: 'test'
+  ...
+# Subtest: TW-00A: manifest declara carpeta configurable y herramientas reales
+ok 40 - TW-00A: manifest declara carpeta configurable y herramientas reales
+  ---
+  duration_ms: 1.31115
+  type: 'test'
+  ...
+# Subtest: TW-00A: placeholder sin sustituir cae a la carpeta por defecto
+ok 41 - TW-00A: placeholder sin sustituir cae a la carpeta por defecto
+  ---
+  duration_ms: 1.782868
+  type: 'test'
+  ...
+# Subtest: TW-00A: vertical MCP stdio -> proyecto -> DXF -> respuesta
+ok 42 - TW-00A: vertical MCP stdio -> proyecto -> DXF -> respuesta
+  ---
+  duration_ms: 918.831675
+  type: 'test'
+  ...
+# Subtest: TW-00A: archivo fuera del proyecto y DXF corrupto dan error claro
+ok 43 - TW-00A: archivo fuera del proyecto y DXF corrupto dan error claro
+  ---
+  duration_ms: 805.411416
+  type: 'test'
+  ...
+# Subtest: simple: longitudes, perímetros y áreas coinciden con el oráculo analítico
+ok 44 - simple: longitudes, perímetros y áreas coinciden con el oráculo analítico
+  ---
+  duration_ms: 9.394234
+  type: 'test'
+  ...
+# Subtest: bloques: transformaciones, arreglos, anidamiento y espejo
+ok 45 - bloques: transformaciones, arreglos, anidamiento y espejo
+  ---
+  duration_ms: 3.576013
+  type: 'test'
+  ...
+# Subtest: duplicados excluidos de totales y reportados; abiertas y autointersección marcadas
+ok 46 - duplicados excluidos de totales y reportados; abiertas y autointersección marcadas
+  ---
+  duration_ms: 2.152219
+  type: 'test'
+  ...
+# Subtest: unidades: mm confirmado convierte; sin unidades bloquea; discrepancia advierte
+ok 47 - unidades: mm confirmado convierte; sin unidades bloquea; discrepancia advierte
+  ---
+  duration_ms: 4.749263
+  type: 'test'
+  ...
+# Subtest: archivos corruptos o no-DXF lanzan DxfError con código
+ok 48 - archivos corruptos o no-DXF lanzan DxfError con código
+  ---
+  duration_ms: 0.932543
+  type: 'test'
+  ...
+# Subtest: entidades no soportadas se listan (no se inventan cantidades)
+ok 49 - entidades no soportadas se listan (no se inventan cantidades)
+  ---
+  duration_ms: 1.98336
+  type: 'test'
+  ...
+# Subtest: INSERT con bloque inexistente o recursivo -> needs_review sin colgarse
+ok 50 - INSERT con bloque inexistente o recursivo -> needs_review sin colgarse
+  ---
+  duration_ms: 0.458144
+  type: 'test'
+  ...
+# Subtest: escala no uniforme con círculos/arcos no inventa valores
+ok 51 - escala no uniforme con círculos/arcos no inventa valores
+  ---
+  duration_ms: 0.269839
+  type: 'test'
+  ...
+# Subtest: MCP tannia_dxf_medir: bloquea conversión sin unidad y la aplica al confirmar
+ok 52 - MCP tannia_dxf_medir: bloquea conversión sin unidad y la aplica al confirmar
+  ---
+  duration_ms: 849.590965
+  type: 'test'
+  ...
+# Subtest: APU y presupuesto: valores calculados a mano
+ok 53 - APU y presupuesto: valores calculados a mano
+  ---
+  duration_ms: 2.867439
+  type: 'test'
+  ...
+# Subtest: bloqueos: precio faltante, cantidad no verificada, unidad distinta, sin APU
+ok 54 - bloqueos: precio faltante, cantidad no verificada, unidad distinta, sin APU
+  ---
+  duration_ms: 1.795211
+  type: 'test'
+  ...
+# Subtest: XLSX: fórmulas presentes, archivo reabrible y recalculado por LibreOffice == cálculo JS
+ok 55 - XLSX: fórmulas presentes, archivo reabrible y recalculado por LibreOffice == cálculo JS
+  ---
+  duration_ms: 1455.641142
+  type: 'test'
+  ...
+# Subtest: XLSX borrador con pendientes: marca PENDIENTE y no entrega total final
+ok 56 - XLSX borrador con pendientes: marca PENDIENTE y no entrega total final
+  ---
+  duration_ms: 24.061612
+  type: 'test'
+  ...
+# Subtest: cantidades: reglas exigen parámetros, sin valores por defecto
+ok 57 - cantidades: reglas exigen parámetros, sin valores por defecto
+  ---
+  duration_ms: 9.589522
+  type: 'test'
+  ...
+# Subtest: cantidades: unidad no confirmada, needs_review y discrepancia
+ok 58 - cantidades: unidad no confirmada, needs_review y discrepancia
+  ---
+  duration_ms: 18.494014
+  type: 'test'
+  ...
+# Subtest: inspección: vectorial, pistas de escala como dato, texto malicioso solo como dato
+ok 59 - inspección: vectorial, pistas de escala como dato, texto malicioso solo como dato
+  ---
+  duration_ms: 197.742661
+  type: 'test'
+  ...
+# Subtest: escaneado detectado; corrupto y no-PDF con error claro
+ok 60 - escaneado detectado; corrupto y no-PDF con error claro
+  ---
+  duration_ms: 16.747185
+  type: 'test'
+  ...
+# Subtest: calibración por cota y medición de longitud/área reales (1:100)
+ok 61 - calibración por cota y medición de longitud/área reales (1:100)
+  ---
+  duration_ms: 4.529431
+  type: 'test'
+  ...
+# Subtest: calibración errónea o sin verificar marca needs_review
+ok 62 - calibración errónea o sin verificar marca needs_review
+  ---
+  duration_ms: 0.892323
+  type: 'test'
+  ...
+# Subtest: varias páginas con calibración independiente
+ok 63 - varias páginas con calibración independiente
+  ---
+  duration_ms: 10.612801
+  type: 'test'
+  ...
+# Subtest: curvas Bézier se aplanan: círculo con área ≈ πr² (tolerancia 0.2 %)
+ok 64 - curvas Bézier se aplanan: círculo con área ≈ πr² (tolerancia 0.2 %)
+  ---
+  duration_ms: 3.816052
+  type: 'test'
+  ...
+# Subtest: memoria PDF: válida, reabrible, con acentos, trazabilidad, advertencias y BORRADOR
+ok 65 - memoria PDF: válida, reabrible, con acentos, trazabilidad, advertencias y BORRADOR
+  ---
+  duration_ms: 360.392482
+  type: 'test'
+  ...
+# Subtest: latin(): transliteración de símbolos fuera de WinAnsi
+ok 66 - latin(): transliteración de símbolos fuera de WinAnsi
+  ---
+  duration_ms: 0.327635
+  type: 'test'
+  ...
+# Subtest: TW-04 flujo completo de producto [fuente]
+ok 67 - TW-04 flujo completo de producto [fuente]
+  ---
+  duration_ms: 2381.358446
+  type: 'test'
+  ...
+# Subtest: TW-04 flujo completo de producto [bundle .mcpb]
+ok 68 - TW-04 flujo completo de producto [bundle .mcpb]
+  ---
+  duration_ms: 1826.925623
+  type: 'test'
+  ...
+# Subtest: TW-05: actualización conserva datos del usuario; desinstalar no borra proyectos; reinstalar los recupera
+ok 69 - TW-05: actualización conserva datos del usuario; desinstalar no borra proyectos; reinstalar los recupera
+  ---
+  duration_ms: 19954.735028
+  type: 'test'
+  ...
+# Subtest: TW-05: los registros del servidor no contienen rutas, nombres de proyecto ni contenido
+ok 70 - TW-05: los registros del servidor no contienen rutas, nombres de proyecto ni contenido
+  ---
+  duration_ms: 2032.358748
+  type: 'test'
+  ...
+# Subtest: TW-05: reparar recrea carpetas y restaura JSON dañado; sin red en el código del producto
+ok 71 - TW-05: reparar recrea carpetas y restaura JSON dañado; sin red en el código del producto
+  ---
+  duration_ms: 772.115486
+  type: 'test'
+  ...
+# Subtest: TW-05: carpeta sin permiso de escritura se reporta con mensaje claro
+ok 72 - TW-05: carpeta sin permiso de escritura se reporta con mensaje claro # SKIP
+  ---
+  duration_ms: 0.372252
+  type: 'test'
+  ...
+# Subtest: matriz: completa, sin SUPPORTED sin evidencia real en tests, y autocad_com sin SUPPORTED
+ok 73 - matriz: completa, sin SUPPORTED sin evidencia real en tests, y autocad_com sin SUPPORTED
+  ---
+  duration_ms: 2.67448
+  type: 'test'
+  ...
+# Subtest: docs/qa/CAD_CAPABILITY_MATRIX.md está al día con el código
+ok 74 - docs/qa/CAD_CAPABILITY_MATRIX.md está al día con el código
+  ---
+  duration_ms: 1.261415
+  type: 'test'
+  ...
+# Subtest: detección: parseo del registro, LT, no Windows y fallos que NO prueban ausencia
+ok 75 - detección: parseo del registro, LT, no Windows y fallos que NO prueban ausencia
+  ---
+  duration_ms: 1.318898
+  type: 'test'
+  ...
+# Subtest: saneamiento: sin rutas, usuarios ni correos
+ok 76 - saneamiento: sin rutas, usuarios ni correos
+  ---
+  duration_ms: 1.635123
+  type: 'test'
+  ...
+# Subtest: normalizarRuta: prefijo \\\\?\\ y NFC sin alterar el contenido Unicode
+ok 77 - normalizarRuta: prefijo \\\\?\\ y NFC sin alterar el contenido Unicode
+  ---
+  duration_ms: 0.197274
+  type: 'test'
+  ...
+# Subtest: contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/Close/Open solo donde corresponde; sin enumeración COM frágil ni conversiones a 0
+ok 78 - contrato COM: scripts estáticos; sin comandos destructivos; Delete/Save/Close/Open solo donde corresponde; sin enumeración COM frágil ni conversiones a 0
+  ---
+  duration_ms: 3.359264
+  type: 'test'
+  ...
+# Subtest: autorización: copia en 03 Trabajo con ó, ñ, espacios y apóstrofo SÍ; originales, enlaces y rutas ilegibles NO (fallan cerrado)
+ok 79 - autorización: copia en 03 Trabajo con ó, ñ, espacios y apóstrofo SÍ; originales, enlaces y rutas ilegibles NO (fallan cerrado)
+  ---
+  duration_ms: 10.612389
+  type: 'test'
+  ...
+# Subtest: validación de entradas (capa, handle, coordenadas, tamaño del lote) antes de tocar AutoCAD
+ok 80 - validación de entradas (capa, handle, coordenadas, tamaño del lote) antes de tocar AutoCAD
+  ---
+  duration_ms: 3.644782
+  type: 'test'
+  ...
+# Subtest: contrato COM: errores por etapa, causas separadas, reintento si AutoCAD está ocupado, sin datos sensibles
+ok 81 - contrato COM: errores por etapa, causas separadas, reintento si AutoCAD está ocupado, sin datos sensibles
+  ---
+  duration_ms: 2.133261
+  type: 'test'
+  ...
+# Subtest: escritura todo-o-nada: capa no creada, dibujo revertido, documento cambiado y guardado fallido se informan por separado
+ok 82 - escritura todo-o-nada: capa no creada, dibujo revertido, documento cambiado y guardado fallido se informan por separado
+  ---
+  duration_ms: 3.557158
+  type: 'test'
+  ...
+# Subtest: MCP: estado separa registro y COM (registro fallido + COM vivo => conectado); COM caído => causa separada; sin rutas ajenas
+ok 83 - MCP: estado separa registro y COM (registro fallido + COM vivo => conectado); COM caído => causa separada; sin rutas ajenas
+  ---
+  duration_ms: 42.696274
+  type: 'test'
+  ...
+# Subtest: MCP: herramientas CAD (matriz, listado, lote) y validación de esquema
+ok 84 - MCP: herramientas CAD (matriz, listado, lote) y validación de esquema
+  ---
+  duration_ms: 33.23269
+  type: 'test'
+  ...
+# Subtest: verificar contorno: lee extremos por COM y concluye cierre del rectángulo 6000×4000 (cálculo independiente)
+ok 85 - verificar contorno: lee extremos por COM y concluye cierre del rectángulo 6000×4000 (cálculo independiente)
+  ---
+  duration_ms: 2.20601
+  type: 'test'
+  ...
+# Subtest: 3DFACE: cubo 2x3x4 de 6 caras -> volumen 24 y área 52 (oráculo analítico)
+ok 86 - 3DFACE: cubo 2x3x4 de 6 caras -> volumen 24 y área 52 (oráculo analítico)
+  ---
+  duration_ms: 12.018721
+  type: 'test'
+  ...
+# Subtest: MESH: pirámide de base 1x1 y altura 1 -> V=1/3; POLYLINE 3D longitud 17
+ok 87 - MESH: pirámide de base 1x1 y altura 1 -> V=1/3; POLYLINE 3D longitud 17
+  ---
+  duration_ms: 3.586495
+  type: 'test'
+  ...
+# Subtest: malla abierta: sin volumen y needs_review; normales invertidas: valor absoluto con aviso
+ok 88 - malla abierta: sin volumen y needs_review; normales invertidas: valor absoluto con aviso
+  ---
+  duration_ms: 1.248352
+  type: 'test'
+  ...
+# Subtest: 3DSOLID/REGION/SURFACE: detectados pero SIN volumen inventado
+ok 89 - 3DSOLID/REGION/SURFACE: detectados pero SIN volumen inventado
+  ---
+  duration_ms: 1.996868
+  type: 'test'
+  ...
+# Subtest: cantidad de volumen solo desde mallas cerradas, con conversión cúbica (mm→m)
+ok 90 - cantidad de volumen solo desde mallas cerradas, con conversión cúbica (mm→m)
+  ---
+  duration_ms: 5.113295
+  type: 'test'
+  ...
+# Subtest: transformación con espejo (escala -1) conserva volumen positivo y sin falso aviso de normales
+ok 91 - transformación con espejo (escala -1) conserva volumen positivo y sin falso aviso de normales
+  ---
+  duration_ms: 1.456438
+  type: 'test'
+  ...
+# Subtest: POLYFACE (POLYLINE bit 64): prisma 1x1x2 -> V=2, A=10
+ok 92 - POLYFACE (POLYLINE bit 64): prisma 1x1x2 -> V=2, A=10
+  ---
+  duration_ms: 3.035734
+  type: 'test'
+  ...
+# Subtest: PowerShell real: ruta con ó ñ espacios y apóstrofo viaja Node→PowerShell→Node idéntica byte a byte
+ok 93 - PowerShell real: ruta con ó ñ espacios y apóstrofo viaja Node→PowerShell→Node idéntica byte a byte # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 1.23691
+  type: 'test'
+  ...
+# Subtest: PowerShell real: salida con caracteres no ASCII no depende de la página de códigos de la consola
+ok 94 - PowerShell real: salida con caracteres no ASCII no depende de la página de códigos de la consola # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.142258
+  type: 'test'
+  ...
+# Subtest: PowerShell real: 4 líneas 6000×4000 mm en capa TW_PRUEBA inexistente (se crea antes), handles, longitudes y original intacto
+ok 95 - PowerShell real: 4 líneas 6000×4000 mm en capa TW_PRUEBA inexistente (se crea antes), handles, longitudes y original intacto # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.186013
+  type: 'test'
+  ...
+# Subtest: PowerShell real: listar con medidas (4 líneas 6000/4000), filtro por capa y medir por handle
+ok 96 - PowerShell real: listar con medidas (4 líneas 6000/4000), filtro por capa y medir por handle # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.086294
+  type: 'test'
+  ...
+# Subtest: PowerShell real: fallo al dibujar la 3.ª línea revierte las 2 creadas y la capa nueva (sin escrituras parciales ni guardado)
+ok 97 - PowerShell real: fallo al dibujar la 3.ª línea revierte las 2 creadas y la capa nueva (sin escrituras parciales ni guardado) # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.085286
+  type: 'test'
+  ...
+# Subtest: PowerShell real: si no se puede crear la capa no se dibuja nada
+ok 98 - PowerShell real: si no se puede crear la capa no se dibuja nada # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.105063
+  type: 'test'
+  ...
+# Subtest: PowerShell real: guardado fallido se informa con los handles (las líneas siguen en la copia, nunca en el original)
+ok 99 - PowerShell real: guardado fallido se informa con los handles (las líneas siguen en la copia, nunca en el original) # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.071022
+  type: 'test'
+  ...
+# Subtest: PowerShell real: original activo => ORIGINAL_PROTEGIDO sin escribir; el documento activo que cambia entre estado y dibujo => DOCUMENTO_CAMBIO sin escribir
+ok 100 - PowerShell real: original activo => ORIGINAL_PROTEGIDO sin escribir; el documento activo que cambia entre estado y dibujo => DOCUMENTO_CAMBIO sin escribir # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.068494
+  type: 'test'
+  ...
+# Subtest: PowerShell real: sin AutoCAD, el script de conexión REAL informa AUTOCAD_NO_ABIERTO con los intentos (sin rutas)
+ok 101 - PowerShell real: sin AutoCAD, el script de conexión REAL informa AUTOCAD_NO_ABIERTO con los intentos (sin rutas) # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.378255
+  type: 'test'
+  ...
+# Subtest: PowerShell real: un script con error de sintaxis o excepción produce una clase de fallo segura, no un cuelgue
+ok 102 - PowerShell real: un script con error de sintaxis o excepción produce una clase de fallo segura, no un cuelgue # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.333167
+  type: 'test'
+  ...
+# Subtest: PowerShell real: StartPoint/EndPoint por COM y verificación independiente del cierre del rectángulo 6000×4000
+ok 103 - PowerShell real: StartPoint/EndPoint por COM y verificación independiente del cierre del rectángulo 6000×4000 # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.122069
+  type: 'test'
+  ...
+# Subtest: PowerShell real: persistencia por cierre y reapertura (Close($false) + Open), con detección de pérdida, cambios pendientes y reapertura fallida
+ok 104 - PowerShell real: persistencia por cierre y reapertura (Close($false) + Open), con detección de pérdida, cambios pendientes y reapertura fallida # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.066497
+  type: 'test'
+  ...
+# Subtest: PowerShell real: causa raíz — arcos SIN Length leen ArcLength (no 0), el texto conserva Ñ y las capas se recorren por índice
+ok 105 - PowerShell real: causa raíz — arcos SIN Length leen ArcLength (no 0), el texto conserva Ñ y las capas se recorren por índice # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.040933
+  type: 'test'
+  ...
+# Subtest: PowerShell real: construir_3d con convenciones de AutoCAD distintas a las supuestas (cajas por la base, cuña inclinada en Y) se autocorrige y verifica cada sólido
+ok 106 - PowerShell real: construir_3d con convenciones de AutoCAD distintas a las supuestas (cajas por la base, cuña inclinada en Y) se autocorrige y verifica cada sólido # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.087263
+  type: 'test'
+  ...
+# Subtest: PowerShell real: con ruta esperada se localiza EXACTAMENTE ese documento (dos dibujos con los mismos handles y conteo); si no está abierto falla y nunca lee el activo
+ok 107 - PowerShell real: con ruta esperada se localiza EXACTAMENTE ese documento (dos dibujos con los mismos handles y conteo); si no está abierto falla y nunca lee el activo # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.040795
+  type: 'test'
+  ...
+# Subtest: PowerShell real: DXF→DWG en ruta con ó ñ y apóstrofo — el DXF se importa en un documento aislado (contrato en tw12_*) y el GUARDADO se ejecuta con PowerShell real: INSUNITS=4, SaveAs, cabecera verificada en disco
+ok 108 - PowerShell real: DXF→DWG en ruta con ó ñ y apóstrofo — el DXF se importa en un documento aislado (contrato en tw12_*) y el GUARDADO se ejecuta con PowerShell real: INSUNITS=4, SaveAs, cabecera verificada en disco # SKIP requiere Windows PowerShell (powershell.exe)
+  ---
+  duration_ms: 0.036434
+  type: 'test'
+  ...
+# Subtest: TANNIA_HOME: origen, valores inválidos y advertencias (apóstrofo, carpeta hermana)
+ok 109 - TANNIA_HOME: origen, valores inválidos y advertencias (apóstrofo, carpeta hermana)
+  ---
+  duration_ms: 3.373431
+  type: 'test'
+  ...
+# Subtest: TANNIA_HOME: al reiniciar con otra carpeta el servidor usa la nueva; la anterior queda intacta; el diagnóstico lo muestra
+ok 110 - TANNIA_HOME: al reiniciar con otra carpeta el servidor usa la nueva; la anterior queda intacta; el diagnóstico lo muestra
+  ---
+  duration_ms: 2587.141206
+  type: 'test'
+  ...
+# Subtest: E10: CIP sin escala legible — se registra la fuente pero no se extrae ninguna restricción; pide documento legible
+ok 111 - E10: CIP sin escala legible — se registra la fuente pero no se extrae ninguna restricción; pide documento legible
+  ---
+  duration_ms: 969.871767
+  type: 'test'
+  ...
+# Subtest: E13: hemisferios — Buenos Aires/Santiago vs Madrid: el sol de mediodía está al norte (sur) o al sur (norte); estaciones invertidas
+ok 112 - E13: hemisferios — Buenos Aires/Santiago vs Madrid: el sol de mediodía está al norte (sur) o al sur (norte); estaciones invertidas
+  ---
+  duration_ms: 84.612305
+  type: 'test'
+  ...
+# Subtest: E14/E11: un proyecto con anteproyecto v1 y 3D previos conserva sus archivos con hash idéntico tras el flujo arquitectónico; otro proyecto no se toca
+ok 113 - E14/E11: un proyecto con anteproyecto v1 y 3D previos conserva sus archivos con hash idéntico tras el flujo arquitectónico; otro proyecto no se toca
+  ---
+  duration_ms: 3093.653323
+  type: 'test'
+  ...
+# Subtest: propiedad: 150 huellas aleatorias (rectángulo, L, U) — huella exacta, sin solapes, losa 3D = huella real, cuñas de patio vacías
+ok 114 - propiedad: 150 huellas aleatorias (rectángulo, L, U) — huella exacta, sin solapes, losa 3D = huella real, cuñas de patio vacías
+  ---
+  duration_ms: 278.389253
+  type: 'test'
+  ...
+# Subtest: fuzz de nombres: ningún nombre de estudio hostil escapa de "03 Trabajo/Arquitectura" ni produce rutas inválidas en Windows
+ok 115 - fuzz de nombres: ningún nombre de estudio hostil escapa de "03 Trabajo/Arquitectura" ni produce rutas inválidas en Windows
+  ---
+  duration_ms: 913.494971
+  type: 'test'
+  ...
+# Subtest: F10 — a 90 m² (3 dorm., 2 baños) hay 4 partidos generados y EXACTAMENTE 3 elegibles; dos_alas queda bloqueada por superficie y no se cuenta como viable
+ok 116 - F10 — a 90 m² (3 dorm., 2 baños) hay 4 partidos generados y EXACTAMENTE 3 elegibles; dos_alas queda bloqueada por superficie y no se cuenta como viable
+  ---
+  duration_ms: 601.911167
+  type: 'test'
+  ...
+# Subtest: F10 — la lineal es realmente distinta: clase de huella propia, topología distinta, invariante a giros/espejos, una sola crujía con espina de circulación
+ok 117 - F10 — la lineal es realmente distinta: clase de huella propia, topología distinta, invariante a giros/espejos, una sola crujía con espina de circulación
+  ---
+  duration_ms: 120.250453
+  type: 'test'
+  ...
+# Subtest: F10 — geometría de la lineal: esquema válido Zod, sin errores, 2D↔3D coherente, losa = huella real, jardín fuera de la huella y circulación sin recintos incomunicados
+ok 118 - F10 — geometría de la lineal: esquema válido Zod, sin errores, 2D↔3D coherente, losa = huella real, jardín fuera de la huella y circulación sin recintos incomunicados
+  ---
+  duration_ms: 17.365656
+  type: 'test'
+  ...
+# Subtest: F10 — sitio: la lineal entra en 16×30 y en 12×28 con acceso por el frente (entrada por el testero girada); no en 10×20; las zonas exteriores también deben caber
+ok 119 - F10 — sitio: la lineal entra en 16×30 y en 12×28 con acceso por el frente (entrada por el testero girada); no en 10×20; las zonas exteriores también deben caber
+  ---
+  duration_ms: 614.214747
+  type: 'test'
+  ...
+# Subtest: F10 — conteo honesto cuando NO hay tres: 60 m² con 3 dormitorios y 2 baños → los partidos exceden la superficie, quedan bloqueados y el veredicto lo dice; no se rebaja el requisito
+ok 120 - F10 — conteo honesto cuando NO hay tres: 60 m² con 3 dormitorios y 2 baños → los partidos exceden la superficie, quedan bloqueados y el veredicto lo dice; no se rebaja el requisito
+  ---
+  duration_ms: 1148.036189
+  type: 'test'
+  ...
+# Subtest: F10 (MCP) — con el encargo de Los Robles el veredicto afirma 3 elegibles de 4 y la hoja comparativa lo repite; ninguna bloqueada entra en la frontera de Pareto
+ok 121 - F10 (MCP) — con el encargo de Los Robles el veredicto afirma 3 elegibles de 4 y la hoja comparativa lo repite; ninguna bloqueada entra en la frontera de Pareto
+  ---
+  duration_ms: 1357.480437
+  type: 'test'
+  ...
+# Subtest: F06 — «No inventes orientación, normativa, viento ni datos del terreno» NO es un objetivo: es una instrucción de incertidumbre
+ok 122 - F06 — «No inventes orientación, normativa, viento ni datos del terreno» NO es un objetivo: es una instrucción de incertidumbre
+  ---
+  duration_ms: 27.946242
+  type: 'test'
+  ...
+# Subtest: F06 — contraste: «Quiero proteger el patio del viento» SÍ es un objetivo explícito del usuario
+ok 123 - F06 — contraste: «Quiero proteger el patio del viento» SÍ es un objetivo explícito del usuario
+  ---
+  duration_ms: 8.968577
+  type: 'test'
+  ...
+# Subtest: F06 — «No quiero priorizar el viento» es exclusión/retirada, no incorporación; con un objetivo previo lo retira
+ok 124 - F06 — «No quiero priorizar el viento» es exclusión/retirada, no incorporación; con un objetivo previo lo retira
+  ---
+  duration_ms: 7.259777
+  type: 'test'
+  ...
+# Subtest: F06 — prioridad LOCAL: «Necesito mucha luz, pero el viento es un dato desconocido» → luz alta; el viento ni objetivo ni prioridad
+ok 125 - F06 — prioridad LOCAL: «Necesito mucha luz, pero el viento es un dato desconocido» → luz alta; el viento ni objetivo ni prioridad
+  ---
+  duration_ms: 1.79592
+  type: 'test'
+  ...
+# Subtest: F06 — adversarial: menciones, preguntas, advertencias e instrucciones al asistente nunca son preferencias
+ok 126 - F06 — adversarial: menciones, preguntas, advertencias e instrucciones al asistente nunca son preferencias
+  ---
+  duration_ms: 4.548006
+  type: 'test'
+  ...
+# Subtest: F06 — la «prioridad alta» de una frase no se propaga a todo el encargo
+ok 127 - F06 — la «prioridad alta» de una frase no se propaga a todo el encargo
+  ---
+  duration_ms: 1.793016
+  type: 'test'
+  ...
+# Subtest: F06/F07 — mensaje rc2 completo (reconstruido): exactamente los objetivos pedidos, sin viento, sin duplicados, con las notas al asistente
+ok 128 - F06/F07 — mensaje rc2 completo (reconstruido): exactamente los objetivos pedidos, sin viento, sin duplicados, con las notas al asistente
+  ---
+  duration_ms: 3.548058
+  type: 'test'
+  ...
+# Subtest: F07 — repetir el encargo/una lista de confirmación al actualizar no duplica ni cambia el número de objetivos; procedencia y prioridad válidas se conservan
+ok 129 - F07 — repetir el encargo/una lista de confirmación al actualizar no duplica ni cambia el número de objetivos; procedencia y prioridad válidas se conservan
+  ---
+  duration_ms: 4.131357
+  type: 'test'
+  ...
+# Subtest: F07 — un brief heredado CON duplicados (como v002) se evalúa y se compara una sola vez por objetivo (sin alterar pesos/Pareto)
+ok 130 - F07 — un brief heredado CON duplicados (como v002) se evalúa y se compara una sola vez por objetivo (sin alterar pesos/Pareto)
+  ---
+  duration_ms: 700.303117
+  type: 'test'
+  ...
+# Subtest: rc2 completo por MCP: 6 objetivos pedidos (+ supervisión asumida), sin viento ni duplicados; notas «no inventar»; las otras 3 respuestas siguen compactas
+ok 131 - rc2 completo por MCP: 6 objetivos pedidos (+ supervisión asumida), sin viento ni duplicados; notas «no inventar»; las otras 3 respuestas siguen compactas
+  ---
+  duration_ms: 1521.140478
+  type: 'test'
+  ...
+# Subtest: proyectos históricos intactos: ninguna operación F06–F10 toca archivos de otro proyecto ni versiones previas del mismo estudio
+ok 132 - proyectos históricos intactos: ninguna operación F06–F10 toca archivos de otro proyecto ni versiones previas del mismo estudio
+  ---
+  duration_ms: 1548.505864
+  type: 'test'
+  ...
+# Subtest: identidadPaquete: lee manifest.json junto al servidor; sin manifest o inválido ⇒ no_disponible con motivo (nunca inventa)
+ok 133 - identidadPaquete: lee manifest.json junto al servidor; sin manifest o inválido ⇒ no_disponible con motivo (nunca inventa)
+  ---
+  duration_ms: 6.313771
+  type: 'test'
+  ...
+# Subtest: diagnóstico (código fuente): servidor, motor y paquete por separado; el campo `version` heredado se conserva
+ok 134 - diagnóstico (código fuente): servidor, motor y paquete por separado; el campo `version` heredado se conserva
+  ---
+  duration_ms: 850.894452
+  type: 'test'
+  ...
+# Subtest: diagnóstico (paquete real): informa id y versión del .mcpb instalado, distinta de la del servidor; el verificador lo exige
+ok 135 - diagnóstico (paquete real): informa id y versión del .mcpb instalado, distinta de la del servidor; el verificador lo exige
+  ---
+  duration_ms: 8168.883827
+  type: 'test'
+  ...
+# Subtest: compatibilidad: el MCP sigue anunciando el nombre/versión del servidor (no se reetiqueta TW-09) y hay 72 herramientas
+ok 136 - compatibilidad: el MCP sigue anunciando el nombre/versión del servidor (no se reetiqueta TW-09) y hay 72 herramientas
+  ---
+  duration_ms: 842.70038
+  type: 'test'
+  ...
+# Subtest: F09 — sin punto confirmado: visual geométrica PRELIMINAR; expone mejor/media/peor, punto usado, 9 muestras, obstrucciones y datos faltantes; el índice NO es el mejor punto
+ok 137 - F09 — sin punto confirmado: visual geométrica PRELIMINAR; expone mejor/media/peor, punto usado, 9 muestras, obstrucciones y datos faltantes; el índice NO es el mejor punto
+  ---
+  duration_ms: 91.934545
+  type: 'test'
+  ...
+# Subtest: F09 — en la evaluación el objetivo visual es «parcial» (preliminar) con el índice = media, nunca «evaluado» con el mejor punto
+ok 138 - F09 — en la evaluación el objetivo visual es «parcial» (preliminar) con el índice = media, nunca «evaluado» con el mejor punto
+  ---
+  duration_ms: 33.14317
+  type: 'test'
+  ...
+# Subtest: F09 — con un punto de observación CONFIRMADO se evalúa explícitamente (mínimo entre confirmados) y deja de ser preliminar; no se inventan muebles
+ok 139 - F09 — con un punto de observación CONFIRMADO se evalúa explícitamente (mínimo entre confirmados) y deja de ser preliminar; no se inventan muebles
+  ---
+  duration_ms: 50.292472
+  type: 'test'
+  ...
+# Subtest: F09 — obstrucción adversarial: sin ventana de cocina al patio la visual es obstruida y se nombra el elemento que obstruye con su conteo
+ok 140 - F09 — obstrucción adversarial: sin ventana de cocina al patio la visual es obstruida y se nombra el elemento que obstruye con su conteo
+  ---
+  duration_ms: 24.452694
+  type: 'test'
+  ...
+# Subtest: F09 (servicio/MCP) — «punto_observacion» crea versión nueva sin tocar la geometría, cambia el análisis de forma trazable y se puede quitar; entradas inválidas se rechazan
+ok 141 - F09 (servicio/MCP) — «punto_observacion» crea versión nueva sin tocar la geometría, cambia el análisis de forma trazable y se puede quitar; entradas inválidas se rechazan
+  ---
+  duration_ms: 1497.592134
+  type: 'test'
+  ...
+# Subtest: F02 — mensaje de prueba entregado: registra visual cocina→piscina, iluminación, frescura, circulación, patio y ahorro
+ok 142 - F02 — mensaje de prueba entregado: registra visual cocina→piscina, iluminación, frescura, circulación, patio y ahorro
+  ---
+  duration_ms: 25.59469
+  type: 'test'
+  ...
+# Subtest: F02 — variante con las palabras del campo: registra visual cocina→piscina, iluminación, frescura, circulación, patio y ahorro
+ok 143 - F02 — variante con las palabras del campo: registra visual cocina→piscina, iluminación, frescura, circulación, patio y ahorro
+  ---
+  duration_ms: 2.14771
+  type: 'test'
+  ...
+# Subtest: F02 — expresiones equivalentes razonables (visual, luz, presupuesto)
+ok 144 - F02 — expresiones equivalentes razonables (visual, luz, presupuesto)
+  ---
+  duration_ms: 12.165158
+  type: 'test'
+  ...
+# Subtest: F02 — referencias ambiguas generan PREGUNTA, no inferencia
+ok 145 - F02 — referencias ambiguas generan PREGUNTA, no inferencia
+  ---
+  duration_ms: 2.307335
+  type: 'test'
+  ...
+# Subtest: F03 — actualización incremental conserva requisitos, prioridades y antecedentes; el original no cambia
+ok 146 - F03 — actualización incremental conserva requisitos, prioridades y antecedentes; el original no cambia
+  ---
+  duration_ms: 2.645202
+  type: 'test'
+  ...
+# Subtest: F03 — A→B→A: volver al valor original restituye el encargo sin pérdidas
+ok 147 - F03 — A→B→A: volver al valor original restituye el encargo sin pérdidas
+  ---
+  duration_ms: 1.884151
+  type: 'test'
+  ...
+# Subtest: F03 — retiro explícito sí elimina; cambios relativos o sin reconocer NO cambian nada y preguntan
+ok 148 - F03 — retiro explícito sí elimina; cambios relativos o sin reconocer NO cambian nada y preguntan
+  ---
+  duration_ms: 1.939843
+  type: 'test'
+  ...
+# Subtest: F03 — reemplazar es explícito: nuevo encargo integral, el anterior solo queda en el historial
+ok 149 - F03 — reemplazar es explícito: nuevo encargo integral, el anterior solo queda en el historial
+  ---
+  duration_ms: 0.961877
+  type: 'test'
+  ...
+# Subtest: F03 (servicio) — A→B→A por MCP/servicio: 3 versiones inmutables; leer no crea versiones; sin cambios no versiona
+ok 150 - F03 (servicio) — A→B→A por MCP/servicio: 3 versiones inmutables; leer no crea versiones; sin cambios no versiona
+  ---
+  duration_ms: 35.725843
+  type: 'test'
+  ...
+# Subtest: F01/F04/F05 — resumen por defecto: cabe sin truncar y trae alertas exactas, m² y % de circulación, índice de envolvente y TODOS los objetivos
+ok 151 - F01/F04/F05 — resumen por defecto: cabe sin truncar y trae alertas exactas, m² y % de circulación, índice de envolvente y TODOS los objetivos
+  ---
+  duration_ms: 1458.457976
+  type: 'test'
+  ...
+# Subtest: F01 — cada sección es consultable, cabe sin truncar y trae evidencia, unidades y límites; "completo" conserva el contrato anterior
+ok 152 - F01 — cada sección es consultable, cabe sin truncar y trae evidencia, unidades y límites; "completo" conserva el contrato anterior
+  ---
+  duration_ms: 1705.120512
+  type: 'test'
+  ...
+# Subtest: Visual→ray casting: la relación cocina→zona de piscina del brief produce una visual calculada en el L y "no evaluada" (con razón) en la compacta
+ok 153 - Visual→ray casting: la relación cocina→zona de piscina del brief produce una visual calculada en el L y "no evaluada" (con razón) en la compacta
+  ---
+  duration_ms: 1454.7737
+  type: 'test'
+  ...
+# Subtest: Lectura sin versiones: ver / evaluar (todas las secciones) / comparar / decisiones no crean ni modifican archivos
+ok 154 - Lectura sin versiones: ver / evaluar (todas las secciones) / comparar / decisiones no crean ni modifican archivos
+  ---
+  duration_ms: 1675.574704
+  type: 'test'
+  ...
+# Subtest: Brief→evaluación: ninguna alternativa afirma cumplimiento normativo ni seguridad en alertas, acciones o resumen
+ok 155 - Brief→evaluación: ninguna alternativa afirma cumplimiento normativo ni seguridad en alertas, acciones o resumen
+  ---
+  duration_ms: 1454.226572
+  type: 'test'
+  ...
+# Subtest: Compatibilidad: con el brief de campo (variante) la generación sigue dando 3 alternativas y la visual se conecta con el ray casting
+ok 156 - Compatibilidad: con el brief de campo (variante) la generación sigue dando 3 alternativas y la visual se conecta con el ray casting
+  ---
+  duration_ms: 534.534672
+  type: 'test'
+  ...
+# Subtest: F01 — ninguna herramienta de lectura/generación de TW-10 trunca su texto con el encargo de Los Robles (con y sin terreno)
+ok 157 - F01 — ninguna herramienta de lectura/generación de TW-10 trunca su texto con el encargo de Los Robles (con y sin terreno)
+  ---
+  duration_ms: 4589.335634
+  type: 'test'
+  ...
+# Subtest: brief/1 válido y estricto (campos desconocidos rechazados)
+ok 158 - brief/1 válido y estricto (campos desconocidos rechazados)
+  ---
+  duration_ms: 6.691343
+  type: 'test'
+  ...
+# Subtest: site/1 y weather/1 vacíos son válidos y no contienen datos inventados
+ok 159 - site/1 y weather/1 vacíos son válidos y no contienen datos inventados
+  ---
+  duration_ms: 2.558107
+  type: 'test'
+  ...
+# Subtest: política epistémica: unknown no lleva valor; confirmed/assumed lo exigen
+ok 160 - política epistémica: unknown no lleva valor; confirmed/assumed lo exigen
+  ---
+  duration_ms: 0.968711
+  type: 'test'
+  ...
+# Subtest: decision/1: nunca un número ilustrativo como calculado
+ok 161 - decision/1: nunca un número ilustrativo como calculado
+  ---
+  duration_ms: 2.360924
+  type: 'test'
+  ...
+# Subtest: weather/1: un clima de archivo nunca es "validated"; EPW cargado exige hash
+ok 162 - weather/1: un clima de archivo nunca es "validated"; EPW cargado exige hash
+  ---
+  duration_ms: 0.549047
+  type: 'test'
+  ...
+# Subtest: analysis/1: métrica no calculada no puede traer valor; estado global sin "excelente"
+ok 163 - analysis/1: métrica no calculada no puede traer valor; estado global sin "excelente"
+  ---
+  duration_ms: 2.916874
+  type: 'test'
+  ...
+# Subtest: estado: mismas claves que la plantilla (raíz y gates)
+ok 164 - estado: mismas claves que la plantilla (raíz y gates)
+  ---
+  duration_ms: 1.446454
+  type: 'test'
+  ...
+# Subtest: estado: rama correcta, base verificada, y el agente jamás marca ACEPTADO_POR_PO ni da por real lo no ejecutado
+ok 165 - estado: rama correcta, base verificada, y el agente jamás marca ACEPTADO_POR_PO ni da por real lo no ejecutado
+  ---
+  duration_ms: 0.323298
+  type: 'test'
+  ...
+# Subtest: TW-09 intacto: 61 herramientas con esquemas sin arreglos tipo tupla
+ok 166 - TW-09 intacto: 61 herramientas con esquemas sin arreglos tipo tupla
+  ---
+  duration_ms: 804.187583
+  type: 'test'
+  ...
+# Subtest: TW-09 intacto: generador rectangular v1 da la misma geometría (huella de referencia)
+ok 167 - TW-09 intacto: generador rectangular v1 da la misma geometría (huella de referencia)
+  ---
+  duration_ms: 7.578656
+  type: 'test'
+  ...
+# Subtest: encargo del contrato: brief con objetivos, requisitos y desconocidos; no inventa terreno ni presupuesto
+ok 168 - encargo del contrato: brief con objetivos, requisitos y desconocidos; no inventa terreno ni presupuesto
+  ---
+  duration_ms: 23.408394
+  type: 'test'
+  ...
+# Subtest: sin superficie: pregunta esencial y no se puede generar; con superficie se pueden generar conceptos sin terreno
+ok 169 - sin superficie: pregunta esencial y no se puede generar; con superficie se pueden generar conceptos sin terreno
+  ---
+  duration_ms: 3.097812
+  type: 'test'
+  ...
+# Subtest: frases libres variadas → objetivos tipados (viento, privacidad, circulaciones, ahorro, verano, accesibilidad)
+ok 170 - frases libres variadas → objetivos tipados (viento, privacidad, circulaciones, ahorro, verano, accesibilidad)
+  ---
+  duration_ms: 1.451581
+  type: 'test'
+  ...
+# Subtest: texto hostil o con control se trata como dato: no cambia el esquema ni se ejecuta nada
+ok 171 - texto hostil o con control se trata como dato: no cambia el esquema ni se ejecuta nada
+  ---
+  duration_ms: 1.78116
+  type: 'test'
+  ...
+# Subtest: diff: cambiar el programa explica qué restricciones cambiaron; programaDeBrief deja null lo no dicho
+ok 172 - diff: cambiar el programa explica qué restricciones cambiaron; programaDeBrief deja null lo no dicho
+  ---
+  duration_ms: 3.274435
+  type: 'test'
+  ...
+# Subtest: grafo de relaciones: visual cocina→piscina trae alerta de barrera; heurísticas marcadas como editables
+ok 173 - grafo de relaciones: visual cocina→piscina trae alerta de barrera; heurísticas marcadas como editables
+  ---
+  duration_ms: 0.585093
+  type: 'test'
+  ...
+# Subtest: sitio vacío: insuficiente para estudio solar y con lista concreta de antecedentes faltantes
+ok 174 - sitio vacío: insuficiente para estudio solar y con lista concreta de antecedentes faltantes
+  ---
+  duration_ms: 1.102897
+  type: 'test'
+  ...
+# Subtest: predio sin norte: parcel_known_only; con coordenadas+zona+norte confirmado: solar_study_possible; norte supuesto NO habilita
+ok 175 - predio sin norte: parcel_known_only; con coordenadas+zona+norte confirmado: solar_study_possible; norte supuesto NO habilita
+  ---
+  duration_ms: 21.478855
+  type: 'test'
+  ...
+# Subtest: entradas inválidas: zona IANA falsa, polígono autointersectado, predio no ortogonal, 2 vértices
+ok 176 - entradas inválidas: zona IANA falsa, polígono autointersectado, predio no ortogonal, 2 vértices
+  ---
+  duration_ms: 0.910205
+  type: 'test'
+  ...
+# Subtest: restricción urbana: exige fuente registrada y fecha; ocupación solo se verifica con fuente; nunca «cumple»
+ok 177 - restricción urbana: exige fuente registrada y fecha; ocupación solo se verifica con fuente; nunca «cumple»
+  ---
+  duration_ms: 85.395292
+  type: 'test'
+  ...
+# Subtest: el nombre de una comuna jamás produce restricciones: urban_constraints sigue vacío
+ok 178 - el nombre de una comuna jamás produce restricciones: urban_constraints sigue vacío
+  ---
+  duration_ms: 0.96031
+  type: 'test'
+  ...
+# Subtest: obstáculos de altura desconocida quedan unknown y piden dato
+ok 179 - obstáculos de altura desconocida quedan unknown y piden dato
+  ---
+  duration_ms: 1.073118
+  type: 'test'
+  ...
+# Subtest: EPW: parseo con fuente, hash, estación, cobertura y faltantes declarados; representatividad regional (nunca validada)
+ok 180 - EPW: parseo con fuente, hash, estación, cobertura y faltantes declarados; representatividad regional (nunca validada)
+  ---
+  duration_ms: 47.94944
+  type: 'test'
+  ...
+# Subtest: EPW inválido/incompleto/grande: error claro, sin completar datos
+ok 181 - EPW inválido/incompleto/grande: error claro, sin completar datos
+  ---
+  duration_ms: 32.936279
+  type: 'test'
+  ...
+# Subtest: estaciones: hemisferio sur invierno = JJA; hemisferio norte invierno = DEF (signos)
+ok 182 - estaciones: hemisferio sur invierno = JJA; hemisferio norte invierno = DEF (signos)
+  ---
+  duration_ms: 0.185517
+  type: 'test'
+  ...
+# Subtest: perfiles: invierno más frío que verano (sur); rosa con dirección dominante coherente; salvedades obligatorias
+ok 183 - perfiles: invierno más frío que verano (sur); rosa con dirección dominante coherente; salvedades obligatorias
+  ---
+  duration_ms: 36.593301
+  type: 'test'
+  ...
+# Subtest: exposición de fachadas depende del norte verdadero: girar el norte cambia la fachada más expuesta; sin norte = null
+ok 184 - exposición de fachadas depende del norte verdadero: girar el norte cambia la fachada más expuesta; sin norte = null
+  ---
+  duration_ms: 40.485583
+  type: 'test'
+  ...
+# Subtest: EPW con instrucciones hostiles en comentarios: se guardan como dato truncado, no se ejecutan ni alteran el resultado
+ok 185 - EPW con instrucciones hostiles en comentarios: se guardan como dato truncado, no se ejecutan ni alteran el resultado
+  ---
+  duration_ms: 37.129406
+  type: 'test'
+  ...
+# Subtest: Open-Meteo en caché local: sin red, con atribución/licencia por verificar y representatividad regional
+ok 186 - Open-Meteo en caché local: sin red, con atribución/licencia por verificar y representatividad regional
+  ---
+  duration_ms: 23.507739
+  type: 'test'
+  ...
+# Subtest: solar: coincide con NREL SPA (pvlib) en 168 casos, 7 lugares, ambos hemisferios
+ok 187 - solar: coincide con NREL SPA (pvlib) en 168 casos, 7 lugares, ambos hemisferios
+  ---
+  duration_ms: 2.710243
+  type: 'test'
+  ...
+# Subtest: solar: la hora local civil usa IANA (DST) y coincide con los instantes del oráculo
+ok 188 - solar: la hora local civil usa IANA (DST) y coincide con los instantes del oráculo
+  ---
+  duration_ms: 64.819956
+  type: 'test'
+  ...
+# Subtest: solar: Chile — diciembre UTC−3 y junio UTC−4; hora inexistente se rechaza
+ok 189 - solar: Chile — diciembre UTC−3 y junio UTC−4; hora inexistente se rechaza
+  ---
+  duration_ms: 2.642734
+  type: 'test'
+  ...
+# Subtest: solar: hemisferio sur — al mediodía solar el sol está al NORTE; hemisferio norte al SUR; polaridad de estaciones
+ok 190 - solar: hemisferio sur — al mediodía solar el sol está al NORTE; hemisferio norte al SUR; polaridad de estaciones
+  ---
+  duration_ms: 1.477148
+  type: 'test'
+  ...
+# Subtest: solar: vector local respeta el norte dibujado (rotar el norte rota el sol, no la casa)
+ok 191 - solar: vector local respeta el norte dibujado (rotar el norte rota el sol, no la casa)
+  ---
+  duration_ms: 0.292995
+  type: 'test'
+  ...
+# Subtest: solar: muestras de un día solo con sol sobre el horizonte; entradas fuera de rango rechazadas
+ok 192 - solar: muestras de un día solo con sol sobre el horizonte; entradas fuera de rango rechazadas
+  ---
+  duration_ms: 7.398072
+  type: 'test'
+  ...
+# Subtest: L real: huella = unión (no caja envolvente); el esquema valida con Zod
+ok 193 - L real: huella = unión (no caja envolvente); el esquema valida con Zod
+  ---
+  duration_ms: 20.727992
+  type: 'test'
+  ...
+# Subtest: L: 3D con losa y cubierta sobre la huella real (volumen = área real × espesor), coherente con el 2D
+ok 194 - L: 3D con losa y cubierta sobre la huella real (volumen = área real × espesor), coherente con el 2D
+  ---
+  duration_ms: 8.905477
+  type: 'test'
+  ...
+# Subtest: cubierta inclinada sobre L: rechazo explícito, no silencioso
+ok 195 - cubierta inclinada sobre L: rechazo explícito, no silencioso
+  ---
+  duration_ms: 3.327518
+  type: 'test'
+  ...
+# Subtest: patio central: vacío declarado → losas por rectángulos sin cubrir el patio; vacío NO declarado = error
+ok 196 - patio central: vacío declarado → losas por rectángulos sin cubrir el patio; vacío NO declarado = error
+  ---
+  duration_ms: 6.083515
+  type: 'test'
+  ...
+# Subtest: validaciones duras: solapes, recinto sin acceso, vano fuera de muro, patio inexistente, huella inconsistente
+ok 197 - validaciones duras: solapes, recinto sin acceso, vano fuera de muro, patio inexistente, huella inconsistente
+  ---
+  duration_ms: 1.874208
+  type: 'test'
+  ...
+# Subtest: DXF/SVG de una L: contorno real, vano recortado, verificación cruzada y sin falso rectángulo
+ok 198 - DXF/SVG de una L: contorno real, vano recortado, verificación cruzada y sin falso rectángulo
+  ---
+  duration_ms: 10.431964
+  type: 'test'
+  ...
+# Subtest: compatibilidad v1: copia a scheme/2 reproduce áreas y coherencia; el modelo v1 no se modifica
+ok 199 - compatibilidad v1: copia a scheme/2 reproduce áreas y coherencia; el modelo v1 no se modifica
+  ---
+  duration_ms: 16.087473
+  type: 'test'
+  ...
+# Subtest: tres partidos para 90 m²: factibles, dentro de ±3 % de superficie, esquema válido Zod y sin errores geométricos
+ok 200 - tres partidos para 90 m²: factibles, dentro de ±3 % de superficie, esquema válido Zod y sin errores geométricos
+  ---
+  duration_ms: 137.147637
+  type: 'test'
+  ...
+# Subtest: diversidad real: huellas rectangular / L / C / lineal y topologías distintas; ninguna repetida
+ok 201 - diversidad real: huellas rectangular / L / C / lineal y topologías distintas; ninguna repetida
+  ---
+  duration_ms: 579.325555
+  type: 'test'
+  ...
+# Subtest: espejo y rotación NO son alternativas distintas (mismo concepto, 8 simetrías ⇒ misma firma)
+ok 202 - espejo y rotación NO son alternativas distintas (mismo concepto, 8 simetrías ⇒ misma firma)
+  ---
+  duration_ms: 443.649082
+  type: 'test'
+  ...
+# Subtest: determinismo: misma entrada y semilla ⇒ mismas opciones; la semilla solo reordena la presentación
+ok 203 - determinismo: misma entrada y semilla ⇒ mismas opciones; la semilla solo reordena la presentación
+  ---
+  duration_ms: 1178.637742
+  type: 'test'
+  ...
+# Subtest: cada partido se compila a 3D con losa/cubierta sobre la huella real y coherencia 2D↔3D
+ok 204 - cada partido se compila a 3D con losa/cubierta sobre la huella real y coherencia 2D↔3D
+  ---
+  duration_ms: 101.2225
+  type: 'test'
+  ...
+# Subtest: superficie pequeña: se entrega el mínimo con aviso explícito, no una cifra inventada
+ok 205 - superficie pequeña: se entrega el mínimo con aviso explícito, no una cifra inventada
+  ---
+  duration_ms: 4.217838
+  type: 'test'
+  ...
+# Subtest: sin superficie: error pidiendo el dato; fuera de rango: error claro
+ok 206 - sin superficie: error pidiendo el dato; fuera de rango: error claro
+  ---
+  duration_ms: 0.818189
+  type: 'test'
+  ...
+# Subtest: predio 12×28 con acceso por un extremo: cada alternativa que cabe respeta el predio y el acceso; las que no, se explican
+ok 207 - predio 12×28 con acceso por un extremo: cada alternativa que cabe respeta el predio y el acceso; las que no, se explican
+  ---
+  duration_ms: 1201.087851
+  type: 'test'
+  ...
+# Subtest: norte conocido: el patio del L se orienta hacia el norte verdadero en el hemisferio sur
+ok 208 - norte conocido: el patio del L se orienta hacia el norte verdadero en el hemisferio sur
+  ---
+  duration_ms: 303.956207
+  type: 'test'
+  ...
+# Subtest: rayoGolpea: oráculo geométrico — caja interpuesta bloquea, caja detrás no, rayo paralelo fuera no
+ok 209 - rayoGolpea: oráculo geométrico — caja interpuesta bloquea, caja detrás no, rayo paralelo fuera no
+  ---
+  duration_ms: 1.170329
+  type: 'test'
+  ...
+# Subtest: sin norte/coordenadas confirmados: no concluyente y sin horas inventadas
+ok 210 - sin norte/coordenadas confirmados: no concluyente y sin horas inventadas
+  ---
+  duration_ms: 75.120549
+  type: 'test'
+  ...
+# Subtest: Chile: junio vs diciembre difieren y la fachada ecuatorial (N) recibe sol en invierno; el sol de verano pasa por encima
+ok 211 - Chile: junio vs diciembre difieren y la fachada ecuatorial (N) recibe sol en invierno; el sol de verano pasa por encima
+  ---
+  duration_ms: 193.067814
+  type: 'test'
+  ...
+# Subtest: invarianza: rotar la casa 90° y el norte 90° da lo mismo; cambiar SOLO el norte cambia las horas
+ok 212 - invarianza: rotar la casa 90° y el norte 90° da lo mismo; cambiar SOLO el norte cambia las horas
+  ---
+  duration_ms: 145.732181
+  type: 'test'
+  ...
+# Subtest: autosombra en L: el ala larga proyecta sombra sobre el patio y sobre ventanas del ala corta en invierno; resultado con el mismo reloj en ambos hemisferios de signo
+ok 213 - autosombra en L: el ala larga proyecta sombra sobre el patio y sobre ventanas del ala corta en invierno; resultado con el mismo reloj en ambos hemisferios de signo
+  ---
+  duration_ms: 108.794428
+  type: 'test'
+  ...
+# Subtest: aleros: nunca aumentan el sol directo (monotonía); en la fachada N el compromiso verano/invierno se cuantifica; fachada sin sol no aporta
+ok 214 - aleros: nunca aumentan el sol directo (monotonía); en la fachada N el compromiso verano/invierno se cuantifica; fachada sin sol no aporta
+  ---
+  duration_ms: 696.919094
+  type: 'test'
+  ...
+# Subtest: obstáculos de contexto: altura desconocida ⇒ no concluyente; altura conocida proyecta sombra (menos horas)
+ok 215 - obstáculos de contexto: altura desconocida ⇒ no concluyente; altura conocida proyecta sombra (menos horas)
+  ---
+  duration_ms: 117.922369
+  type: 'test'
+  ...
+# Subtest: escena: el sólido de cubierta no cubre el patio (no se tapa con bbox)
+ok 216 - escena: el sólido de cubierta no cubre el patio (no se tapa con bbox)
+  ---
+  duration_ms: 17.881113
+  type: 'test'
+  ...
+# Subtest: modo hipótesis: se etiqueta explícitamente como no real
+ok 217 - modo hipótesis: se etiqueta explícitamente como no real
+  ---
+  duration_ms: 71.463268
+  type: 'test'
+  ...
+# Subtest: recorridos: todos los recintos alcanzables desde el acceso; distancias finitas; circulación % calculada; cruce social detectado donde corresponde
+ok 218 - recorridos: todos los recintos alcanzables desde el acceso; distancias finitas; circulación % calculada; cruce social detectado donde corresponde
+  ---
+  duration_ms: 267.417305
+  type: 'test'
+  ...
+# Subtest: visual cocina→piscina: en el L con patio la cocina ve la zona; con un muro interpuesto queda obstruida; siempre trae el límite de seguridad
+ok 219 - visual cocina→piscina: en el L con patio la cocina ve la zona; con un muro interpuesto queda obstruida; siempre trae el límite de seguridad
+  ---
+  duration_ms: 44.041308
+  type: 'test'
+  ...
+# Subtest: visual: sin zona de piscina (compacta) o recinto inexistente → no evaluado con razón, nunca un número
+ok 220 - visual: sin zona de piscina (compacta) o recinto inexistente → no evaluado con razón, nunca un número
+  ---
+  duration_ms: 43.267053
+  type: 'test'
+  ...
+# Subtest: seguridad: piscina ⇒ alerta crítica de barrera y seguridad_demostrada=false aunque la visual sea buena; puerta directa sin control ⇒ crítica
+ok 221 - seguridad: piscina ⇒ alerta crítica de barrera y seguridad_demostrada=false aunque la visual sea buena; puerta directa sin control ⇒ crítica
+  ---
+  duration_ms: 65.557355
+  type: 'test'
+  ...
+# Subtest: privacidad: ventanas enfrentadas entre zona privada y otra se detectan; deslinde cercano con predio; sin predio se declara no evaluado
+ok 222 - privacidad: ventanas enfrentadas entre zona privada y otra se detectan; deslinde cercano con predio; sin predio se declara no evaluado
+  ---
+  duration_ms: 35.572561
+  type: 'test'
+  ...
+# Subtest: constructibilidad: L y C tienen índice de envolvente mayor que la compacta y alertas de planta irregular; sin precios en pesos
+ok 223 - constructibilidad: L y C tienen índice de envolvente mayor que la compacta y alertas de planta irregular; sin precios en pesos
+  ---
+  duration_ms: 90.061598
+  type: 'test'
+  ...
+# Subtest: sin sitio ni clima: análisis válido, sol/viento bloqueados (no 0, no inventados), estado global nunca "excelente"
+ok 224 - sin sitio ni clima: análisis válido, sol/viento bloqueados (no 0, no inventados), estado global nunca "excelente"
+  ---
+  duration_ms: 623.285506
+  type: 'test'
+  ...
+# Subtest: requisitos duros: dos_alas (≥104 m²) queda BLOQUEADA por superficie; no se compara como si cumpliera
+ok 225 - requisitos duros: dos_alas (≥104 m²) queda BLOQUEADA por superficie; no se compara como si cumpliera
+  ---
+  duration_ms: 459.711193
+  type: 'test'
+  ...
+# Subtest: piscina visible: alerta crítica ⇒ estado global con_alertas_criticas aunque la visual sea 1.0
+ok 226 - piscina visible: alerta crítica ⇒ estado global con_alertas_criticas aunque la visual sea 1.0
+  ---
+  duration_ms: 761.517695
+  type: 'test'
+  ...
+# Subtest: compacta no tiene patio ni piscina: visual no evaluada (no 0) y outdoor/courtyard evaluados en 0 con evidencia
+ok 227 - compacta no tiene patio ni piscina: visual no evaluada (no 0) y outdoor/courtyard evaluados en 0 con evidencia
+  ---
+  duration_ms: 441.516043
+  type: 'test'
+  ...
+# Subtest: con sitio, norte y clima: sol y viento se calculan; cambiar SOLO el norte cambia los resultados; rotación consistente
+ok 228 - con sitio, norte y clima: sol y viento se calculan; cambiar SOLO el norte cambia los resultados; rotación consistente
+  ---
+  duration_ms: 1575.32001
+  type: 'test'
+  ...
+# Subtest: Pareto: frontera no vacía entre elegibles; ranking ponderado es solo sensibilidad; contrafactuales sin inventar
+ok 229 - Pareto: frontera no vacía entre elegibles; ranking ponderado es solo sensibilidad; contrafactuales sin inventar
+  ---
+  duration_ms: 816.477496
+  type: 'test'
+  ...
+# Subtest: cambio de prioridad puede reordenar o se explica por qué no (estabilidad medida)
+ok 230 - cambio de prioridad puede reordenar o se explica por qué no (estabilidad medida)
+  ---
+  duration_ms: 1.93519
+  type: 'test'
+  ...
+# Subtest: DecisionLedger: decisión/1 válida por objetivo; evidencia solo "computed" con método+hash; los no evaluados quedan pendientes de evidencia
+ok 231 - DecisionLedger: decisión/1 válida por objetivo; evidencia solo "computed" con método+hash; los no evaluados quedan pendientes de evidencia
+  ---
+  duration_ms: 445.129799
+  type: 'test'
+  ...
+# Subtest: modo crítico: puntos débiles, alertas pendientes, qué evidencia cambiaría la conclusión; sin inventar datos
+ok 232 - modo crítico: puntos débiles, alertas pendientes, qué evidencia cambiaría la conclusión; sin inventar datos
+  ---
+  duration_ms: 327.898834
+  type: 'test'
+  ...
+# Subtest: viento/ventilación: sin norte → no concluyente; ventilación solo potencial geométrico
+ok 233 - viento/ventilación: sin norte → no concluyente; ventilación solo potencial geométrico
+  ---
+  duration_ms: 487.15003
+  type: 'test'
+  ...
+# Subtest: «en L» orienta pero no bloquea: la compacta sigue elegible como contraste y el requisito se informa
+ok 234 - «en L» orienta pero no bloquea: la compacta sigue elegible como contraste y el requisito se informa
+  ---
+  duration_ms: 452.804099
+  type: 'test'
+  ...
+# Subtest: 72 herramientas (61 TW-09 + 11 TW-10) con esquemas válidos para el cliente; las 61 previas siguen presentes
+ok 235 - 72 herramientas (61 TW-09 + 11 TW-10) con esquemas válidos para el cliente; las 61 previas siguen presentes
+  ---
+  duration_ms: 892.747409
+  type: 'test'
+  ...
+# Subtest: flujo: encargo → ideas sin terreno → terreno con norte → alternativas → aleros → elegir → decisiones → publicar; versiones inmutables
+ok 236 - flujo: encargo → ideas sin terreno → terreno con norte → alternativas → aleros → elegir → decisiones → publicar; versiones inmutables
+  ---
+  duration_ms: 5830.206311
+  type: 'test'
+  ...
+# Subtest: entradas incompletas y peligrosas: sin superficie se pide el dato; alternativa bloqueada no se publica; nombres hostiles; originales intactos
+ok 237 - entradas incompletas y peligrosas: sin superficie se pide el dato; alternativa bloqueada no se publica; nombres hostiles; originales intactos
+  ---
+  duration_ms: 959.147116
+  type: 'test'
+  ...
+# Subtest: enrutador: un encargo con patio/piscina/sol se dirige a la capacidad arquitectónica razonada y declara sus límites
+ok 238 - enrutador: un encargo con patio/piscina/sol se dirige a la capacidad arquitectónica razonada y declara sus límites
+  ---
+  duration_ms: 763.997426
+  type: 'test'
+  ...
+# Subtest: 1–3: breve por defecto; cambio a normal y a detallado; una solicitud explícita del mensaje actual prevalece sobre la preferencia persistente
+ok 239 - 1–3: breve por defecto; cambio a normal y a detallado; una solicitud explícita del mensaje actual prevalece sobre la preferencia persistente
+  ---
+  duration_ms: 813.427737
+  type: 'test'
+  ...
+# Subtest: 5–6: la preferencia sobrevive al cierre y reapertura; la preferencia de proyecto prevalece sobre la global; otro proyecto usa la global
+ok 240 - 5–6: la preferencia sobrevive al cierre y reapertura; la preferencia de proyecto prevalece sobre la global; otro proyecto usa la global
+  ---
+  duration_ms: 1622.980742
+  type: 'test'
+  ...
+# Subtest: 8–9: las advertencias críticas aparecen en el TEXTO en los tres niveles, agrupadas en una línea, y los datos estructurados son idénticos (sin pérdida)
+ok 241 - 8–9: las advertencias críticas aparecen en el TEXTO en los tres niveles, agrupadas en una línea, y los datos estructurados son idénticos (sin pérdida)
+  ---
+  duration_ms: 829.832536
+  type: 'test'
+  ...
+# Subtest: 7: ninguna respuesta de herramienta narra («voy a…», «procederé…», «a continuación…») y las instrucciones lo prohíben; errores sin repetir causas inventadas
+ok 242 - 7: ninguna respuesta de herramienta narra («voy a…», «procederé…», «a continuación…») y las instrucciones lo prohíben; errores sin repetir causas inventadas
+  ---
+  duration_ms: 996.243925
+  type: 'test'
+  ...
+# Subtest: 10: compatibilidad — con CIC apagado no existe la herramienta ni cambia nada; con CIC activado las herramientas anteriores no cambian su salida (solo se agregan las nuevas)
+ok 243 - 10: compatibilidad — con CIC apagado no existe la herramienta ni cambia nada; con CIC activado las herramientas anteriores no cambian su salida (solo se agregan las nuevas)
+  ---
+  duration_ms: 1717.727303
+  type: 'test'
+  ...
+# Subtest: flag TANNIA_CIC: apagado por defecto y solo "on/1/true/si" lo enciende
+ok 244 - flag TANNIA_CIC: apagado por defecto y solo "on/1/true/si" lo enciende
+  ---
+  duration_ms: 1.502957
+  type: 'test'
+  ...
+# Subtest: línea base: con el flag apagado el servidor expone EXACTAMENTE las 72 herramientas de rc3 (nombres y esquemas idénticos)
+ok 245 - línea base: con el flag apagado el servidor expone EXACTAMENTE las 72 herramientas de rc3 (nombres y esquemas idénticos)
+  ---
+  duration_ms: 910.063314
+  type: 'test'
+  ...
+# Subtest: con el flag encendido las 72 previas permanecen idénticas y se AGREGAN solo tannia_cic_* y tannia_comunicacion
+ok 246 - con el flag encendido las 72 previas permanecen idénticas y se AGREGAN solo tannia_cic_* y tannia_comunicacion
+  ---
+  duration_ms: 937.21228
+  type: 'test'
+  ...
+# Subtest: contratos Zod: ida y vuelta, versionado obligatorio y rechazo de inválidos
+ok 247 - contratos Zod: ida y vuelta, versionado obligatorio y rechazo de inválidos
+  ---
+  duration_ms: 10.107782
+  type: 'test'
+  ...
+# Subtest: ejecutor: caso de desarrollo reproducible, métricas calculadas y veredicto automático que NUNCA equivale a aprobación (falta la rúbrica del revisor)
+ok 248 - ejecutor: caso de desarrollo reproducible, métricas calculadas y veredicto automático que NUNCA equivale a aprobación (falta la rúbrica del revisor)
+  ---
+  duration_ms: 1760.60513
+  type: 'test'
+  ...
+# Subtest: ejecutor: detecta valor numérico erróneo, valor crítico inventado y casos manipulados (hash de compromiso); mal desempeño uniforme NO aprueba
+ok 249 - ejecutor: detecta valor numérico erróneo, valor crítico inventado y casos manipulados (hash de compromiso); mal desempeño uniforme NO aprueba
+  ---
+  duration_ms: 4879.225719
+  type: 'test'
+  ...
+# Subtest: los casos retenidos NO existen en el repositorio: solo el ejecutor y casos públicos de desarrollo
+ok 250 - los casos retenidos NO existen en el repositorio: solo el ejecutor y casos públicos de desarrollo
+  ---
+  duration_ms: 0.536665
+  type: 'test'
+  ...
+# Subtest: unidades: conversiones exactas, dimensiones y rechazo de incompatibles/desconocidas
+ok 251 - unidades: conversiones exactas, dimensiones y rechazo de incompatibles/desconocidas
+  ---
+  duration_ms: 2.786647
+  type: 'test'
+  ...
+# Subtest: catálogo: todas las operaciones declaran contrato completo y madurez E2 con oráculo
+ok 252 - catálogo: todas las operaciones declaran contrato completo y madurez E2 con oráculo
+  ---
+  duration_ms: 0.595673
+  type: 'test'
+  ...
+# Subtest: geo.polygon.properties: rectángulo, círculo (2 bulges), semicírculo, huecos; invariancias
+ok 253 - geo.polygon.properties: rectángulo, círculo (2 bulges), semicírculo, huecos; invariancias
+  ---
+  duration_ms: 13.443269
+  type: 'test'
+  ...
+# Subtest: geo.polygon.properties: rechaza auto-intersección, huecos fuera/solapados y falta de unidad; advierte sentido horario
+ok 254 - geo.polygon.properties: rechaza auto-intersección, huecos fuera/solapados y falta de unidad; advierte sentido horario
+  ---
+  duration_ms: 0.964902
+  type: 'test'
+  ...
+# Subtest: geo.section.arch: semicírculo (herradura) exacto, contraste con polígono con arco y rango de validez
+ok 255 - geo.section.arch: semicírculo (herradura) exacto, contraste con polígono con arco y rango de validez
+  ---
+  duration_ms: 1.443252
+  type: 'test'
+  ...
+# Subtest: P01 volúmenes: áreas medias vs prismoidal con hipótesis distintas (no se exige equivalencia)
+ok 256 - P01 volúmenes: áreas medias vs prismoidal con hipótesis distintas (no se exige equivalencia)
+  ---
+  duration_ms: 1.326871
+  type: 'test'
+  ...
+# Subtest: volúmenes: rechazo de progresivas no monótonas, áreas negativas, longitudes distintas y unidades
+ok 257 - volúmenes: rechazo de progresivas no monótonas, áreas negativas, longitudes distintas y unidades
+  ---
+  duration_ms: 0.808663
+  type: 'test'
+  ...
+# Subtest: P01 extrusión: sección CONSTANTE; normal vs corte vertical; oblicua (no se usa una cuña de sección variable)
+ok 258 - P01 extrusión: sección CONSTANTE; normal vs corte vertical; oblicua (no se usa una cuña de sección variable)
+  ---
+  duration_ms: 0.869156
+  type: 'test'
+  ...
+# Subtest: P01 barrido: torus-sector analítico, oráculo de malla+divergencia, Pappus solo con centroide y distinto de A·L_eje
+ok 259 - P01 barrido: torus-sector analítico, oráculo de malla+divergencia, Pappus solo con centroide y distinto de A·L_eje
+  ---
+  duration_ms: 5.129511
+  type: 'test'
+  ...
+# Subtest: geo.profile.vertical_curve: parábola analítica, derivada numérica y punto de giro
+ok 260 - geo.profile.vertical_curve: parábola analítica, derivada numérica y punto de giro
+  ---
+  duration_ms: 1.382321
+  type: 'test'
+  ...
+# Subtest: earth.volume_estimate: caso manual, factor obligatorio aportado, advertencias de transición/mixtas
+ok 261 - earth.volume_estimate: caso manual, factor obligatorio aportado, advertencias de transición/mixtas
+  ---
+  duration_ms: 3.153038
+  type: 'test'
+  ...
+# Subtest: reproducibilidad: el hash de entradas es estable y distinto si cambia una entrada o la operación
+ok 262 - reproducibilidad: el hash de entradas es estable y distinto si cambia una entrada o la operación
+  ---
+  duration_ms: 0.399689
+  type: 'test'
+  ...
+# Subtest: claims: ids deterministas/reproducibles, procedencia completa y cascada stale
+ok 263 - claims: ids deterministas/reproducibles, procedencia completa y cascada stale
+  ---
+  duration_ms: 8.606079
+  type: 'test'
+  ...
+# Subtest: T10: números técnicos sin respaldo se bloquean (slot sin claim, claim stale, valor distinto, cifra con unidad en texto)
+ok 264 - T10: números técnicos sin respaldo se bloquean (slot sin claim, claim stale, valor distinto, cifra con unidad en texto)
+  ---
+  duration_ms: 3.860576
+  type: 'test'
+  ...
+# Subtest: T10b: entregable correcto con numeración, ids, π, versiones, fechas y conteos NO se bloquea (0 falsos bloqueos)
+ok 265 - T10b: entregable correcto con numeración, ids, π, versiones, fechas y conteos NO se bloquea (0 falsos bloqueos)
+  ---
+  duration_ms: 1.424496
+  type: 'test'
+  ...
+# Subtest: MCP (flag ON): calcular → claims → verificar; unidades incompatibles y fuera de rango = error sin cálculo; versiones inmutables
+ok 266 - MCP (flag ON): calcular → claims → verificar; unidades incompatibles y fuera de rango = error sin cálculo; versiones inmutables
+  ---
+  duration_ms: 868.746259
+  type: 'test'
+  ...
+# Subtest: extractores: localizadores de página, sección, diapositiva, hoja y línea; formatos no soportados y ZIP hostil
+ok 267 - extractores: localizadores de página, sección, diapositiva, hoja y línea; formatos no soportados y ZIP hostil
+  ---
+  duration_ms: 711.789901
+  type: 'test'
+  ...
+# Subtest: buscar: conjunto dorado — recall@5 ≥ 0,85, localizador correcto ≥ 0,95 y «no encontrado» ≥ 0,95 en consultas sin respuesta
+ok 268 - buscar: conjunto dorado — recall@5 ≥ 0,85, localizador correcto ≥ 0,95 y «no encontrado» ≥ 0,95 en consultas sin respuesta
+  ---
+  duration_ms: 902.806021
+  type: 'test'
+  ...
+# Subtest: citas verificables (P02): exacta, inventada, localizador distinto, hash_only, fuente no aprobada
+ok 269 - citas verificables (P02): exacta, inventada, localizador distinto, hash_only, fuente no aprobada
+  ---
+  duration_ms: 943.636444
+  type: 'test'
+  ...
+# Subtest: T18/ADR-003: una fuente externa propuesta por Claude NO puede aprobarse sola (ni con parámetros inventados); archivo fuera de banda sí
+ok 270 - T18/ADR-003: una fuente externa propuesta por Claude NO puede aprobarse sola (ni con parámetros inventados); archivo fuera de banda sí
+  ---
+  duration_ms: 821.88658
+  type: 'test'
+  ...
+# Subtest: aprobación humana por elicitación del cliente: aceptar / rechazar / cancelar
+ok 271 - aprobación humana por elicitación del cliente: aceptar / rechazar / cancelar
+  ---
+  duration_ms: 3315.846414
+  type: 'test'
+  ...
+# Subtest: T7: documentos con instrucciones hostiles son DATO; licencias limitan la cita; vigencia y reemplazo; brief sin datos del proyecto
+ok 272 - T7: documentos con instrucciones hostiles son DATO; licencias limitan la cita; vigencia y reemplazo; brief sin datos del proyecto
+  ---
+  duration_ms: 837.949803
+  type: 'test'
+  ...
+# Subtest: T5/T19: contradicciones entre claims de dato se exponen sin resolverse; el servidor del CIC no importa módulos de red
+ok 273 - T5/T19: contradicciones entre claims de dato se exponen sin resolverse; el servidor del CIC no importa módulos de red
+  ---
+  duration_ms: 7.613238
+  type: 'test'
+  ...
+# Subtest: T16: la etiqueta de disciplina (ninguna, correcta, absurda, varias) NO cambia las capacidades accesibles ni el plan
+ok 274 - T16: la etiqueta de disciplina (ninguna, correcta, absurda, varias) NO cambia las capacidades accesibles ni el plan
+  ---
+  duration_ms: 20.351163
+  type: 'test'
+  ...
+# Subtest: validación: DAG, duplicados, dependencias inexistentes → rechazo; capacidad inexistente o ausente → BRECHA (no rechazo); entradas faltantes → pregunta
+ok 275 - validación: DAG, duplicados, dependencias inexistentes → rechazo; capacidad inexistente o ausente → BRECHA (no rechazo); entradas faltantes → pregunta
+  ---
+  duration_ms: 4.442544
+  type: 'test'
+  ...
+# Subtest: magnitudes: valor sin unidad y unidad desconocida generan preguntas, nunca suposiciones; desconocidos → brechas con su resolución
+ok 276 - magnitudes: valor sin unidad y unidad desconocida generan preguntas, nunca suposiciones; desconocidos → brechas con su resolución
+  ---
+  duration_ms: 2.863769
+  type: 'test'
+  ...
+# Subtest: modos como política: profesional bloquea E1 (edu.*), académico lo permite; modo no indicado = profesional
+ok 277 - modos como política: profesional bloquea E1 (edu.*), académico lo permite; modo no indicado = profesional
+  ---
+  duration_ms: 1.729021
+  type: 'test'
+  ...
+# Subtest: ejecutor: cadena por referencias, error tipificado sin cálculo parcial, ramas independientes continúan, idempotencia y recomputación con stale
+ok 278 - ejecutor: cadena por referencias, error tipificado sin cálculo parcial, ramas independientes continúan, idempotencia y recomputación con stale
+  ---
+  duration_ms: 13.044198
+  type: 'test'
+  ...
+# Subtest: reanudación: un paso de cálculo interrumpido (running) se recalcula; uno de ESCRITURA no se reintenta (RESULTADO_INCIERTO)
+ok 279 - reanudación: un paso de cálculo interrumpido (running) se recalcula; uno de ESCRITURA no se reintenta (RESULTADO_INCIERTO)
+  ---
+  duration_ms: 0.828906
+  type: 'test'
+  ...
+# Subtest: MCP: proyecto DESCONOCIDO multidisciplinar, sin especialización: asistencia sustantiva (cálculos + brechas + investigación) y citas verificadas
+ok 280 - MCP: proyecto DESCONOCIDO multidisciplinar, sin especialización: asistencia sustantiva (cálculos + brechas + investigación) y citas verificadas
+  ---
+  duration_ms: 919.638281
+  type: 'test'
+  ...
+# Subtest: MCP: encargo solo de investigación o incompleto es VÁLIDO (plan mínimo con búsquedas y preguntas); interpretación inválida se rechaza con causa
+ok 281 - MCP: encargo solo de investigación o incompleto es VÁLIDO (plan mínimo con búsquedas y preguntas); interpretación inválida se rechaza con causa
+  ---
+  duration_ms: 871.065305
+  type: 'test'
+  ...
+# \# ezdxf no disponible: se omitió la lectura de terceros
+# Subtest: alineamiento: largo, continuidad de rumbo, posiciones analíticas, izquierda/derecha y fuera de rango
+ok 282 - alineamiento: largo, continuidad de rumbo, posiciones analíticas, izquierda/derecha y fuera de rango
+  ---
+  duration_ms: 2.86607
+  type: 'test'
+  ...
+# Subtest: perfil: PIV con curva vertical coincide con la operación parabólica verificada; solape y progresiva fuera de rango
+ok 283 - perfil: PIV con curva vertical coincide con la operación parabólica verificada; solape y progresiva fuera de rango
+  ---
+  duration_ms: 1.226701
+  type: 'test'
+  ...
+# Subtest: secciones tipo: áreas contra fórmulas y contra la operación geo.section.arch; rangos
+ok 284 - secciones tipo: áreas contra fórmulas y contra la operación geo.section.arch; rangos
+  ---
+  duration_ms: 0.895594
+  type: 'test'
+  ...
+# Subtest: TIN: plano inclinado exacto, pirámide, cruce de plano con corte/relleno exactos, interpolación y errores
+ok 285 - TIN: plano inclinado exacto, pirámide, cruce de plano con corte/relleno exactos, interpolación y errores
+  ---
+  duration_ms: 1.856338
+  type: 'test'
+  ...
+# Subtest: LandXML: alineamientos, perfiles y superficies importados; pérdidas declaradas; clotoide = alineamiento NO utilizable; DOCTYPE rechazado
+ok 286 - LandXML: alineamientos, perfiles y superficies importados; pérdidas declaradas; clotoide = alineamiento NO utilizable; DOCTYPE rechazado
+  ---
+  duration_ms: 2.808864
+  type: 'test'
+  ...
+# Subtest: DXF lineal: planta, perfil con exageración declarada y secciones; releído con el lector del repo y con ezdxf (si existe); detecta manipulación
+ok 287 - DXF lineal: planta, perfil con exageración declarada y secciones; releído con el lector del repo y con ezdxf (si existe); detecta manipulación
+  ---
+  duration_ms: 78.74454
+  type: 'test'
+  ...
+# Subtest: MCP tannia_cic_geometria: generar_lineal (con claims y verificación), verificar_dxf, no sobrescribe, errores sin escribir, importar_landxml
+ok 288 - MCP tannia_cic_geometria: generar_lineal (con claims y verificación), verificar_dxf, no sobrescribe, errores sin escribir, importar_landxml
+  ---
+  duration_ms: 898.936247
+  type: 'test'
+  ...
+# Subtest: qty/bud/sched: oráculos manuales; precios, pérdida y tasas jamás por defecto; unidades sin conversión implícita
+ok 289 - qty/bud/sched: oráculos manuales; precios, pérdida y tasas jamás por defecto; unidades sin conversión implícita
+  ---
+  duration_ms: 6.648408
+  type: 'test'
+  ...
+# Subtest: CPM contra red de libro y enumeración independiente de caminos; ciclos; curva S y valor ganado con solución cerrada
+ok 290 - CPM contra red de libro y enumeración independiente de caminos; ciclos; curva S y valor ganado con solución cerrada
+  ---
+  duration_ms: 1.724883
+  type: 'test'
+  ...
+# Subtest: Caso D: plano → cantidad → partidas → presupuesto → programa → informe sin transcripción manual; cambio de un dato deja todo desactualizado y se recalcula
+ok 291 - Caso D: plano → cantidad → partidas → presupuesto → programa → informe sin transcripción manual; cambio de un dato deja todo desactualizado y se recalcula
+  ---
+  duration_ms: 1619.422179
+  type: 'test'
+  ...
+# Subtest: especializaciones integradas: válidas, solo declaran, referencian operaciones existentes y exigen validación competente
+ok 292 - especializaciones integradas: válidas, solo declaran, referencian operaciones existentes y exigen validación competente
+  ---
+  duration_ms: 5.746453
+  type: 'test'
+  ...
+# Subtest: T13: especialización corrupta o con referencias inexistentes en disco se DESACTIVA con motivo; el resto y el servidor siguen
+ok 293 - T13: especialización corrupta o con referencias inexistentes en disco se DESACTIVA con motivo; el resto y el servidor siguen
+  ---
+  duration_ms: 855.395719
+  type: 'test'
+  ...
+# Subtest: migración M3: ≥200 frases históricas; la clasificación existente NO cambia; el adaptador solo AGREGA una ruta (y nunca bloquea)
+ok 294 - migración M3: ≥200 frases históricas; la clasificación existente NO cambia; el adaptador solo AGREGA una ruta (y nunca bloquea)
+  ---
+  duration_ms: 19.908625
+  type: 'test'
+  ...
+# Subtest: MCP: tannia_encargo_evaluar con el flag APAGADO es idéntico a rc3; ENCENDIDO solo agrega «cic» (60 frases)
+ok 295 - MCP: tannia_encargo_evaluar con el flag APAGADO es idéntico a rc3; ENCENDIDO solo agrega «cic» (60 frases)
+  ---
+  duration_ms: 1802.199919
+  type: 'test'
+  ...
+# Subtest: B1–B7: el departamento tiene entrepiso compartido, medianeros, acceso por circulación común, terraza con borde abierto y NINGÚN elemento de lote; desconocidos declarados
+ok 296 - B1–B7: el departamento tiene entrepiso compartido, medianeros, acceso por circulación común, terraza con borde abierto y NINGÚN elemento de lote; desconocidos declarados
+  ---
+  duration_ms: 12.773609
+  type: 'test'
+  ...
+# Subtest: B6 contraste: el MISMO programa interpretado como casa produce un modelo tipológicamente DIFERENTE (≥6 diferencias estructurales); una casa renombrada falla
+ok 297 - B6 contraste: el MISMO programa interpretado como casa produce un modelo tipológicamente DIFERENTE (≥6 diferencias estructurales); una casa renombrada falla
+  ---
+  duration_ms: 7.652692
+  type: 'test'
+  ...
+# Subtest: DXF del departamento: releído con lector independiente (áreas, largos por clase, ventanas solo en fachada, sin elementos de lote); manipulaciones se detectan
+ok 298 - DXF del departamento: releído con lector independiente (áreas, largos por clase, ventanas solo en fachada, sin elementos de lote); manipulaciones se detectan
+  ---
+  duration_ms: 5.215772
+  type: 'test'
+  ...
+# Subtest: generalidad (retenidos de desarrollo): oficina, local comercial, otro nivel, lados declarados, terraza con área, último piso; errores claros
+ok 299 - generalidad (retenidos de desarrollo): oficina, local comercial, otro nivel, lados declarados, terraza con área, último piso; errores claros
+  ---
+  duration_ms: 24.405751
+  type: 'test'
+  ...
+# Subtest: MCP tannia_cic_edificacion: artefactos reales (DXF + modelo + 3D versionado), claims de superficie y contraste casa/departamento por herramienta
+ok 300 - MCP tannia_cic_edificacion: artefactos reales (DXF + modelo + 3D versionado), claims de superficie y contraste casa/departamento por herramienta
+  ---
+  duration_ms: 851.038196
+  type: 'test'
+  ...
+# Subtest: paquete CIC apagado = 72 herramientas; candidato CIC activado = 72 + tannia_cic_* + tannia_comunicacion; identidades distintas; el CIC NO se activa solo en el paquete base
+ok 301 - paquete CIC apagado = 72 herramientas; candidato CIC activado = 72 + tannia_cic_* + tannia_comunicacion; identidades distintas; el CIC NO se activa solo en el paquete base
+  ---
+  duration_ms: 17189.205411
+  type: 'test'
+  ...
+# Subtest: GV1: túnel académico extremo a extremo — comprensión, citas, plan con brechas, cálculos, DXF, cubicaciones, memoria y coherencia entre archivos
+ok 302 - GV1: túnel académico extremo a extremo — comprensión, citas, plan con brechas, cálculos, DXF, cubicaciones, memoria y coherencia entre archivos
+  ---
+  duration_ms: 1556.066015
+  type: 'test'
+  ...
+# Subtest: H1: actualizar CONSERVA lo no mencionado; reemplazar es explícito; conflictos piden confirmación; retiro solo explícito; A→B→A restaura
+ok 303 - H1: actualizar CONSERVA lo no mencionado; reemplazar es explícito; conflictos piden confirmación; retiro solo explícito; A→B→A restaura
+  ---
+  duration_ms: 1001.721601
+  type: 'test'
+  ...
+# Subtest: H2: fuente registrada → cálculo → fuente retirada / vencida / reemplazada → el informe NO se genera y lo derivado queda pendiente
+ok 304 - H2: fuente registrada → cálculo → fuente retirada / vencida / reemplazada → el informe NO se genera y lo derivado queda pendiente
+  ---
+  duration_ms: 920.728004
+  type: 'test'
+  ...
+# Subtest: H3: «permitir_desactualizado» autodeclarado NO autoriza nada; el borrador desactualizado exige consentimiento humano comprobable y se rotula inequívocamente
+ok 305 - H3: «permitir_desactualizado» autodeclarado NO autoriza nada; el borrador desactualizado exige consentimiento humano comprobable y se rotula inequívocamente
+  ---
+  duration_ms: 2641.169616
+  type: 'test'
+  ...
+# Subtest: H4: referencias psg-*: pasaje correcto, inexistente, fuente retirada, cita distinta y fuente sin contenido verificable
+ok 306 - H4: referencias psg-*: pasaje correcto, inexistente, fuente retirada, cita distinta y fuente sin contenido verificable
+  ---
+  duration_ms: 940.476951
+  type: 'test'
+  ...
+# Subtest: H5: con TANNIA_CIC=on las instrucciones priorizan el enrutamiento transversal (túnel/canal/departamento no se tratan como vivienda); con CIC apagado se conservan las de TW-10
+ok 307 - H5: con TANNIA_CIC=on las instrucciones priorizan el enrutamiento transversal (túnel/canal/departamento no se tratan como vivienda); con CIC apagado se conservan las de TW-10
+  ---
+  duration_ms: 2095.065058
+  type: 'test'
+  ...
+# Subtest: política: ningún residuo puede alcanzar a DWG/DXF/PDF/plantillas (invariante), y los residuos conocidos se excluyen
+ok 308 - política: ningún residuo puede alcanzar a DWG/DXF/PDF/plantillas (invariante), y los residuos conocidos se excluyen
+  ---
+  duration_ms: 3.88568
+  type: 'test'
+  ...
+# Subtest: registrar: solo originales admitidos; locks ignorados, sin hash ni cambio de permisos; verificación sin falsos positivos
+ok 309 - registrar: solo originales admitidos; locks ignorados, sin hash ni cambio de permisos; verificación sin falsos positivos
+  ---
+  duration_ms: 11.343449
+  type: 'test'
+  ...
+# Subtest: la protección real NO se debilita: DWG modificado o faltante se detecta aunque haya locks
+ok 310 - la protección real NO se debilita: DWG modificado o faltante se detecta aunque haya locks
+  ---
+  duration_ms: 8.165219
+  type: 'test'
+  ...
+# Subtest: captura inestable: lock presente al registrar => advertencia explícita, marca en el manifiesto y nota en la verificación; no se borran locks
+ok 311 - captura inestable: lock presente al registrar => advertencia explícita, marca en el manifiesto y nota en la verificación; no se borran locks
+  ---
+  duration_ms: 6.247297
+  type: 'test'
+  ...
+# Subtest: migración segura del manifiesto de rc.2 (locks registrados como originales): DWG idéntico, locks apartados con su hash, permisos restaurados
+ok 312 - migración segura del manifiesto de rc.2 (locks registrados como originales): DWG idéntico, locks apartados con su hash, permisos restaurados
+  ---
+  duration_ms: 13.044035
+  type: 'test'
+  ...
+# Subtest: reparar migra el manifiesto antiguo y el original no cambia (hash, tamaño y fecha) tras copiar y registrar
+ok 313 - reparar migra el manifiesto antiguo y el original no cambia (hash, tamaño y fecha) tras copiar y registrar
+  ---
+  duration_ms: 13.601847
+  type: 'test'
+  ...
+# Subtest: P1: ningún secreto de aprobación existe en el proyecto ni es recuperable con herramientas MCP (fuente candidata y borrador desactualizado)
+ok 314 - P1: ningún secreto de aprobación existe en el proyecto ni es recuperable con herramientas MCP (fuente candidata y borrador desactualizado)
+  ---
+  duration_ms: 1008.467903
+  type: 'test'
+  ...
+# Subtest: P1: el agente no puede autoaprobar (archivos falsos en el proyecto, parámetros, preexistentes, de otro id, contenido ajeno)
+ok 315 - P1: el agente no puede autoaprobar (archivos falsos en el proyecto, parámetros, preexistentes, de otro id, contenido ajeno)
+  ---
+  duration_ms: 906.494748
+  type: 'test'
+  ...
+# Subtest: P1: las herramientas MCP no pueden leer, escribir ni importar la carpeta de configuración (aprobaciones y preferencias)
+ok 316 - P1: las herramientas MCP no pueden leer, escribir ni importar la carpeta de configuración (aprobaciones y preferencias)
+  ---
+  duration_ms: 849.632456
+  type: 'test'
+  ...
+# Subtest: canales: elicitación (aceptar/rechazar), diálogo del SO (si/no/no disponible) y archivo — con prioridad y sin fallback tras un rechazo explícito
+ok 317 - canales: elicitación (aceptar/rechazar), diálogo del SO (si/no/no disponible) y archivo — con prioridad y sin fallback tras un rechazo explícito
+  ---
+  duration_ms: 5.890075
+  type: 'test'
+  ...
+# Subtest: regresión end-to-end: borrador desactualizado y fuente — elicitación y archivo de la persona funcionan; el agente solo recibe una ruta sin secretos
+ok 318 - regresión end-to-end: borrador desactualizado y fuente — elicitación y archivo de la persona funcionan; el agente solo recibe una ruta sin secretos
+  ---
+  duration_ms: 2695.819667
+  type: 'test'
+  ...
+# Subtest: SEC-01: ningún camino hacia la configuración puede importarse (enlaces/junctions en el padre, ruta con «..», mayúsculas, enlace rígido); un archivo normal sí
+ok 319 - SEC-01: ningún camino hacia la configuración puede importarse (enlaces/junctions en el padre, ruta con «..», mayúsculas, enlace rígido); un archivo normal sí
+  ---
+  duration_ms: 12.984011
+  type: 'test'
+  ...
+# Subtest: SEC-01 (MCP): el agente no puede leer la configuración importándola por un enlace
+ok 320 - SEC-01 (MCP): el agente no puede leer la configuración importándola por un enlace
+  ---
+  duration_ms: 871.688438
+  type: 'test'
+  ...
+# Subtest: SEC-02: la aprobación acepta EXACTAMENTE una línea «APRUEBO <id>» (con un único terminador LF o CRLF opcional) y rechaza todo lo demás
+ok 321 - SEC-02: la aprobación acepta EXACTAMENTE una línea «APRUEBO <id>» (con un único terminador LF o CRLF opcional) y rechaza todo lo demás
+  ---
+  duration_ms: 12.763985
+  type: 'test'
+  ...
+# Subtest: SEC-02: debe ser un archivo REGULAR (no enlace simbólico, ni directorio, ni enlace rígido) y la aprobación se consume UNA sola vez (también bajo concurrencia)
+ok 322 - SEC-02: debe ser un archivo REGULAR (no enlace simbólico, ni directorio, ni enlace rígido) y la aprobación se consume UNA sola vez (también bajo concurrencia)
+  ---
+  duration_ms: 3.31097
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-01 script: una sola apertura, sin reintento tras error, rutas sin excepción, etapas y ocupación explícitas
+ok 323 - CAD-OPEN-01 script: una sola apertura, sin reintento tras error, rutas sin excepción, etapas y ocupación explícitas
+  ---
+  duration_ms: 1.714392
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-01 con Dibujo1 sin guardar: el DXF se importa en un documento AISLADO (Add+Import), Dibujo1 solo se observa; una sola llamada
+ok 324 - CAD-OPEN-01 con Dibujo1 sin guardar: el DXF se importa en un documento AISLADO (Add+Import), Dibujo1 solo se observa; una sola llamada
+  ---
+  duration_ms: 125.285605
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-01 fallo de apertura: etapa, HRESULT, tipo y diagnóstico en detalle; NO se reintenta; no se lanza otra operación
+ok 325 - CAD-OPEN-01 fallo de apertura: etapa, HRESULT, tipo y diagnóstico en detalle; NO se reintenta; no se lanza otra operación
+  ---
+  duration_ms: 51.798433
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-01 clasificación: ocupado, comando activo, cuadro modal, sesión ambigua, COM caído, fallo COM al enumerar, ruta
+ok 326 - CAD-OPEN-01 clasificación: ocupado, comando activo, cuadro modal, sesión ambigua, COM caído, fallo COM al enumerar, ruta
+  ---
+  duration_ms: 56.437462
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-01 el DXF inválido se detecta en Node antes de tocar AutoCAD (no se confunde con un fallo COM)
+ok 327 - CAD-OPEN-01 el DXF inválido se detecta en Node antes de tocar AutoCAD (no se confunde con un fallo COM)
+  ---
+  duration_ms: 49.925955
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-01 originales siguen protegidos y la sesión ambigua bloquea la apertura
+ok 328 - CAD-OPEN-01 originales siguen protegidos y la sesión ambigua bloquea la apertura
+  ---
+  duration_ms: 42.740104
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-01 recuperación: importación aislada + puerta → DXF→DWG guarda una sola vez y es idempotente
+ok 329 - CAD-OPEN-01 recuperación: importación aislada + puerta → DXF→DWG guarda una sola vez y es idempotente
+  ---
+  duration_ms: 92.225386
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-01 exportar_dwg: guardado negativo (solo lectura / documento aislado ausente) se distingue; el DXF perdido en Import NO se guarda
+ok 330 - CAD-OPEN-01 exportar_dwg: guardado negativo (solo lectura / documento aislado ausente) se distingue; el DXF perdido en Import NO se guarda
+  ---
+  duration_ms: 418.609063
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-02 excepción exacta tras Documents.Add (Dibujo2 vacío): el TEXTO visible trae etapa, HRESULT, excepción, mensaje saneado y últimas etapas; structuredContent se mantiene
+ok 331 - CAD-OPEN-02 excepción exacta tras Documents.Add (Dibujo2 vacío): el TEXTO visible trae etapa, HRESULT, excepción, mensaje saneado y últimas etapas; structuredContent se mantiene
+  ---
+  duration_ms: 38.905765
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-02 mientras exista un documento aislado pendiente NO se inicia otra importación (ni abrir_copia ni exportar_dwg); se bloquea con texto claro
+ok 332 - CAD-OPEN-02 mientras exista un documento aislado pendiente NO se inicia otra importación (ni abrir_copia ni exportar_dwg); se bloquea con texto claro
+  ---
+  duration_ms: 12.621578
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-02 inspección de SOLO LECTURA: entidades, layouts, viewports y nombre del documento aislado; el script no puede modificar, activar, guardar ni cerrar
+ok 333 - CAD-OPEN-02 inspección de SOLO LECTURA: entidades, layouts, viewports y nombre del documento aislado; el script no puede modificar, activar, guardar ni cerrar
+  ---
+  duration_ms: 16.026768
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-02 reconciliación segura: las marcas se CONSERVAN; se resuelven por entrada de solo-adición solo con estado real limpio, y entonces se permite una importación explícita
+ok 334 - CAD-OPEN-02 reconciliación segura: las marcas se CONSERVAN; se resuelven por entrada de solo-adición solo con estado real limpio, y entonces se permite una importación explícita
+  ---
+  duration_ms: 20.282924
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-02 marcas históricas apertura-*.pendiente.json: se listan, no se borran ni bloquean importaciones, y se reconcilian con el archivo indicado (solo lectura)
+ok 335 - CAD-OPEN-02 marcas históricas apertura-*.pendiente.json: se listan, no se borran ni bloquean importaciones, y se reconcilian con el archivo indicado (solo lectura)
+  ---
+  duration_ms: 20.854733
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-02 fallos ANTERIORES a crear el documento aislado (AutoCAD ocupado) no dejan marca ni bloquean; fallos en la medición sí (excepción tras Add)
+ok 336 - CAD-OPEN-02 fallos ANTERIORES a crear el documento aislado (AutoCAD ocupado) no dejan marca ni bloquean; fallos en la medición sí (excepción tras Add)
+  ---
+  duration_ms: 9.731106
+  type: 'test'
+  ...
+# Subtest: diagnosticoVisible: compacto, sin rutas, sin JSON, y vacío cuando el detalle no trae campos técnicos
+ok 337 - diagnosticoVisible: compacto, sin rutas, sin JSON, y vacío cuando el detalle no trae campos técnicos
+  ---
+  duration_ms: 0.508321
+  type: 'test'
+  ...
+# Subtest: CAD-OPEN-02 exportar_dwg (guardarLaminas) también queda bloqueada por un documento aislado pendiente: sin importar, sin SaveAs, sin diario
+ok 338 - CAD-OPEN-02 exportar_dwg (guardarLaminas) también queda bloqueada por un documento aislado pendiente: sin importar, sin SaveAs, sin diario
+  ---
+  duration_ms: 18.400142
+  type: 'test'
+  ...
+# Subtest: runPowerShell real: el progreso emitido ANTES del bloqueo sobrevive al tiempo agotado y al kill
+ok 339 - runPowerShell real: el progreso emitido ANTES del bloqueo sobrevive al tiempo agotado y al kill
+  ---
+  duration_ms: 2221.020927
+  type: 'test'
+  ...
+# Subtest: texto visible del tiempo agotado en la importación: código, última etapa, duración y estado incierto; detalle saneado
+ok 340 - texto visible del tiempo agotado en la importación: código, última etapa, duración y estado incierto; detalle saneado
+  ---
+  duration_ms: 119.991376
+  type: 'test'
+  ...
+# Subtest: importación tardía/incompleta: tras el timeout se reconcilia; NO se repite Import, NO se guarda y NO se cierra nada; la marca persiste hasta limpiar
+ok 341 - importación tardía/incompleta: tras el timeout se reconcilia; NO se repite Import, NO se guarda y NO se cierra nada; la marca persiste hasta limpiar
+  ---
+  duration_ms: 62.131647
+  type: 'test'
+  ...
+# Subtest: estado incierto no verificable: mientras no se pueda reconciliar no se inicia ninguna importación
+ok 342 - estado incierto no verificable: mientras no se pueda reconciliar no se inicia ninguna importación
+  ---
+  duration_ms: 39.987605
+  type: 'test'
+  ...
+# Subtest: exportar_dwg: un timeout al importar no crea una escritura incierta en el diario; tras limpiar el estado continúa una sola vez
+ok 343 - exportar_dwg: un timeout al importar no crea una escritura incierta en el diario; tras limpiar el estado continúa una sola vez
+  ---
+  duration_ms: 73.610635
+  type: 'test'
+  ...
+# Subtest: lógica de apertura por contrato: Open solo en abrir_copia (.dwg); DXF solo vía Add+Import con progreso antes/después; guardar no abre ni importa
+ok 344 - lógica de apertura por contrato: Open solo en abrir_copia (.dwg); DXF solo vía Add+Import con progreso antes/después; guardar no abre ni importa
+  ---
+  duration_ms: 0.667923
+  type: 'test'
+  ...
+# Subtest: escaneo estático del repositorio: Documents.Open solo existe en scripts DWG-only (abrir_copia y cerrar_reabrir), con guardia .dwg
+ok 345 - escaneo estático del repositorio: Documents.Open solo existe en scripts DWG-only (abrir_copia y cerrar_reabrir), con guardia .dwg
+  ---
+  duration_ms: 10.882842
+  type: 'test'
+  ...
+# Subtest: la vía por extensión falla cerrado: dwg → Open; dxf → documento aislado; cualquier otra cosa no llega a AutoCAD
+ok 346 - la vía por extensión falla cerrado: dwg → Open; dxf → documento aislado; cualquier otra cosa no llega a AutoCAD
+  ---
+  duration_ms: 0.732304
+  type: 'test'
+  ...
+# Subtest: un .dxf NUNCA se envía a abrir_copia/Documents.Open: abrirCopia(DXF) despacha solo importar_dxf_aislado; un DWG despacha abrir_copia
+ok 347 - un .dxf NUNCA se envía a abrir_copia/Documents.Open: abrirCopia(DXF) despacha solo importar_dxf_aislado; un DWG despacha abrir_copia
+  ---
+  duration_ms: 23.392881
+  type: 'test'
+  ...
+# Subtest: flujo aislado: Dibujo1 y demás documentos del usuario nunca se activan, guardan, cierran ni modifican en la importación
+ok 348 - flujo aislado: Dibujo1 y demás documentos del usuario nunca se activan, guardan, cierran ni modifican en la importación
+  ---
+  duration_ms: 0.4568
+  type: 'test'
+  ...
+# Subtest: extractor del DXF: layouts, viewports, cotas, XDATA y textos del cajetín se derivan del propio archivo
+ok 349 - extractor del DXF: layouts, viewports, cotas, XDATA y textos del cajetín se derivan del propio archivo
+  ---
+  duration_ms: 4.908201
+  type: 'test'
+  ...
+# Subtest: puerta de verificación: una medición idéntica pasa; cada pérdida por separado se detecta con su causa
+ok 350 - puerta de verificación: una medición idéntica pasa; cada pérdida por separado se detecta con su causa
+  ---
+  duration_ms: 44.975332
+  type: 'test'
+  ...
+# Subtest: contrato de datos entre scripts y Node: el script mide las claves que la puerta lee
+ok 351 - contrato de datos entre scripts y Node: el script mide las claves que la puerta lee
+  ---
+  duration_ms: 0.384358
+  type: 'test'
+  ...
+# Subtest: XDATA: el esperado trae las 20 trazas con elemento, vista, rol, ref, capa y tipo; las refs son únicas
+ok 352 - XDATA: el esperado trae las 20 trazas con elemento, vista, rol, ref, capa y tipo; las refs son únicas
+  ---
+  duration_ms: 2.911549
+  type: 'test'
+  ...
+# Subtest: XDATA: con el MISMO número de registros, cualquier valor alterado, intercambiado o duplicado se detecta por ref
+ok 353 - XDATA: con el MISMO número de registros, cualquier valor alterado, intercambiado o duplicado se detecta por ref
+  ---
+  duration_ms: 39.401566
+  type: 'test'
+  ...
+# Subtest: XDATA: fail-closed si el script solo cuenta (sin valores); normalización NFC/espacios no genera falsos positivos
+ok 354 - XDATA: fail-closed si el script solo cuenta (sin valores); normalización NFC/espacios no genera falsos positivos
+  ---
+  duration_ms: 20.472839
+  type: 'test'
+  ...
+# Subtest: el script mide VALORES de XDATA y los envía a Node (ref, elemento, vista, rol, capa, tipo)
+ok 355 - el script mide VALORES de XDATA y los envía a Node (ref, elemento, vista, rol, capa, tipo)
+  ---
+  duration_ms: 0.335108
+  type: 'test'
+  ...
+# Subtest: puerta de fidelidad EXHAUSTIVA antes de SaveAs: layouts, viewports (centro/escala/bloqueo/región), cotas, textos, XDATA por valores
+ok 356 - puerta de fidelidad EXHAUSTIVA antes de SaveAs: layouts, viewports (centro/escala/bloqueo/región), cotas, textos, XDATA por valores
+  ---
+  duration_ms: 106.360093
+  type: 'test'
+  ...
+# Subtest: resolverDestino: usa TANNIA_TARGET, no la plataforma del constructor; rechaza destinos desconocidos
+ok 357 - resolverDestino: usa TANNIA_TARGET, no la plataforma del constructor; rechaza destinos desconocidos
+  ---
+  duration_ms: 1.726442
+  type: 'test'
+  ...
+# Subtest: paquete INGENIERÍA construido en este equipo con destino win32-x64: manifiesto «win32», binario nativo de Windows verificado contra el lockfile y 89 herramientas (85 + entrega_estado, proyecto_migracion, metodo, recibos_verificar)
+ok 358 - paquete INGENIERÍA construido en este equipo con destino win32-x64: manifiesto «win32», binario nativo de Windows verificado contra el lockfile y 89 herramientas (85 + entrega_estado, proyecto_migracion, metodo, recibos_verificar)
+  ---
+  duration_ms: 12725.817185
+  type: 'test'
+  ...
+# Subtest: el empaquetado se niega a declarar un destino distinto del binario construido (sin editar el manifiesto a mano)
+ok 359 - el empaquetado se niega a declarar un destino distinto del binario construido (sin editar el manifiesto a mano)
+  ---
+  duration_ms: 3483.583232
+  type: 'test'
+  ...
+# Subtest: rectángulo 6000×4000: cerrado, ángulos 90°, área 24e6, perímetro 20000, dimensiones esperadas
+ok 360 - rectángulo 6000×4000: cerrado, ángulos 90°, área 24e6, perímetro 20000, dimensiones esperadas
+  ---
+  duration_ms: 2.377905
+  type: 'test'
+  ...
+# Subtest: robusto al orden y sentido de las líneas
+ok 361 - robusto al orden y sentido de las líneas
+  ---
+  duration_ms: 0.502215
+  type: 'test'
+  ...
+# Subtest: detecta huecos, líneas sueltas, tres líneas, duplicados, longitud cero y cotas distintas
+ok 362 - detecta huecos, líneas sueltas, tres líneas, duplicados, longitud cero y cotas distintas
+  ---
+  duration_ms: 0.652706
+  type: 'test'
+  ...
+# Subtest: cierra pero no es rectángulo (paralelogramo, triángulo) y dimensiones que no coinciden
+ok 363 - cierra pero no es rectángulo (paralelogramo, triángulo) y dimensiones que no coinciden
+  ---
+  duration_ms: 0.399371
+  type: 'test'
+  ...
+# Subtest: comparar lecturas antes/después de reabrir
+ok 364 - comparar lecturas antes/después de reabrir
+  ---
+  duration_ms: 1.017171
+  type: 'test'
+  ...
+# Subtest: QTY-01 defecto del piloto: planta.axis y perfil.grade (mismo elemento, 150 m) ya no suman 300 m
+ok 365 - QTY-01 defecto del piloto: planta.axis y perfil.grade (mismo elemento, 150 m) ya no suman 300 m
+  ---
+  duration_ms: 115.699857
+  type: 'test'
+  ...
+# Subtest: QTY-01 la lógica no depende de nombres de capa: renombrar las capas no cambia el resultado
+ok 366 - QTY-01 la lógica no depende de nombres de capa: renombrar las capas no cambia el resultado
+  ---
+  duration_ms: 86.75483
+  type: 'test'
+  ...
+# Subtest: QTY-01 dos fuentes del mismo elemento en vistas distintas: ambiguas, no se suman, necesita revisión
+ok 367 - QTY-01 dos fuentes del mismo elemento en vistas distintas: ambiguas, no se suman, necesita revisión
+  ---
+  duration_ms: 0.545295
+  type: 'test'
+  ...
+# Subtest: QTY-01 elementos físicos realmente independientes de igual longitud SÍ se suman (sin falso positivo)
+ok 368 - QTY-01 elementos físicos realmente independientes de igual longitud SÍ se suman (sin falso positivo)
+  ---
+  duration_ms: 0.847485
+  type: 'test'
+  ...
+# Subtest: QTY-01 sin semántica: DXF heredado se mide como antes; las posibles copias de una misma forma se marcan (no se descuentan) y se citan sus handles
+ok 369 - QTY-01 sin semántica: DXF heredado se mide como antes; las posibles copias de una misma forma se marcan (no se descuentan) y se citan sus handles
+  ---
+  duration_ms: 0.907517
+  type: 'test'
+  ...
+# Subtest: QTY-01 contraste con el modelo autorizado: magnitud alterada, entidad no autorizada, traza distinta, modelo ajeno
+ok 370 - QTY-01 contraste con el modelo autorizado: magnitud alterada, entidad no autorizada, traza distinta, modelo ajeno
+  ---
+  duration_ms: 52.839512
+  type: 'test'
+  ...
+# Subtest: QTY-01 semántica incompleta o rol desconocido: ambigua, no se suma; las otras magnitudes/capas no se alteran
+ok 371 - QTY-01 semántica incompleta o rol desconocido: ambigua, no se suma; las otras magnitudes/capas no se alteran
+  ---
+  duration_ms: 0.366891
+  type: 'test'
+  ...
+# Subtest: QTY-01 extremo a extremo (MCP): tannia_planos genera el DXF con su modelo autorizado y tannia_cubicar_dxf cubica 150 m
+ok 372 - QTY-01 extremo a extremo (MCP): tannia_planos genera el DXF con su modelo autorizado y tannia_cubicar_dxf cubica 150 m
+  ---
+  duration_ms: 3029.460929
+  type: 'test'
+  ...
+# Subtest: CAD-META-01 sin autor/institución: los planos quedan PENDIENTE y no se pide nada; correo o URL en cualquier campo se rechaza
+ok 373 - CAD-META-01 sin autor/institución: los planos quedan PENDIENTE y no se pide nada; correo o URL en cualquier campo se rechaza
+  ---
+  duration_ms: 3.230437
+  type: 'test'
+  ...
+# Subtest: CAD-META-01 un nombre propuesto por Claude NO se aplica sin autorización humana; con ella se reutiliza sin volver a preguntar
+ok 374 - CAD-META-01 un nombre propuesto por Claude NO se aplica sin autorización humana; con ella se reutiliza sin volver a preguntar
+  ---
+  duration_ms: 5.010112
+  type: 'test'
+  ...
+# Subtest: CAD-META-01 si el nombre coincide con la cuenta del equipo se advierte en la solicitud; la lista de identidades solo usa datos locales
+ok 375 - CAD-META-01 si el nombre coincide con la cuenta del equipo se advierte en la solicitud; la lista de identidades solo usa datos locales
+  ---
+  duration_ms: 1.24545
+  type: 'test'
+  ...
+# Subtest: CAD-META-01 extremo a extremo (MCP): author propuesto por Claude → autorización fuera de banda → rótulo; el correo de la cuenta nunca aparece en los artefactos
+ok 376 - CAD-META-01 extremo a extremo (MCP): author propuesto por Claude → autorización fuera de banda → rótulo; el correo de la cuenta nunca aparece en los artefactos
+  ---
+  duration_ms: 4014.162631
+  type: 'test'
+  ...
+# Subtest: TW12 journal: repeat, conflict, partial write, corrupt/missing checkpoint never replay
+ok 377 - TW12 journal: repeat, conflict, partial write, corrupt/missing checkpoint never replay
+  ---
+  duration_ms: 22.052114
+  type: 'test'
+  ...
+# Subtest: TW12 journal holds the project lock across asynchronous CAD calls
+ok 378 - TW12 journal holds the project lock across asynchronous CAD calls
+  ---
+  duration_ms: 10.716088
+  type: 'test'
+  ...
+# Subtest: TW12 strict session rejects wrong route, multiple processes, read-only, busy and closed target
+ok 379 - TW12 strict session rejects wrong route, multiple processes, read-only, busy and closed target
+  ---
+  duration_ms: 9.880081
+  type: 'test'
+  ...
+# Subtest: TW12 pilot physical oracle: 5.5m at 1:50 = 110mm; exact areas, 4 sheets, independent bounds
+ok 380 - TW12 pilot physical oracle: 5.5m at 1:50 = 110mm; exact areas, 4 sheets, independent bounds
+  ---
+  duration_ms: 3.991748
+  type: 'test'
+  ...
+# Subtest: TW12 blocking legibility regressions: tiny section, overlap, corrupt glyph, wrong scale/region and clipped viewport
+ok 381 - TW12 blocking legibility regressions: tiny section, overlap, corrupt glyph, wrong scale/region and clipped viewport
+  ---
+  duration_ms: 185.526603
+  type: 'test'
+  ...
+# Subtest: TW12 PDF: rendered four physical A3 sheets, text and vector content survive reopening
+ok 382 - TW12 PDF: rendered four physical A3 sheets, text and vector content survive reopening
+  ---
+  duration_ms: 1681.332296
+  type: 'test'
+  ...
+# Subtest: TW12 service preserves originals, emits immutable PDF/DXF/PNG revisions and detects alteration
+ok 383 - TW12 service preserves originals, emits immutable PDF/DXF/PNG revisions and detects alteration
+  ---
+  duration_ms: 1489.94913
+  type: 'test'
+  ...
+# Subtest: TW12 trust: invalid pilot cannot reach any approval channel, no generic MessageBox or model secret
+ok 384 - TW12 trust: invalid pilot cannot reach any approval channel, no generic MessageBox or model secret
+  ---
+  duration_ms: 1.675944
+  type: 'test'
+  ...
+# Subtest: TW12 consent deduplicates simultaneous windows; close/decline never falls back to approve
+ok 385 - TW12 consent deduplicates simultaneous windows; close/decline never falls back to approve
+  ---
+  duration_ms: 1.593448
+  type: 'test'
+  ...
+# Subtest: TW12 audit: plan has A-A cut marker at 0+075, profile has height dimension, revision table and short dimension labels clear of geometry
+ok 386 - TW12 audit: plan has A-A cut marker at 0+075, profile has height dimension, revision table and short dimension labels clear of geometry
+  ---
+  duration_ms: 48.055512
+  type: 'test'
+  ...
+# Subtest: TW12 audit: physical 1:50 section — 5.5 m measures 110 mm in the PDF scene and 0.25 m radius arrows stay legible
+ok 387 - TW12 audit: physical 1:50 section — 5.5 m measures 110 mm in the PDF scene and 0.25 m radius arrows stay legible
+  ---
+  duration_ms: 7.547309
+  type: 'test'
+  ...
+# Subtest: TW12 oracle (ezdxf, independent reader): 4 layouts, no audit errors, viewport paper size / view height == scale
+ok 388 - TW12 oracle (ezdxf, independent reader): 4 layouts, no audit errors, viewport paper size / view height == scale # SKIP requiere python3 + ezdxf
+  ---
+  duration_ms: 0.060046
+  type: 'test'
+  ...
+# Subtest: TW12 layouts: DXF written by the generator satisfies the structural check read by an independent parser
+ok 389 - TW12 layouts: DXF written by the generator satisfies the structural check read by an independent parser
+  ---
+  duration_ms: 27.293303
+  type: 'test'
+  ...
+# Subtest: TW12 layouts: positive mock passes; negatives are rejected with the precise issue
+ok 390 - TW12 layouts: positive mock passes; negatives are rejected with the precise issue
+  ---
+  duration_ms: 1.811238
+  type: 'test'
+  ...
+# Subtest: TW12 layouts: scale-only coincidence (old some() check) no longer passes; missing model region is declared partial, never complete
+ok 391 - TW12 layouts: scale-only coincidence (old some() check) no longer passes; missing model region is declared partial, never complete
+  ---
+  duration_ms: 0.455362
+  type: 'test'
+  ...
+# Subtest: TW12 guardarLaminas: structural mismatch in the saved DWG fails verification and never claims real-AutoCAD validation
+ok 392 - TW12 guardarLaminas: structural mismatch in the saved DWG fails verification and never claims real-AutoCAD validation
+  ---
+  duration_ms: 178.475137
+  type: 'test'
+  ...
+# Subtest: caso de aceptación: 80 m², 3 dormitorios, 2 baños, living-comedor y cocina americana → distribución coherente y completa
+ok 393 - caso de aceptación: 80 m², 3 dormitorios, 2 baños, living-comedor y cocina americana → distribución coherente y completa
+  ---
+  duration_ms: 9.229468
+  type: 'test'
+  ...
+# Subtest: geometría verificada de forma independiente: sin solapes, áreas cuadran, muros con espesor, aberturas dentro del muro y barridos dentro del recinto
+ok 394 - geometría verificada de forma independiente: sin solapes, áreas cuadran, muros con espesor, aberturas dentro del muro y barridos dentro del recinto
+  ---
+  duration_ms: 14.234271
+  type: 'test'
+  ...
+# Subtest: programas fuera de los límites se rechazan con mensaje claro (no se inventa una solución)
+ok 395 - programas fuera de los límites se rechazan con mensaje claro (no se inventa una solución)
+  ---
+  duration_ms: 2.624161
+  type: 'test'
+  ...
+# Subtest: DXF: lo escrito se re-mide con el motor DXF; áreas = modelo; textos Unicode escapados; capas esperadas
+ok 396 - DXF: lo escrito se re-mide con el motor DXF; áreas = modelo; textos Unicode escapados; capas esperadas
+  ---
+  duration_ms: 32.995783
+  type: 'test'
+  ...
+# Subtest: oráculo externo (ezdxf, si está disponible): el DXF abre sin errores de auditoría y las áreas coinciden
+ok 397 - oráculo externo (ezdxf, si está disponible): el DXF abre sin errores de auditoría y las áreas coinciden # SKIP ezdxf/python3 no disponible
+  ---
+  duration_ms: 43.402505
+  type: 'test'
+  ...
+# Subtest: refinamiento: ajustar un recinto solo cambia lo declarado; lo demás queda idéntico; superficies recalculadas
+ok 398 - refinamiento: ajustar un recinto solo cambia lo declarado; lo demás queda idéntico; superficies recalculadas
+  ---
+  duration_ms: 17.923342
+  type: 'test'
+  ...
+# Subtest: operaciones del catálogo: intercambiar, renombrar, aberturas, dividir, eliminar, separación, espesores y sistema
+ok 399 - operaciones del catálogo: intercambiar, renombrar, aberturas, dividir, eliminar, separación, espesores y sistema
+  ---
+  duration_ms: 83.472623
+  type: 'test'
+  ...
+# Subtest: versiones: crear, modificar, rechazo atómico, deshacer/rehacer/restaurar, inmutabilidad, solo bajo 03 Trabajo y originales intactos
+ok 400 - versiones: crear, modificar, rechazo atómico, deshacer/rehacer/restaurar, inmutabilidad, solo bajo 03 Trabajo y originales intactos
+  ---
+  duration_ms: 78.169436
+  type: 'test'
+  ...
+# Subtest: cubicación desde la geometría construida: fórmulas verificables y altura entregada por la usuaria
+ok 401 - cubicación desde la geometría construida: fórmulas verificables y altura entregada por la usuaria
+  ---
+  duration_ms: 2.276909
+  type: 'test'
+  ...
+# Subtest: capa de conocimiento técnico: orienta sin evaluar; sin valores normativos ni artículos citados; origen y dónde confirmar
+ok 402 - capa de conocimiento técnico: orienta sin evaluar; sin valores normativos ni artículos citados; origen y dónde confirmar
+  ---
+  duration_ms: 1.325722
+  type: 'test'
+  ...
+# Subtest: TW-DESIGN: "diseña una casa de ~80 m² 3D2B" → refinar → deshacer → verificar → cubicar [fuente]
+ok 403 - TW-DESIGN: "diseña una casa de ~80 m² 3D2B" → refinar → deshacer → verificar → cubicar [fuente]
+  ---
+  duration_ms: 1044.354171
+  type: 'test'
+  ...
+# Subtest: TW-DESIGN: "diseña una casa de ~80 m² 3D2B" → refinar → deshacer → verificar → cubicar [bundle .mcpb]
+ok 404 - TW-DESIGN: "diseña una casa de ~80 m² 3D2B" → refinar → deshacer → verificar → cubicar [bundle .mcpb]
+  ---
+  duration_ms: 951.99532
+  type: 'test'
+  ...
+# Subtest: comparación TIPADA: cada tipo se compara por sus propiedades reales y lo no informado NO se compara como null=null
+ok 405 - comparación TIPADA: cada tipo se compara por sus propiedades reales y lo no informado NO se compara como null=null
+  ---
+  duration_ms: 2.481443
+  type: 'test'
+  ...
+# Subtest: comparación tipada: detecta cambios reales por tipo (línea, arco, polilínea, texto con ñ, capa, desaparición, tipo)
+ok 406 - comparación tipada: detecta cambios reales por tipo (línea, arco, polilínea, texto con ñ, capa, desaparición, tipo)
+  ---
+  duration_ms: 0.735105
+  type: 'test'
+  ...
+# Subtest: arcos de puerta: la longitud 0 era una conversión de propiedad inexistente; ahora se lee ArcLength y se cruza con r×ángulo
+ok 407 - arcos de puerta: la longitud 0 era una conversión de propiedad inexistente; ahora se lee ArcLength y se cruza con r×ángulo
+  ---
+  duration_ms: 0.668239
+  type: 'test'
+  ...
+# Subtest: textos con tildes y Ñ: clasificación exacta / secuencia \\U+ sin decodificar / corrupta, con puntos de código
+ok 408 - textos con tildes y Ñ: clasificación exacta / secuencia \\U+ sin decodificar / corrupta, con puntos de código
+  ---
+  duration_ms: 0.812116
+  type: 'test'
+  ...
+# Subtest: el DXF del anteproyecto contiene textos con Ñ/tildes escapados y el esperado se decodifica a caracteres reales
+ok 409 - el DXF del anteproyecto contiene textos con Ñ/tildes escapados y el esperado se decodifica a caracteres reales
+  ---
+  duration_ms: 2.721823
+  type: 'test'
+  ...
+# Subtest: fidelidad DXF→DWG por firmas: fiel cuando coincide; detecta faltantes, sobrantes y conversiones erróneas
+ok 410 - fidelidad DXF→DWG por firmas: fiel cuando coincide; detecta faltantes, sobrantes y conversiones erróneas
+  ---
+  duration_ms: 15.045771
+  type: 'test'
+  ...
+# Subtest: estructura: capas y conteos por capa; una lista de capas vacía (defecto "capas: []") NO se da por buena
+ok 411 - estructura: capas y conteos por capa; una lista de capas vacía (defecto "capas: []") NO se da por buena
+  ---
+  duration_ms: 1.94561
+  type: 'test'
+  ...
+# Subtest: dxfADwg: reporta capas reales y conteos por capa; valida cabecera; detecta capas vacías o conteos distintos
+ok 412 - dxfADwg: reporta capas reales y conteos por capa; valida cabecera; detecta capas vacías o conteos distintos
+  ---
+  duration_ms: 32.016201
+  type: 'test'
+  ...
+# Subtest: persistencia por LOTES: 2000 entidades sin superar el límite por llamada; cada lote es una llamada independiente
+ok 413 - persistencia por LOTES: 2000 entidades sin superar el límite por llamada; cada lote es una llamada independiente
+  ---
+  duration_ms: 102.248655
+  type: 'test'
+  ...
+# Subtest: persistencia del anteproyecto completo (LINE, ARC, POLYLINE, TEXT): verificada; pérdida, texto corrupto y arco defectuoso se detectan
+ok 414 - persistencia del anteproyecto completo (LINE, ARC, POLYLINE, TEXT): verificada; pérdida, texto corrupto y arco defectuoso se detectan
+  ---
+  duration_ms: 26.215151
+  type: 'test'
+  ...
+# Subtest: verificar DWG contra el DXF: fiel; y cada defecto (faltantes, textos sin decodificar/corruptos, capas vacías, arcos en 0) se reporta
+ok 415 - verificar DWG contra el DXF: fiel; y cada defecto (faltantes, textos sin decodificar/corruptos, capas vacías, arcos en 0) se reporta
+  ---
+  duration_ms: 46.672884
+  type: 'test'
+  ...
+# Subtest: geometría: recintos rectangulares aleatorios — volumen analítico, sin solapes, vanos realmente abiertos y huella exacta
+ok 416 - geometría: recintos rectangulares aleatorios — volumen analítico, sin solapes, vanos realmente abiertos y huella exacta
+  ---
+  duration_ms: 11.89488
+  type: 'test'
+  ...
+# Subtest: geometría: planta en L con tabique interior, dos niveles, losas ortogonales y alturas distintas por nivel
+ok 417 - geometría: planta en L con tabique interior, dos niveles, losas ortogonales y alturas distintas por nivel
+  ---
+  duration_ms: 2.689622
+  type: 'test'
+  ...
+# Subtest: geometría: muro inclinado (45°) — volumen, centroide y caja envolvente analíticos y aviso de solapes
+ok 418 - geometría: muro inclinado (45°) — volumen, centroide y caja envolvente analíticos y aviso de solapes
+  ---
+  duration_ms: 0.565156
+  type: 'test'
+  ...
+# Subtest: cubiertas: plana, a un agua y a dos aguas — volúmenes, centroides y alturas de cumbrera analíticos; pendiente obligatoria
+ok 419 - cubiertas: plana, a un agua y a dos aguas — volúmenes, centroides y alturas de cumbrera analíticos; pendiente obligatoria
+  ---
+  duration_ms: 1.923653
+  type: 'test'
+  ...
+# Subtest: validación: no se inventan alturas, antepechos ni pendientes; vanos imposibles y contornos no ortogonales se rechazan con código claro
+ok 420 - validación: no se inventan alturas, antepechos ni pendientes; vanos imposibles y contornos no ortogonales se rechazan con código claro
+  ---
+  duration_ms: 1.603062
+  type: 'test'
+  ...
+# Subtest: operaciones: todas o ninguna; cada operación del catálogo modifica solo lo indicado
+ok 421 - operaciones: todas o ninguna; cada operación del catálogo modifica solo lo indicado
+  ---
+  duration_ms: 1.89591
+  type: 'test'
+  ...
+# Subtest: 2D → 3D con CUALQUIER anteproyecto: coherencia con el plano, desfase detectado y sincronización; versiones inmutables y deshacer
+ok 422 - 2D → 3D con CUALQUIER anteproyecto: coherencia con el plano, desfase detectado y sincronización; versiones inmutables y deshacer
+  ---
+  duration_ms: 147.449493
+  type: 'test'
+  ...
+# Subtest: 2D → 3D: tras modificar el anteproyecto el 3D avisa del desfase y actualizar_desde_anteproyecto lo sincroniza; historial y versiones
+ok 423 - 2D → 3D: tras modificar el anteproyecto el 3D avisa del desfase y actualizar_desde_anteproyecto lo sincroniza; historial y versiones
+  ---
+  duration_ms: 99.44732
+  type: 'test'
+  ...
+# Subtest: coherencia 2D detecta manipulaciones: muro movido o vano desplazado en el 3D
+ok 424 - coherencia 2D detecta manipulaciones: muro movido o vano desplazado en el 3D
+  ---
+  duration_ms: 9.650895
+  type: 'test'
+  ...
+# Subtest: comparación de sólidos: volumen, centroide, capa y caja envolvente; sin caja envolvente el resultado es no concluyente
+ok 425 - comparación de sólidos: volumen, centroide, capa y caja envolvente; sin caja envolvente el resultado es no concluyente
+  ---
+  duration_ms: 3.098979
+  type: 'test'
+  ...
+# Subtest: AutoCAD (servidor COM simulado): construir DWG 3D nuevo, verificar cada sólido, vistas, inspección, transformación y persistencia
+ok 426 - AutoCAD (servidor COM simulado): construir DWG 3D nuevo, verificar cada sólido, vistas, inspección, transformación y persistencia
+  ---
+  duration_ms: 27.840011
+  type: 'test'
+  ...
+# Subtest: MCP: flujo completo de herramientas 3D sin AutoCAD (crear, ver, modificar, historial) y herramientas de AutoCAD con mensajes claros fuera de Windows
+ok 427 - MCP: flujo completo de herramientas 3D sin AutoCAD (crear, ver, modificar, historial) y herramientas de AutoCAD con mensajes claros fuera de Windows
+  ---
+  duration_ms: 949.518678
+  type: 'test'
+  ...
+# Subtest: límites de Windows: scripts 3D largos van comprimidos y entradas grandes por la entrada estándar (sin superar 32 767 caracteres)
+ok 428 - límites de Windows: scripts 3D largos van comprimidos y entradas grandes por la entrada estándar (sin superar 32 767 caracteres)
+  ---
+  duration_ms: 17.55206
+  type: 'test'
+  ...
+# Subtest: esquemas MCP compatibles con la API: ninguna herramienta usa tuplas (items como lista / prefixItems) ni construcciones no admitidas
+ok 429 - esquemas MCP compatibles con la API: ninguna herramienta usa tuplas (items como lista / prefixItems) ni construcciones no admitidas
+  ---
+  duration_ms: 860.761627
+  type: 'test'
+  ...
+# Subtest: REPRODUCCIÓN del caso real: 51 entidades antes y 0 tras reabrir con SHA idéntico NUNCA es "verificada"
+ok 430 - REPRODUCCIÓN del caso real: 51 entidades antes y 0 tras reabrir con SHA idéntico NUNCA es "verificada"
+  ---
+  duration_ms: 20.499797
+  type: 'test'
+  ...
+# Subtest: persistencia: entidad nueva fuera de la lista previa, handle perdido, otro documento reabierto y conteo por capa se detectan en ambos sentidos
+ok 431 - persistencia: entidad nueva fuera de la lista previa, handle perdido, otro documento reabierto y conteo por capa se detectan en ambos sentidos
+  ---
+  duration_ms: 10.637121
+  type: 'test'
+  ...
+# Subtest: persistencia a gran escala (2000 entidades) y textos Unicode conservan el gate global
+ok 432 - persistencia a gran escala (2000 entidades) y textos Unicode conservan el gate global
+  ---
+  duration_ms: 83.336684
+  type: 'test'
+  ...
+# Subtest: ciclo COM: cero documentos, lecturas por ruta, reintentos solo en lecturas y originales intactos
+ok 433 - ciclo COM: cero documentos, lecturas por ruta, reintentos solo en lecturas y originales intactos
+  ---
+  duration_ms: 8.104488
+  type: 'test'
+  ...
+# Subtest: altura: 2D libre 2500 frente a 3D 2400 (discrepante), 2500 (verificado) y 2600 (revisar) — nunca un verde ambiguo
+ok 434 - altura: 2D libre 2500 frente a 3D 2400 (discrepante), 2500 (verificado) y 2600 (revisar) — nunca un verde ambiguo
+  ---
+  duration_ms: 28.65961
+  type: 'test'
+  ...
+# Subtest: sin altura en el 2D la faceta queda "no_comparado" y todo lo comparado se declara
+ok 435 - sin altura en el 2D la faceta queda "no_comparado" y todo lo comparado se declara
+  ---
+  duration_ms: 6.546015
+  type: 'test'
+  ...
+# Subtest: facetas de vanos y espesores: alto, antepecho y espesor discrepantes se localizan por id
+ok 436 - facetas de vanos y espesores: alto, antepecho y espesor discrepantes se localizan por id
+  ---
+  duration_ms: 8.097903
+  type: 'test'
+  ...
+# Subtest: al crear desde un plano 2D la altura sale del plano (no de un 2400 fijo) y el registro de supuestos queda al día tras cada cambio
+ok 437 - al crear desde un plano 2D la altura sale del plano (no de un 2400 fijo) y el registro de supuestos queda al día tras cada cambio
+  ---
+  duration_ms: 187.306794
+  type: 'test'
+  ...
+# Subtest: semántica: distancia_mm es el CENTRO; inicio = oeste/sur, fin = este/norte, centro = desplazamiento desde el punto medio
+ok 438 - semántica: distancia_mm es el CENTRO; inicio = oeste/sur, fin = este/norte, centro = desplazamiento desde el punto medio
+  ---
+  duration_ms: 43.984704
+  type: 'test'
+  ...
+# Subtest: candidatos libres: respetan margen a esquinas y separación con aberturas existentes; sin espacio → no viable con motivo
+ok 439 - candidatos libres: respetan margen a esquinas y separación con aberturas existentes; sin espacio → no viable con motivo
+  ---
+  duration_ms: 10.469327
+  type: 'test'
+  ...
+# Subtest: previsualizar: no escribe nada, explica por qué no cabe y coincide con lo que luego hace modificar
+ok 440 - previsualizar: no escribe nada, explica por qué no cabe y coincide con lo que luego hace modificar
+  ---
+  duration_ms: 105.812249
+  type: 'test'
+  ...
+# Subtest: MCP: tannia_diseno_inspeccionar y tannia_diseno_previsualizar sin ids ni JSON del usuario
+ok 441 - MCP: tannia_diseno_inspeccionar y tannia_diseno_previsualizar sin ids ni JSON del usuario
+  ---
+  duration_ms: 910.871755
+  type: 'test'
+  ...
+# Subtest: identidad: id UUID estable al crear; proyectos anteriores se migran sin cambiar rutas ni archivos; nombres equivalentes no crean carpetas parecidas
+ok 442 - identidad: id UUID estable al crear; proyectos anteriores se migran sin cambiar rutas ni archivos; nombres equivalentes no crean carpetas parecidas
+  ---
+  duration_ms: 15.70601
+  type: 'test'
+  ...
+# Subtest: resolver: único, probable, ambiguo y ninguno; nunca elige entre varios y no escribe nada
+ok 443 - resolver: único, probable, ambiguo y ninguno; nunca elige entre varios y no escribe nada
+  ---
+  duration_ms: 8.660879
+  type: 'test'
+  ...
+# Subtest: importar: copia real con hash, manifiesto, sin sobrescribir, duplicados por SHA, rechazos claros y originales protegidos
+ok 444 - importar: copia real con hash, manifiesto, sin sobrescribir, duplicados por SHA, rechazos claros y originales protegidos
+  ---
+  duration_ms: 18.476416
+  type: 'test'
+  ...
+# Subtest: originales: 0 registrados NO es una prueba positiva de protección; con originales sí, y un cambio se detecta
+ok 445 - originales: 0 registrados NO es una prueba positiva de protección; con originales sí, y un cambio se detecta
+  ---
+  duration_ms: 5.036772
+  type: 'test'
+  ...
+# Subtest: aislamiento: tres proyectos con anteproyecto, 3D, importaciones e historial independientes; el resumen no cruza referencias
+ok 446 - aislamiento: tres proyectos con anteproyecto, 3D, importaciones e historial independientes; el resumen no cruza referencias
+  ---
+  duration_ms: 147.059468
+  type: 'test'
+  ...
+# Subtest: MCP: resolver, resumen e importar por herramientas (flujo "Casa Los Robles con antecedentes")
+ok 447 - MCP: resolver, resumen e importar por herramientas (flujo "Casa Los Robles con antecedentes")
+  ---
+  duration_ms: 889.807027
+  type: 'test'
+  ...
+# Subtest: 2D: un corte en cualquier paso no deja versión falsa; la siguiente operación reconcilia y las versiones históricas no cambian
+ok 448 - 2D: un corte en cualquier paso no deja versión falsa; la siguiente operación reconcilia y las versiones históricas no cambian
+  ---
+  duration_ms: 192.32491
+  type: 'test'
+  ...
+# Subtest: 2D: corte justo tras actualizar el historial (commit lógico hecho) conserva la versión y limpia el journal
+ok 449 - 2D: corte justo tras actualizar el historial (commit lógico hecho) conserva la versión y limpia el journal
+  ---
+  duration_ms: 23.757928
+  type: 'test'
+  ...
+# Subtest: 3D: mismos cortes en cada paso; el modelo anterior sigue siendo el vigente y nada se pierde
+ok 450 - 3D: mismos cortes en cada paso; el modelo anterior sigue siendo el vigente y nada se pierde
+  ---
+  duration_ms: 80.373419
+  type: 'test'
+  ...
+# Subtest: manifiesto detecta alteración posterior; versiones inmutables (no se sobrescribe); dos solicitudes simultáneas no pisan archivos
+ok 451 - manifiesto detecta alteración posterior; versiones inmutables (no se sobrescribe); dos solicitudes simultáneas no pisan archivos
+  ---
+  duration_ms: 8.004367
+  type: 'test'
+  ...
+# Subtest: exportaciones: jamás reemplazan un archivo existente (idéntico se reutiliza; distinto recibe otro nombre)
+ok 452 - exportaciones: jamás reemplazan un archivo existente (idéntico se reutiliza; distinto recibe otro nombre)
+  ---
+  duration_ms: 3.197444
+  type: 'test'
+  ...
+# Subtest: encargos: cada tipo se enruta a la capacidad REAL y lo no soportado se dice con honestidad (sin casa hardcodeada)
+ok 453 - encargos: cada tipo se enruta a la capacidad REAL y lo no soportado se dice con honestidad (sin casa hardcodeada)
+  ---
+  duration_ms: 3.509767
+  type: 'test'
+  ...
+# Subtest: política y instrucciones del servidor: cuatro categorías, nunca automático, sin "preguntar siempre", adjuntos y respuestas breves
+ok 454 - política y instrucciones del servidor: cuatro categorías, nunca automático, sin "preguntar siempre", adjuntos y respuestas breves
+  ---
+  duration_ms: 0.745122
+  type: 'test'
+  ...
+# Subtest: respuestas: el JSON del texto se acota (detalle completo en structuredContent) y los resúmenes breves no se tocan
+ok 455 - respuestas: el JSON del texto se acota (detalle completo en structuredContent) y los resúmenes breves no se tocan
+  ---
+  duration_ms: 2.692995
+  type: 'test'
+  ...
+# Subtest: MCP: tannia_encargo_evaluar y tannia_politica_autonomia disponibles; el flujo de encargos del producto no pide nada técnico a la usuaria
+ok 456 - MCP: tannia_encargo_evaluar y tannia_politica_autonomia disponibles; el flujo de encargos del producto no pide nada técnico a la usuaria
+  ---
+  duration_ms: 862.735603
+  type: 'test'
+  ...
+# Subtest: originales reales (DWG/DXF/PDF): tras importar, diseñar 2D, modelar 3D, versionar, exportar y reconciliar, hash y fecha no cambian
+ok 457 - originales reales (DWG/DXF/PDF): tras importar, diseñar 2D, modelar 3D, versionar, exportar y reconciliar, hash y fecha no cambian
+  ---
+  duration_ms: 100.95221
+  type: 'test'
+  ...
+# Subtest: nombres hostiles: traversal, reservados de Windows y separadores no escapan del proyecto ni de su carpeta
+ok 458 - nombres hostiles: traversal, reservados de Windows y separadores no escapan del proyecto ni de su carpeta
+  ---
+  duration_ms: 62.433248
+  type: 'test'
+  ...
+# Subtest: datos hostiles: texto con instrucciones en capas, textos de DXF y notas se conserva como DATO y no activa nada
+ok 459 - datos hostiles: texto con instrucciones en capas, textos de DXF y notas se conserva como DATO y no activa nada
+  ---
+  duration_ms: 807.779885
+  type: 'test'
+  ...
+# Subtest: dos sesiones MCP simultáneas sobre la misma carpeta: la segunda creación del mismo nombre falla limpiamente y nada se corrompe
+ok 460 - dos sesiones MCP simultáneas sobre la misma carpeta: la segunda creación del mismo nombre falla limpiamente y nada se corrompe
+  ---
+  duration_ms: 1560.889887
+  type: 'test'
+  ...
+# Subtest: «Crea un proyecto Casa Los Robles, aquí tienes los antecedentes, necesito una propuesta 3D y los planos guardados» — flujo completo y continuidad
+ok 461 - «Crea un proyecto Casa Los Robles, aquí tienes los antecedentes, necesito una propuesta 3D y los planos guardados» — flujo completo y continuidad
+  ---
+  duration_ms: 1759.244542
+  type: 'test'
+  ...
+# Subtest: contrato del script: con ruta_esperada se localiza el documento o se falla; la rama con ruta NO contiene ActiveDocument
+ok 462 - contrato del script: con ruta_esperada se localiza el documento o se falla; la rama con ruta NO contiene ActiveDocument
+  ---
+  duration_ms: 1.379834
+  type: 'test'
+  ...
+# Subtest: defensa en Node: si el script devolviera datos de OTRO documento (defecto antiguo), todas las verificaciones fallan con DOCUMENTO_DISTINTO
+ok 463 - defensa en Node: si el script devolviera datos de OTRO documento (defecto antiguo), todas las verificaciones fallan con DOCUMENTO_DISTINTO
+  ---
+  duration_ms: 16.312349
+  type: 'test'
+  ...
+# Subtest: dos dibujos abiertos con handles y conteos idénticos: cada verificación lee el documento pedido, aunque el foco cambie
+ok 464 - dos dibujos abiertos con handles y conteos idénticos: cada verificación lee el documento pedido, aunque el foco cambie
+  ---
+  duration_ms: 12.056656
+  type: 'test'
+  ...
+# Subtest: dibujo esperado cerrado (o nunca abierto): falla explícita DOCUMENTO_NO_ABIERTO sin leer nada del otro dibujo
+ok 465 - dibujo esperado cerrado (o nunca abierto): falla explícita DOCUMENTO_NO_ABIERTO sin leer nada del otro dibujo
+  ---
+  duration_ms: 7.232834
+  type: 'test'
+  ...
+# Subtest: una sesión NO puede apartar ni borrar los temporales de una escritura VIVA de otra (reconciliar durante una escritura en curso)
+ok 466 - una sesión NO puede apartar ni borrar los temporales de una escritura VIVA de otra (reconciliar durante una escritura en curso)
+  ---
+  duration_ms: 122.754848
+  type: 'test'
+  ...
+# Subtest: segunda escritura concurrente: espera un tiempo acotado y falla con VERSION_EN_CURSO sin mezclar archivos; al liberar, procede
+ok 467 - segunda escritura concurrente: espera un tiempo acotado y falla con VERSION_EN_CURSO sin mezclar archivos; al liberar, procede
+  ---
+  duration_ms: 399.855848
+  type: 'test'
+  ...
+# Subtest: cortes REALES de proceso (SIGKILL) en cada paso: la siguiente operación recupera sin pérdida de datos y sin bloqueos eternos
+ok 468 - cortes REALES de proceso (SIGKILL) en cada paso: la siguiente operación recupera sin pérdida de datos y sin bloqueos eternos
+  ---
+  duration_ms: 445.199457
+  type: 'test'
+  ...
+# Subtest: dos procesos reales intentan crear la MISMA versión a la vez: exactamente uno la confirma, el otro falla limpio y el estado es consistente
+ok 469 - dos procesos reales intentan crear la MISMA versión a la vez: exactamente uno la confirma, el otro falla limpio y el estado es consistente
+  ---
+  duration_ms: 422.777722
+  type: 'test'
+  ...
+# Subtest: bloqueo abandonado: dueño muerto o latido vencido se toma de forma atómica; un bloqueo vivo reciente no
+ok 470 - bloqueo abandonado: dueño muerto o latido vencido se toma de forma atómica; un bloqueo vivo reciente no
+  ---
+  duration_ms: 417.192234
+  type: 'test'
+  ...
+# Subtest: servicios 2D y 3D: otra sesión que abre, consulta, deshace o modifica durante una escritura viva NO la daña; el conflicto se informa sin pérdida
+ok 471 - servicios 2D y 3D: otra sesión que abre, consulta, deshace o modifica durante una escritura viva NO la daña; el conflicto se informa sin pérdida
+  ---
+  duration_ms: 1614.852114
+  type: 'test'
+  ...
+# Subtest: servicios: una sesión que preparó su cambio sobre una versión que otra ya avanzó recibe VERSION_CONCURRENTE (nada se pisa ni queda a medias)
+ok 472 - servicios: una sesión que preparó su cambio sobre una versión que otra ya avanzó recibe VERSION_CONCURRENTE (nada se pisa ni queda a medias)
+  ---
+  duration_ms: 640.893206
+  type: 'test'
+  ...
+# Subtest: servicios: dos procesos reales modifican el mismo anteproyecto/modelo a la vez — exactamente uno gana, el otro falla limpio y el historial queda consistente
+ok 473 - servicios: dos procesos reales modifican el mismo anteproyecto/modelo a la vez — exactamente uno gana, el otro falla limpio y el historial queda consistente
+  ---
+  duration_ms: 918.7837
+  type: 'test'
+  ...
+# Subtest: servicios: corte real (SIGKILL) a mitad de una modificación — la siguiente sesión recupera sin pérdida y el proyecto sigue utilizable
+ok 474 - servicios: corte real (SIGKILL) a mitad de una modificación — la siguiente sesión recupera sin pérdida y el proyecto sigue utilizable
+  ---
+  duration_ms: 877.175001
+  type: 'test'
+  ...
+# Subtest: carpeta destino reemplazada por enlace (symlink/junction) hacia fuera: se rechaza y NO se escribe nada fuera
+ok 475 - carpeta destino reemplazada por enlace (symlink/junction) hacia fuera: se rechaza y NO se escribe nada fuera
+  ---
+  duration_ms: 17.647736
+  type: 'test'
+  ...
+# Subtest: .tannia y el propio proyecto como enlace: el manifiesto tampoco se escribe fuera
+ok 476 - .tannia y el propio proyecto como enlace: el manifiesto tampoco se escribe fuera
+  ---
+  duration_ms: 3.880462
+  type: 'test'
+  ...
+# Subtest: cambio de directorio DURANTE la copia (TOCTOU): se detecta tras copiar, se elimina lo escrito y no queda nada fuera
+ok 477 - cambio de directorio DURANTE la copia (TOCTOU): se detecta tras copiar, se elimina lo escrito y no queda nada fuera
+  ---
+  duration_ms: 5.559814
+  type: 'test'
+  ...
+# Subtest: archivo del destino que es un enlace colgante: no se escribe a través de él y se elige otro nombre
+ok 478 - archivo del destino que es un enlace colgante: no se escribe a través de él y se elige otro nombre
+  ---
+  duration_ms: 5.157659
+  type: 'test'
+  ...
+# Subtest: colisiones de Windows: mismo nombre con otra capitalización, nombres reservados, ADS, puntos/espacios finales y rutas demasiado largas
+ok 479 - colisiones de Windows: mismo nombre con otra capitalización, nombres reservados, ADS, puntos/espacios finales y rutas demasiado largas
+  ---
+  duration_ms: 14.291321
+  type: 'test'
+  ...
+# Subtest: la importación legítima a 01 Antecedentes y 02 Originales sigue funcionando (hash, manifiesto, registro y protección)
+ok 480 - la importación legítima a 01 Antecedentes y 02 Originales sigue funcionando (hash, manifiesto, registro y protección)
+  ---
+  duration_ms: 10.43945
+  type: 'test'
+  ...
+# Subtest: proyecto heredado sin UUID con `.tannia` reemplazada por un enlace: la migración de id y su respaldo NO escriben fuera
+ok 481 - proyecto heredado sin UUID con `.tannia` reemplazada por un enlace: la migración de id y su respaldo NO escriben fuera
+  ---
+  duration_ms: 9.902534
+  type: 'test'
+  ...
+# Subtest: importar y resumir con `.tannia` enlazada: se rechaza ANTES de cualquier escritura (id, manifiesto de antecedentes, auditoría)
+ok 482 - importar y resumir con `.tannia` enlazada: se rechaza ANTES de cualquier escritura (id, manifiesto de antecedentes, auditoría)
+  ---
+  duration_ms: 5.491731
+  type: 'test'
+  ...
+# Subtest: sustitución de `.tannia` DURANTE la migración de id (entre leer y escribir): no se escribe fuera
+ok 483 - sustitución de `.tannia` DURANTE la migración de id (entre leer y escribir): no se escribe fuera
+  ---
+  duration_ms: 8.467743
+  type: 'test'
+  ...
+# Subtest: sustitución de `.tannia` DURANTE la importación, antes de la actualización FINAL del manifiesto: no se escribe fuera y se deshace lo copiado
+ok 484 - sustitución de `.tannia` DURANTE la importación, antes de la actualización FINAL del manifiesto: no se escribe fuera y se deshace lo copiado
+  ---
+  duration_ms: 7.718074
+  type: 'test'
+  ...
+# Subtest: atomicWriteJson con raíz: rechaza destinos fuera de la raíz o con componentes enlazados, y no deja .tmp/.bak fuera
+ok 485 - atomicWriteJson con raíz: rechaza destinos fuera de la raíz o con componentes enlazados, y no deja .tmp/.bak fuera
+  ---
+  duration_ms: 4.660092
+  type: 'test'
+  ...
+# Subtest: flujo legítimo intacto: migración de id, importación, resumen y auditoría funcionan en un proyecto normal
+ok 486 - flujo legítimo intacto: migración de id, importación, resumen y auditoría funcionan en un proyecto normal
+  ---
+  duration_ms: 7.394176
+  type: 'test'
+  ...
+# Subtest: REPRODUCCIÓN: dueño VIVO con latido vencido (proceso pausado) — otro proceso NO interviene su escritura; la escritura termina íntegra
+ok 487 - REPRODUCCIÓN: dueño VIVO con latido vencido (proceso pausado) — otro proceso NO interviene su escritura; la escritura termina íntegra
+  ---
+  duration_ms: 458.076354
+  type: 'test'
+  ...
+# Subtest: recuperación LEGÍTIMA tras una caída real: dueño muerto (SIGKILL) con latido reciente o vencido se recupera sin esperar y sin pérdida
+ok 488 - recuperación LEGÍTIMA tras una caída real: dueño muerto (SIGKILL) con latido reciente o vencido se recupera sin esperar y sin pérdida
+  ---
+  duration_ms: 149.626774
+  type: 'test'
+  ...
+# Subtest: pid reutilizado: dueño "vivo" con otra identidad de proceso y latido vencido se recupera; con la MISMA identidad no
+ok 489 - pid reutilizado: dueño "vivo" con otra identidad de proceso y latido vencido se recupera; con la MISMA identidad no
+  ---
+  duration_ms: 627.780596
+  type: 'test'
+  ...
+# Subtest: dueño en OTRO equipo (carpeta compartida): no se puede verificar su vida; solo se recupera pasada la edad máxima
+ok 490 - dueño en OTRO equipo (carpeta compartida): no se puede verificar su vida; solo se recupera pasada la edad máxima
+  ---
+  duration_ms: 210.375154
+  type: 'test'
+  ...
+# Subtest: tomarBloqueo informa el diagnóstico y el latido se renueva en cada paso de la escritura (un dueño activo no queda "vencido" por su propio avance)
+ok 491 - tomarBloqueo informa el diagnóstico y el latido se renueva en cada paso de la escritura (un dueño activo no queda "vencido" por su propio avance)
+  ---
+  duration_ms: 33.357207
+  type: 'test'
+  ...
+# Subtest: REPRODUCCIÓN: "H4/H5" es un separador de ruta; "H4-H5" no — y el validador oficial de mcpb NO detecta el problema
+ok 492 - REPRODUCCIÓN: "H4/H5" es un separador de ruta; "H4-H5" no — y el validador oficial de mcpb NO detecta el problema
+  ---
+  duration_ms: 1582.735697
+  type: 'test'
+  ...
+# Subtest: reglas de nombres: separadores, reservados de Windows, puntos/espacios finales, largo, control, ids internos y versiones
+ok 493 - reglas de nombres: separadores, reservados de Windows, puntos/espacios finales, largo, control, ids internos y versiones
+  ---
+  duration_ms: 1.577624
+  type: 'test'
+  ...
+# Subtest: rutas internas del paquete: traversal, absolutas, barra invertida, caracteres de Windows, reservados, largo y colisiones de mayúsculas
+ok 494 - rutas internas del paquete: traversal, absolutas, barra invertida, caracteres de Windows, reservados, largo y colisiones de mayúsculas
+  ---
+  duration_ms: 0.882094
+  type: 'test'
+  ...
+# Subtest: el manifiesto generado por el build del producto cumple las reglas, y un nombre inseguro NO se empaqueta (falla antes de crear nada)
+ok 495 - el manifiesto generado por el build del producto cumple las reglas, y un nombre inseguro NO se empaqueta (falla antes de crear nada)
+  ---
+  duration_ms: 1755.415561
+  type: 'test'
+  ...
+# Subtest: paquete de prueba seguro: se genera, se verifica como cliente MCP (initialize + herramientas exactas + esquemas) y el servidor es idéntico al del build
+ok 496 - paquete de prueba seguro: se genera, se verifica como cliente MCP (initialize + herramientas exactas + esquemas) y el servidor es idéntico al del build
+  ---
+  duration_ms: 18418.651425
+  type: 'test'
+  ...
+1..496
+# tests 496
+# suites 0
+# pass 477
+# fail 0
+# cancelled 0
+# skipped 19
+# todo 0
+# duration_ms 295655.051923
+exit 0
