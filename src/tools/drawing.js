@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { DrawingService } from '../drawing/service.js';
 import { CadOperations } from '../cad/operations.js';
-import { ok, UserError } from '../mcp/util.js';
+import { ok, UserError, conArchivos } from '../mcp/util.js';
+const entregables = (r) => ({ carpeta: r.folder, archivos: r.files.filter((f) => /\.(pdf|dxf|csv)$/.test(f) && !/lamina-\d/.test(f)).map((f) => `${r.folder}/${f}`) });
 import { AprobacionHumana } from '../cic/aprobacion_humana.js';
 import { autorizarAtribucion } from '../drawing/atribucion.js';
 
@@ -23,13 +24,13 @@ export function registerDrawing(reg, { sandbox, cad, server = null, aprobacion =
     if (accion === 'generar') {
       if (!especificacion) throw new UserError('FALTAN_DATOS', 'Falta la especificación de los planos (vistas, elementos, cotas y láminas).');
       const r = await service.generate(proyecto, { especificacion, paper: papel, orientation: orientacion });
-      return ok('Láminas generadas para revisión (DXF con cotas nativas y layouts, PDF y vista previa). Validación en AutoCAD y revisión visual pendientes.', r);
+      return conArchivos(ok('Láminas generadas para revisión (DXF con cotas nativas y layouts, PDF y vista previa). Validación en AutoCAD y revisión visual pendientes.', r), { raiz: sandbox.projectRoot(proyecto), ...entregables(r) });
     }
     if (!datos) throw new UserError('FALTAN_DATOS', 'Se requieren longitud, ancho, hastial y alternativa de revestimiento confirmados.');
     const cap = server?.server?.getClientCapabilities?.()?.elicitation;
     const elicitar = cap && ('form' in cap || Object.keys(cap).length === 0) ? () => server.server.elicitInput({ message: `¿Autoriza rotular los planos del proyecto «${proyecto}» con este texto?\n\n${[datos.author && `Elaborado por: ${datos.author}`, datos.institution && `Institución: ${datos.institution}`].filter(Boolean).join('\n')}\n\nClaude propuso este texto; el servidor no puede comprobar que usted lo indicó.`, requestedSchema: { type: 'object', properties: { aprobar: { type: 'boolean', title: 'Autorizo este texto en los planos', default: false } }, required: ['aprobar'] } }) : null;
     const { datos: limpios, atribucion } = await autorizarAtribucion({ sandbox, ah: AH, project: proyecto, datos, elicitar });
     const r = await service.generate(proyecto, { model: limpios, paper: papel, orientation: orientacion });
-    return ok(`${r.files.filter((f) => /lamina-.*\.pdf$/.test(f)).length} láminas generadas para revisión. Validación CAD y visual pendientes.`, { ...r, atribucion: atribucion ? { autorizada_por: atribucion.por, reutilizada: atribucion.reutilizada } : { estado: 'PENDIENTE', nota: 'Sin autor ni institución confirmados por una persona.' } });
+    return conArchivos(ok(`${r.files.filter((f) => /lamina-.*\.pdf$/.test(f)).length} láminas generadas para revisión. Validación CAD y visual pendientes.`, { ...r, atribucion: atribucion ? { autorizada_por: atribucion.por, reutilizada: atribucion.reutilizada } : { estado: 'PENDIENTE', nota: 'Sin autor ni institución confirmados por una persona.' } }), { raiz: sandbox.projectRoot(proyecto), ...entregables(r) });
   });
 }

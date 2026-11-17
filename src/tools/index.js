@@ -7,7 +7,7 @@ import { VERSION } from '../version.js';
 import { VERSION_MOTOR } from '../architect/version.js';
 import { identidadPaquete } from '../mcp/paquete.js';
 import { FOLDERS, sha256File } from '../security/sandbox.js';
-import { ok, UserError } from '../mcp/util.js';
+import { ok, UserError, conArchivos } from '../mcp/util.js';
 import { createProject, listProjects } from '../project/projects.js';
 import { Project, ESTADOS } from '../project/store.js';
 import { readDxfFile, summarize } from '../dxf/inspect.js';
@@ -422,7 +422,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     new Recibos(sandbox).consumir(pr, ap.recibo.id, `exportado a ${r.carpeta}`);
     pr.setEstado('entregable', `Entregables exportados (${r.carpeta}); recibo ${ap.recibo.id}`);
     const avisoEx = avisoModalidad(pr);
-    return ok(`Entrega exportada en "${r.carpeta}" (revisión ${ap.revision.id}).${avisoEx ? ` ATENCIÓN: ${avisoEx}` : ''}`, { advertencia_modalidad: avisoEx, modalidad: modalidadDe(pr), proteccion_originales: proteccionOriginales(pr), carpeta: r.carpeta, revision: ap.revision.id, archivos: r.archivos.map((x) => ({ archivo: x.archivo, sha256: x.sha256 })) });
+    return conArchivos(ok(`Entrega exportada en "${r.carpeta}" (revisión ${ap.revision.id}).${avisoEx ? ` ATENCIÓN: ${avisoEx}` : ''}`, { advertencia_modalidad: avisoEx, modalidad: modalidadDe(pr), proteccion_originales: proteccionOriginales(pr), carpeta: r.carpeta, revision: ap.revision.id, archivos: r.archivos.map((x) => ({ archivo: x.archivo, sha256: x.sha256 })) }), { raiz: sandbox.projectRoot(pr.name), carpeta: r.carpeta, archivos: r.archivos.map((x) => x.archivo) });
   });
 
   reg('tannia_recibos_verificar', {

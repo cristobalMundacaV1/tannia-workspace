@@ -1,5 +1,7 @@
 import { SecurityError } from '../security/sandbox.js';
 import { DxfError } from '../dxf/reader.js';
+import nodePath from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 export class UserError extends Error {
   constructor(code, message, hint, detalle) { super(message); this.code = code; this.hint = hint; this.detalle = detalle; }
@@ -64,4 +66,24 @@ export function guard(fn, log = () => {}) {
       return fail('ERROR_INTERNO', 'Ocurrió un error inesperado. No se modificó ningún original.', 'Ejecute el diagnóstico (tannia_diagnostico) y comparta el resultado con soporte.');
     }
   };
+}
+
+const MIME = { pdf: 'application/pdf', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', dxf: 'image/vnd.dxf', dwg: 'image/vnd.dwg', csv: 'text/csv', png: 'image/png', json: 'application/json' };
+const QUE_ES = { pdf: 'PDF', xlsx: 'planilla Excel', docx: 'documento Word', dxf: 'dibujo DXF (AutoCAD)', dwg: 'dibujo DWG (AutoCAD)', csv: 'tabla CSV', png: 'imagen de vista previa', json: 'datos técnicos' };
+/**
+ * Entrega de archivos (auditoría integral §6.9). Distingue explícitamente:
+ *  - archivo_guardado_localmente: el archivo existe en el disco de la usuaria (siempre verdadero aquí);
+ *  - resource_link MCP: se agrega un vínculo `file://` por archivo para que el cliente lo muestre si lo soporta
+ *    (la presentación como adjunto descargable en Claude Desktop NO está verificada; no se promete);
+ *  - ruta local: carpeta y nombre en texto, para abrir con el Explorador. No se inventan enlaces web.
+ * Los datos técnicos (huellas) quedan en structuredContent; la conversación recibe nombres comprensibles.
+ */
+export function conArchivos(result, { raiz, carpeta, archivos }) {
+  const items = archivos.map((rel) => { const abs = nodePath.resolve(raiz, rel); const nombre = nodePath.basename(abs); const ext = nombre.split('.').pop().toLowerCase(); return { abs, nombre, ext }; });
+  const carpetaAbs = nodePath.resolve(raiz, carpeta);
+  const lista = items.map((i) => `• ${i.nombre} — ${QUE_ES[i.ext] || 'archivo'}`).join('\n');
+  result.content.unshift({ type: 'text', text: `Archivos listos (guardados en tu equipo):\n${lista}\n\nCarpeta: ${carpetaAbs}\nPara abrirlos: abre esa carpeta en el Explorador de Windows y haz doble clic en el archivo.` });
+  for (const i of items) result.content.push({ type: 'resource_link', uri: pathToFileURL(i.abs).href, name: i.nombre, mimeType: MIME[i.ext] || 'application/octet-stream', description: QUE_ES[i.ext] || 'archivo' });
+  result.structuredContent = { ...result.structuredContent, entrega: { modo: 'archivo_guardado_localmente', carpeta: carpetaAbs, archivos: items.map((i) => ({ nombre: i.nombre, ruta: i.abs, tipo: QUE_ES[i.ext] || 'archivo' })), vinculos_mcp: 'resource_link file:// (visualización como adjunto en el cliente: NO VERIFICADA)' } };
+  return result;
 }

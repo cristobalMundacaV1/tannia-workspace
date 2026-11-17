@@ -67,3 +67,20 @@ test('especificación genérica: validación estricta (escala normalizada, capa 
   const grande = base(); grande.vistas[0].elementos[0].ancho = 50; grande.vistas[0].cotas[0].b = [50, 0];
   assert.equal(code(() => compose(modeloDesdeEspecificacion(grande))), 'VISTA_NO_CABE');
 });
+
+test('MCP: «generar» con especificación de edificación entrega PDF/DXF/CSV como vínculos y nombres comprensibles', async () => {
+  const { tmpHome, startClient } = await import('./helpers.js');
+  const home = tmpHome('Tannia planos gen '); const cli = await startClient(home, undefined, { TANNIA_ENGINEERING: 'on', TANNIA_CIC: 'on', TANNIA_SIN_DIALOGO: '1' }); const c = cli.client;
+  try {
+    await c.callTool({ name: 'tannia_proyecto_crear', arguments: { nombre: 'Casa prueba' } });
+    const r = await c.callTool({ name: 'tannia_planos', arguments: { proyecto: 'Casa prueba', accion: 'generar', especificacion: recintoEspecificacion({ largo: 8, ancho: 5, espesor_muro: 0.2, altura: 2.4 }) } });
+    assert.ok(!r.isError, JSON.stringify(r.content).slice(0, 400));
+    const links = r.content.filter((x) => x.type === 'resource_link');
+    assert.ok(links.some((l) => l.name.endsWith('conjunto.pdf') && l.mimeType === 'application/pdf' && l.uri.startsWith('file://')));
+    assert.ok(links.some((l) => l.name.endsWith('planos.dxf')));
+    assert.match(r.content[0].text, /Archivos listos[\s\S]*Para abrirlos/);
+    assert.doesNotMatch(r.content[0].text, /sha256|HMAC/i);
+    assert.equal(r.structuredContent.entrega.modo, 'archivo_guardado_localmente');
+    const fs = await import('node:fs'); for (const a of r.structuredContent.entrega.archivos) assert.ok(fs.existsSync(a.ruta), a.ruta);
+  } finally { await cli.close?.(); }
+});
