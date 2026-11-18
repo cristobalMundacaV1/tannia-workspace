@@ -67,7 +67,7 @@ export function resumenProyecto(sandbox, nombre, { anteproyectos, modelos3d }) {
 }
 
 const firma = (f) => { const fd = fs.openSync(f, 'r'); try { const b = Buffer.alloc(8); fs.readSync(fd, b, 0, 8, 0); return b; } finally { fs.closeSync(fd); } };
-function formatoDetectado(ext, f) {
+export function formatoDetectado(ext, f) {
   const b = firma(f); const t = b.toString('latin1');
   const reglas = { '.pdf': /^%PDF/.test(t), '.dwg': /^AC10/.test(t), '.png': b[0] === 0x89 && t.slice(1, 4) === 'PNG', '.jpg': b[0] === 0xff && b[1] === 0xd8, '.jpeg': b[0] === 0xff && b[1] === 0xd8, '.xlsx': t.startsWith('PK'), '.docx': t.startsWith('PK') };
   return { extension: ext, firma_coincide: ext in reglas ? reglas[ext] : null };
@@ -87,7 +87,7 @@ const existeLstat = (f) => { try { fs.lstatSync(f); return true; } catch { retur
  * Comprueba que la carpeta destino sea la CANÓNICA del proyecto: ni ella ni su padre ni la raíz del proyecto son enlaces
  * (symlink/junction) y su ruta real coincide con la esperada dentro de Proyectos. Devuelve la ruta real.
  */
-function destinoCanonico(sandbox, pr, carpeta) {
+export function destinoCanonico(sandbox, pr, carpeta) {
   const proyectosReal = fs.realpathSync.native(sandbox.proyectos); const esperadaRaiz = path.join(proyectosReal, path.basename(pr.root));
   const falla = (codigo, msg) => new UserError(codigo, msg, 'No se importa para no escribir fuera del proyecto. Revise esa carpeta (no debe ser un acceso directo/enlace).');
   let rootReal; try { rootReal = fs.realpathSync.native(pr.root); } catch { throw falla('DESTINO_NO_CANONICO', 'La carpeta del proyecto no se puede resolver.'); }
@@ -106,7 +106,7 @@ function destinoCanonico(sandbox, pr, carpeta) {
  * leer por una RUTA LOCAL indicada: un adjunto del chat que no llega como archivo NO se importa (se informa el límite, nunca se simula).
  */
 /** SEC-01: ¿el archivo pertenece a la carpeta de configuración? Se compara la ruta DECLARADA y la REAL canónica (symlinks/junctions en cualquier padre, carpeta de configuración enlazada) y los enlaces rígidos por (dispositivo, inodo). */
-function enConfiguracion(sandbox, origenAbs, real, lst) {
+export function enConfiguracion(sandbox, origenAbs, real, lst) {
   const cfg = path.resolve(sandbox.home, '.tannia-config'); let cfgReal = cfg; try { cfgReal = fs.realpathSync.native(cfg); } catch { /* aún no existe */ }
   const dentro = (base, x) => { const rel = path.relative(base, x); return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel)); };
   if ([cfg, cfgReal].some((b) => dentro(b, origenAbs) || dentro(b, real))) return true;
@@ -115,7 +115,7 @@ function enConfiguracion(sandbox, origenAbs, real, lst) {
   }
   return false;
 }
-export function importarArchivos(sandbox, nombre, { archivos, modo = 'antecedente', nota, hook = () => {} }) {
+export function importarArchivos(sandbox, nombre, { archivos, modo = 'antecedente', nota, hook = () => {}, formatos = FORMATOS_IMPORTABLES }) {
   if (!Array.isArray(archivos) || !archivos.length || archivos.length > MAX_ARCHIVOS_POR_LLAMADA) throw new UserError('DATO_INVALIDO', `Indique de 1 a ${MAX_ARCHIVOS_POR_LLAMADA} rutas de archivo.`);
   if (!['antecedente', 'original'].includes(modo)) throw new UserError('DATO_INVALIDO', 'modo debe ser antecedente u original.');
   const id = asegurarId(sandbox, nombre); const pr = new Project(sandbox, nombre); pr.verificarTannia();
@@ -136,7 +136,7 @@ export function importarArchivos(sandbox, nombre, { archivos, modo = 'antecedent
       if (enConfiguracion(sandbox, path.resolve(origen), real, lst)) throw new UserError('ORIGEN_RESERVADO', 'Esa ubicación (o el archivo al que apunta) es la configuración interna de Tannia Workspace (aprobaciones y preferencias): no se importa a ningún proyecto.');
       if (isInside(proyectosReal, real)) throw new UserError('ORIGEN_EN_PROYECTOS', 'El archivo ya está dentro de una carpeta de proyectos de Tannia Workspace: no se importa entre proyectos.', 'Cópielo manualmente si es lo que desea.');
       const ext = path.extname(nombreSeguro(path.basename(origen))).toLowerCase();
-      if (!FORMATOS_IMPORTABLES.has(ext)) throw new UserError('FORMATO_NO_PERMITIDO', `Formato ${ext || '(sin extensión)'} no admitido.`, `Admitidos: ${[...FORMATOS_IMPORTABLES].join(' ')}`);
+      if (!formatos.has(ext)) throw new UserError('FORMATO_NO_PERMITIDO', `Formato ${ext || '(sin extensión)'} no admitido.`, `Admitidos: ${[...formatos].join(' ')}. Para un ZIP, RAR o una carpeta completa use tannia_expediente_recibir con UNA sola ruta.`);
       if (lst.size > MAX_BYTES_IMPORTACION) throw new UserError('ARCHIVO_MUY_GRANDE', `El archivo supera ${MAX_BYTES_IMPORTACION / 1048576} MB.`);
       const sha = sha256File(real);
       const previo = man.importaciones.find((x) => x.sha256 === sha && x.modo === modo);
