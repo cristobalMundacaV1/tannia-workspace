@@ -47,7 +47,7 @@ test('paquete INGENIERÍA construido en este equipo con destino win32-x64: manif
     const lock = JSON.parse(fs.readFileSync(path.join(raiz, 'package-lock.json'), 'utf8')).packages['node_modules/@napi-rs/canvas-win32-x64-msvc'];
     assert.equal(JSON.parse(fs.readFileSync(path.join(nativeDir, 'canvas-win32-x64-msvc', 'package.json'), 'utf8')).version, lock.version);
     const registro = JSON.parse(fs.readFileSync(path.join(dist, 'destino.json'), 'utf8')); assert.equal(registro.native_integrity, lock.integrity);
-    assert.match(out, /"herramientas": 90/); assert.match(out, /"ok": true/);
+    assert.match(out, /"herramientas": 92/); assert.match(out, /"ok": true/);
     assert.match(fs.readFileSync(`${mcpb}.sha256`, 'utf8'), /^[0-9a-f]{64} /);
   } finally { fs.rmSync(dist, { recursive: true, force: true }); fs.rmSync(salida, { recursive: true, force: true }); }
 });

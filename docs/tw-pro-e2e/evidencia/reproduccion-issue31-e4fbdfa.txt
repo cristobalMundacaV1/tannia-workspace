@@ -1,0 +1,11 @@
+# Reproducción conductual del issue #31 (importar un ZIP del expediente)
+# Script: importarArchivos(sandbox, proyecto, { archivos: [<ruta>/contexto_tunel.zip] }) — Linux x64, Node 22.23.5, 2026-11-18
+
+## e4fbdfa (base, PR #33)
+{"origen":"contexto_tunel.zip","estado":"rechazado","codigo":"FORMATO_NO_PERMITIDO","motivo":"Formato .zip no admitido.","pista":"Admitidos: .pdf .dwg .dxf .png .jpg .jpeg .tif .tiff .xlsx .xls .docx .doc .txt .csv .md"}
+→ No existía otra vía: la persona debía entregar la ruta de cada archivo (máximo 20) y el ZIP no se podía recibir.
+
+## Esta rama
+El importador de archivos sueltos sigue rechazando el .zip (no cambia su contrato) y ahora orienta a la vía correcta:
+{"origen":"contexto_tunel.zip","estado":"rechazado","codigo":"FORMATO_NO_PERMITIDO","motivo":"Formato .zip no admitido.","pista":"... Para un ZIP, RAR o una carpeta completa use tannia_expediente_recibir con UNA sola ruta."}
+tannia_expediente_recibir recibe el ZIP completo: ver test/e2e_g03_recepcion.test.js y REPORTE_DEMO.md.

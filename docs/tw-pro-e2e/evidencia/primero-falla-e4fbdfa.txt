@@ -1,0 +1,196 @@
+node:internal/modules/esm/resolve:275
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '<worktree e4fbdfa>/src/project/recepcion.js' imported from <worktree e4fbdfa>/test/e2e_g03_recepcion.test.js
+    at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:989:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file://<worktree e4fbdfa>/src/project/recepcion.js'
+}
+
+Node.js v22.23.5
+✖ test/e2e_g03_recepcion.test.js (54.828114ms)
+✖ E2E-040/041: túnel — datos con cita comprobada, rechazos de procedencia inventada, una ronda de preguntas y plan que avanza con el estado real (579.744227ms)
+✖ E2E-041: encargo de una especialidad sin perfil validado — se dice con honestidad, sin inventar planos (576.525586ms)
+✖ A→B→A en planos: volver a generar A deja A como revisión vigente (antes quedaba B) (3276.463245ms)
+✖ túnel: las cantidades salen en tw.cantidades/1 (solo la alternativa elegida es sumable) y coinciden con el oráculo (1468.004211ms)
+✖ PL-09: tannia_planos a_partidas crea partidas trazadas a la revisión de planos; un cambio de planos las deja DESACTUALIZADAS y bloquea la entrega hasta regenerarlas; A→B→A reproduce A (2415.220105ms)
+✖ C-04 edificación: cambiar UN vano en B produce el delta exacto solo en la partida del muro (oráculo a mano) (1129.884213ms)
+✖ PL-09 / R-01: mediciones sin identidad física (NEEDS_REVIEW) NO se convierten en partidas; se explica por qué (1173.045522ms)
+✖ G02/G09/NEG-03: la aprobación cubre planos + cantidades + Excel + memoria de UNA revisión; un cambio de planos la anula y bloquea planos A con partidas B (552.144918ms)
+✖ NEG-10: precio de 2010 → referencial, sin estado final; mismo cálculo aritmético (1.695543ms)
+✖ UAT-E2E-A + C (N1): expediente ZIP → encargo → planos → cubicaciones → presupuesto → memoria → aprobación → entrega, con una sola revisión y A→B→A (651.440324ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 0
+ℹ fail 11
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12636.189303
+
+✖ failing tests:
+
+test at test/e2e_g03_recepcion.test.js:1:1
+✖ test/e2e_g03_recepcion.test.js (54.828114ms)
+  'test failed'
+
+test at test/e2e_g04_encargo.test.js:18:1
+✖ E2E-040/041: túnel — datos con cita comprobada, rechazos de procedencia inventada, una ronda de preguntas y plan que avanza con el estado real (579.744227ms)
+  AssertionError [ERR_ASSERTION]: tannia_expediente_recibir: MCP error -32602: Tool tannia_expediente_recibir not found
+      at T (file://<worktree e4fbdfa>/test/e2e_g04_encargo.test.js:14:103)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g04_encargo.test.js:25:22)
+      at async Test.run (node:internal/test_runner/test:1054:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/e2e_g04_encargo.test.js:88:1
+✖ E2E-041: encargo de una especialidad sin perfil validado — se dice con honestidad, sin inventar planos (576.525586ms)
+  AssertionError [ERR_ASSERTION]: tannia_encargo: MCP error -32602: Tool tannia_encargo not found
+      at T (file://<worktree e4fbdfa>/test/e2e_g04_encargo.test.js:14:103)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g04_encargo.test.js:92:20)
+      at async Test.run (node:internal/test_runner/test:1054:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/e2e_g06_planos_partidas.test.js:20:1
+✖ A→B→A en planos: volver a generar A deja A como revisión vigente (antes quedaba B) (3276.463245ms)
+  AssertionError [ERR_ASSERTION]: la revisión vigente debe volver a A
+  + actual - expected
+  
+  + 'r-14dbde489392bb97af8c'
+  - 'r-179db40d2adcbeeb80dd'
+        ^
+  
+      at TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g06_planos_partidas.test.js:26:10)
+      at async Test.run (node:internal/test_runner/test:1054:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'r-14dbde489392bb97af8c',
+    expected: 'r-179db40d2adcbeeb80dd',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/e2e_g06_planos_partidas.test.js:30:1
+✖ túnel: las cantidades salen en tw.cantidades/1 (solo la alternativa elegida es sumable) y coinciden con el oráculo (1468.004211ms)
+  AssertionError [ERR_ASSERTION]: debe emitir cantidades.json
+      at TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g06_planos_partidas.test.js:32:73)
+      at async Test.run (node:internal/test_runner/test:1054:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/e2e_g06_planos_partidas.test.js:57:1
+✖ PL-09: tannia_planos a_partidas crea partidas trazadas a la revisión de planos; un cambio de planos las deja DESACTUALIZADAS y bloquea la entrega hasta regenerarlas; A→B→A reproduce A (2415.220105ms)
+  AssertionError [ERR_ASSERTION]: tannia_planos: MCP error -32602: Input validation error: Invalid arguments for tool tannia_planos: Invalid option: expected one of "generar"|"generar_tunel"|"estado"|"sesion"|"operacion"|"exportar_dwg"|"inspeccionar_aislado"|"marcas"|"reconciliar_marcas" at accion
+      at T (file://<worktree e4fbdfa>/test/e2e_g06_planos_partidas.test.js:52:113)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g06_planos_partidas.test.js:61:21)
+      at async Test.run (node:internal/test_runner/test:1054:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/e2e_g06_planos_partidas.test.js:108:1
+✖ C-04 edificación: cambiar UN vano en B produce el delta exacto solo en la partida del muro (oráculo a mano) (1129.884213ms)
+  AssertionError [ERR_ASSERTION]: tannia_planos: MCP error -32602: Input validation error: Invalid arguments for tool tannia_planos: Invalid option: expected one of "generar"|"generar_tunel"|"estado"|"sesion"|"operacion"|"exportar_dwg"|"inspeccionar_aislado"|"marcas"|"reconciliar_marcas" at accion
+      at T (file://<worktree e4fbdfa>/test/e2e_g06_planos_partidas.test.js:52:113)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g06_planos_partidas.test.js:112:20)
+      at async Test.run (node:internal/test_runner/test:1054:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/e2e_g06_planos_partidas.test.js:123:1
+✖ PL-09 / R-01: mediciones sin identidad física (NEEDS_REVIEW) NO se convierten en partidas; se explica por qué (1173.045522ms)
+  TypeError: Cannot read properties of undefined (reading 'error')
+      at TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g06_planos_partidas.test.js:128:70)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Test.run (node:internal/test_runner/test:1054:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+
+test at test/e2e_g06_planos_partidas.test.js:134:1
+✖ G02/G09/NEG-03: la aprobación cubre planos + cantidades + Excel + memoria de UNA revisión; un cambio de planos la anula y bloquea planos A con partidas B (552.144918ms)
+  AssertionError [ERR_ASSERTION]: tannia_expediente_recibir: MCP error -32602: Tool tannia_expediente_recibir not found
+      at T (file://<worktree e4fbdfa>/test/e2e_g06_planos_partidas.test.js:52:113)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g06_planos_partidas.test.js:139:5)
+      at async Test.run (node:internal/test_runner/test:1054:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/e2e_g07_precios_historicos.test.js:11:1
+✖ NEG-10: precio de 2010 → referencial, sin estado final; mismo cálculo aritmético (1.695543ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g07_precios_historicos.test.js:13:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.start (node:internal/test_runner/test:944:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/e2e_g09_expediente_vertical.test.js:8:1
+✖ UAT-E2E-A + C (N1): expediente ZIP → encargo → planos → cubicaciones → presupuesto → memoria → aprobación → entrega, con una sola revisión y A→B→A (651.440324ms)
+  Error: tannia_expediente_recibir: MCP error -32602: Tool tannia_expediente_recibir not found
+      at Object.T (file://<worktree e4fbdfa>/scripts/demo-e2e.mjs:46:137)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async ejecutarDemo (file://<worktree e4fbdfa>/scripts/demo-e2e.mjs:70:17)
+      at async TestContext.<anonymous> (file://<worktree e4fbdfa>/test/e2e_g09_expediente_vertical.test.js:9:13)
+      at async Test.run (node:internal/test_runner/test:1054:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3) {
+    datos: undefined
+  }
+exit 1
