@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-rc.7 — 2026-11-18 (prueba de planos sin depender de la instalación; candidato para UAT, NO aceptado)
+- PROBAR_PLANOS.cmd ya no exige encontrar la extensión instalada por Claude Desktop (falso «no se detecta» en la UAT de rc.6): usa la extensión incluida en el ZIP, verificada por su huella, la prepara en una carpeta temporal y muestra un diagnóstico (instalación encontrada o no, Node.js usado). Códigos de salida claros; probado en CI Windows con y sin instalación y con paquete alterado.
+- rc.6 no se reutiliza para bytes distintos.
+
 ## 0.3.0-rc.6 — 2026-11-18 (corrige el fallo real de AutoCAD 2027 en rc.5; candidato para UAT, NO aceptado)
 - AutoCAD 2027 descartaba el DXF de planos de rc.5 («Error en la tabla DIMSTYLE / eHandleInUse»): el handle de cada estilo de cota se escribía con el código 5 en vez de 105. Corregido.
 - Se elimina la variable de cabecera $MSLTSCALE que AutoCAD 2027 informaba como desconocida.
