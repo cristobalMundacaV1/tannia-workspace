@@ -9,7 +9,8 @@
     "tannia_recibos_verificar": "R7-5: auditoría de recibos (integridad, canal, identidad declarada, vigencia, consumo) sin exponer la clave",
     "tannia_proyecto_modalidad": "UAT 2026-11-17: modalidad manual_declarado / documental_geometrico, con advertencia persistente",
     "tannia_planos": "PL-01 (issue #32): el motor de planos es capacidad del paquete distribuido (manifest TANNIA_ENGINEERING=on); antes solo existía con un flag manual",
-    "tannia_expediente_recibir": "TW-PRO-E2E G03 (issue #31): recibir el expediente completo desde UNA ruta (ZIP, RAR con libarchive del sistema, carpeta o archivo) con extracción segura, originales protegidos e inventario DocumentSource"
+    "tannia_expediente_recibir": "TW-PRO-E2E G03 (issue #31): recibir el expediente completo desde UNA ruta (ZIP, RAR con libarchive del sistema, carpeta o archivo) con extracción segura, originales protegidos e inventario DocumentSource",
+    "tannia_encargo": "TW-PRO-E2E G04: encargo profesional (WorkOrder) con datos de procedencia comprobada (cita literal verificada en el documento), una sola ronda de preguntas y plan por resultados ligado al estado real del proyecto"
   },
   "esquemas_cambiados": {
     "tannia_proyecto_avanzar": "A-01: aprobado_por y confirmo_revision_profesional se conservan por compatibilidad pero ya no tienen efecto (descripción cambiada); la aprobación la da la persona en la ventana",

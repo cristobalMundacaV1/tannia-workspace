@@ -4,6 +4,7 @@
 import { huella } from './canonico.js';
 import { sha256File } from '../security/sandbox.js';
 import { Recibos } from './recibos.js';
+import { huellaPlanos } from '../expediente/planos_partidas.js';
 
 // `apu` es un dato ECONÓMICO: cambiarlo invalida documentos y aprobación de entrega (vía revisión), no la verificación de la CANTIDAD.
 const CAMPOS_DE_REVISION_HUMANA = ['apu', 'version_id', 'cantidad_verificada', 'verificada_por', 'verificada_en', 'resolucion_needs_review', 'verificacion', 'desactualizada'];
@@ -49,7 +50,8 @@ export function contenidoRevision(pr) {
   }
   const originales = Object.fromEntries(Object.entries(pr.originales()).map(([k, v]) => [k, v.sha256]));
   const verificaciones = [...verificacionesVigentes(pr, partidas).values()].map((r) => r.id).sort();
-  return { modalidad: pr.meta()?.modalidad ?? null, partidas: partidas.map((p) => ({ ...contenidoPartida(p), apu: p.apu ?? null, version_id: p.version_id ?? null })), apus: pr.apus(), config: pr.configGuardada(), calibraciones: pr.calibraciones(), originales, fuentes_actuales: fuentes, verificaciones };
+  const planos = huellaPlanos(pr); // TW-PRO-E2E G02: los planos son parte de la MISMA revisión que cantidades, presupuesto y documentos
+  return { ...(planos ? { planos } : {}), modalidad: pr.meta()?.modalidad ?? null, partidas: partidas.map((p) => ({ ...contenidoPartida(p), apu: p.apu ?? null, version_id: p.version_id ?? null })), apus: pr.apus(), config: pr.configGuardada(), calibraciones: pr.calibraciones(), originales, fuentes_actuales: fuentes, verificaciones };
 }
 
 /** Revisión vigente. Si el contenido cambió (por herramienta o por fuera), crea una revisión nueva con su motivo. */

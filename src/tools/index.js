@@ -456,7 +456,8 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
       archivos: arts.slice(-20).map((a) => ({ archivo: a.rel, tipo: ROLES_ENTREGA[a.tipo] || a.tipo, revision: `R${a.revision}`, estado: etiqueta[a.estado] })),
       aprobacion: ap.ok ? { vigente: true, recibo: ap.recibo.id, manifiesto: ap.manifiesto.id } : { vigente: false, motivo: ap.motivo },
       modalidad: modalidadDe(pr), proteccion_originales: proteccionOriginales(pr), advertencia_modalidad: avisoModalidad(pr),
-      pendientes: [...faltan, ...bloqueosModalidad(pr, ps), ...(sinVerif.length ? [`Verificar con la usuaria: ${sinVerif.join(', ')}.`] : []), ...((B?.bloqueos || []).filter((x) => !/NO verificada/.test(x)).slice(0, 10))],
+      planos: (() => { const v = planosVigentes(pr); return v ? { revision: v.head, integridad: v.integridad, archivos: v.archivos.filter((a) => /-(conjunto\.pdf|planos\.dxf|cantidades\.json)$/.test(a.nombre)).map((a) => a.rel) } : null; })(),
+      pendientes: [...faltan, ...ps.filter((p) => p.desactualizada).map((p) => `${p.codigo}: ${(p.advertencias || []).at(-1)}`), ...bloqueosModalidad(pr, ps), ...(sinVerif.length ? [`Verificar con la usuaria: ${sinVerif.join(', ')}.`] : []), ...((B?.bloqueos || []).filter((x) => !/NO verificada/.test(x)).slice(0, 10))],
     });
   });
 
@@ -530,10 +531,11 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   registerDiseno(reg, { sandbox, cad });
   registerArq3d(reg, { sandbox, cad });
   registerProyectos(reg, { sandbox });
+  registerEncargo(reg, { sandbox });
   registerArquitectura(reg, { sandbox, cad });
   if (cicActivo()) registerCic(reg, { sandbox, server, herramientas: () => [...new Set(TOOL_NAMES)] }); // TW-11: desactivado por defecto (72 herramientas)
   // PL-01: el motor de planos es capacidad del PRODUCTO distribuido (el manifiesto declara TANNIA_ENGINEERING=on). Solo «off» lo desactiva.
-  if (motorPlanosActivo()) registerDrawing(reg, { sandbox, cad, server });
+  if (motorPlanosActivo()) registerDrawing(reg, { sandbox, cad, server, guardarPartida: (pr, partida) => upsert(pr, partida) });
 }
 
 /** Configuración soportada de producción: motor de planos activo salvo TANNIA_ENGINEERING=off explícito. */
@@ -551,7 +553,10 @@ function vista(pr) { return staleMark(pr, conVerificacion(pr, pr.partidas())); }
 
 /** Marca partidas cuyo archivo de origen cambió desde el cálculo. */
 export function staleMark(pr, partidas) {
+  const vig = partidas.some((p) => p.fuente?.plano_revision) ? planosVigentes(pr) : null;
   return partidas.map((p) => {
+    const porPlanos = obsolescenciaPorPlanos(pr, p, vig); // PL-09: la cantidad salió de una revisión de planos que ya no es la vigente
+    if (porPlanos) return { ...p, desactualizada: true, estado_revision: 'needs_review', cantidad_verificada: false, advertencias: [...(p.advertencias || []), porPlanos] };
     if (!p.fuente?.archivo || !p.fuente.sha256) return p;
     let actual = null;
     try { actual = sha256File(pr.sandbox.resolve(pr.name, p.fuente.archivo).abs); } catch { /* faltante */ }
@@ -561,9 +566,11 @@ export function staleMark(pr, partidas) {
 }
 
 import { registerCad } from './cad.js';
+import { planosVigentes, obsolescenciaPorPlanos } from '../expediente/planos_partidas.js';
 import { registerDiseno } from './diseno.js';
 import { registerArq3d } from './arq3d.js';
 import { registerProyectos } from './proyectos.js';
+import { registerEncargo } from './encargo.js';
 import { registerArquitectura } from './arquitectura.js';
 import { registerCic } from './cic.js';
 import { cicActivo } from '../cic/flag.js';

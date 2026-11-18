@@ -248,9 +248,10 @@ export function resumir(fuentes) {
 }
 
 function mensajeRecepcion(r, { nombreCarpeta, original, origenTipo, base }) {
-  const partes = [`Recibí ${r.total} documento${r.total === 1 ? '' : 's'}${origenTipo === 'carpeta' ? ` de la carpeta «${base}»` : origenTipo === 'archivo' ? '' : ` de «${base}»`}: ${r.leidos} se pueden leer`];
-  if (r.pendientes) partes.push(`${r.pendientes} requieren revisión visual o AutoCAD`);
-  if (r.no_leidos) partes.push(`${r.no_leidos} no se pudieron abrir (${[...new Set(r.no_leidos_detalle.map((x) => ({ CIFRADO: 'contraseña', RAR_SIN_MOTOR: 'RAR sin lector', EXCLUIDO_EJECUTABLE: 'programas excluidos', RUTA_FUERA_DEL_DESTINO: 'ruta peligrosa', RUTA_ABSOLUTA: 'ruta peligrosa', ENLACE_NO_PERMITIDO: 'enlaces', ZIP_HOSTIL: 'comprimido hostil' })[x.codigo] || 'formato o daño'))].join(', ')})`);
+  const v = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+  const partes = [`Recibí ${v(r.total, 'documento', 'documentos')}${origenTipo === 'carpeta' ? ` de la carpeta «${base}»` : origenTipo === 'archivo' ? '' : ` de «${base}»`}: ${v(r.leidos, 'se puede leer', 'se pueden leer')}`];
+  if (r.pendientes) partes.push(v(r.pendientes, 'requiere revisión visual o AutoCAD', 'requieren revisión visual o AutoCAD'));
+  if (r.no_leidos) partes.push(`${v(r.no_leidos, 'no se pudo abrir', 'no se pudieron abrir')} (${[...new Set(r.no_leidos_detalle.map((x) => ({ CIFRADO: 'contraseña', RAR_SIN_MOTOR: 'RAR sin lector', EXCLUIDO_EJECUTABLE: 'programas excluidos', RUTA_FUERA_DEL_DESTINO: 'ruta peligrosa', RUTA_ABSOLUTA: 'ruta peligrosa', ENLACE_NO_PERMITIDO: 'enlaces', ZIP_HOSTIL: 'comprimido hostil' })[x.codigo] || 'formato o daño'))].join(', ')})`);
   let m = `${partes.join(', ')}.`;
   if (nombreCarpeta && r.total - r.no_leidos > 0) m += ` Los originales quedaron protegidos en «${FOLDERS.originales}/${nombreCarpeta}».`;
   if (original?.archivo) m += ` El archivo recibido se conservó intacto («${original.archivo}»).`;

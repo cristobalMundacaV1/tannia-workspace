@@ -95,6 +95,23 @@ export function cantidadesFortificacion(model) {
   return filas;
 }
 
+/**
+ * Contrato tw.cantidades/1 del túnel (PL-09): filas de DETALLE sumables solo para la alternativa de revestimiento ELEGIDA y la
+ * fortificación dibujada; la otra alternativa queda aparte como comparación NO sumable. Las magnitudes salen de la misma
+ * sección que se dibuja (bóveda semicircular de radio ancho/2 sobre hastiales verticales) y del patrón declarado.
+ */
+export function cantidadesTunelContrato(model) {
+  const L = model.length_m; const t = model.selected_thickness_m; const alt = model.quantities.find((q) => q.thickness_m === t);
+  if (!alt || !Number.isFinite(L)) return null;
+  const n = (x) => x.toFixed(4).replace('.', ',');
+  const detalle = [
+    { id: 'q-excavacion', partida: 'Excavación de túnel', descripcion: 'Excavación de la sección tipo en todo el largo', metodo: 'TW-MED/1/area_x_largo', unidad: 'm3', valor: alt.excavation_volume_m3, formula: `área de sección dibujada ${n(alt.excavation_area_m2)} m² × largo ${L} m`, fuentes: 'seccion/outer-arch seccion/outer-left seccion/outer-right seccion/outer-floor', elementos: 'tunel-excavacion', naturaleza: 'MEDIDA sobre la sección dibujada con parámetros declarados (sin sobreexcavación ni perfil real de terreno)', estado: 'TRAZADA', procedencia: 'seccion_parametrica_dibujada' },
+    { id: 'q-revestimiento', partida: `Revestimiento shotcrete e = ${Math.round(t * 100)} cm`, descripcion: 'Revestimiento de hastiales y bóveda, sin solera', metodo: 'TW-MED/1/area_x_largo', unidad: 'm3', valor: alt.lining_volume_m3, formula: `(área excavada ${n(alt.excavation_area_m2)} − área interior ${n(alt.interior_area_m2)}) m² × ${L} m`, fuentes: 'seccion/outer-arch seccion/inner-arch', elementos: 'tunel-excavacion', naturaleza: 'MEDIDA geométrica del espesor declarado (no es diseño de sostenimiento ni incluye rebote o pérdidas)', estado: 'TRAZADA', procedencia: 'seccion_parametrica_dibujada' },
+  ];
+  for (const f of cantidadesFortificacion(model) || []) detalle.push({ id: `q-${f.partida.toLowerCase().replace(/[^a-z]+/g, '-')}`, partida: f.partida, descripcion: f.partida, metodo: f.unidad === 'u' ? 'TW-MED/1/conteo_x_anillos' : 'TW-MED/1/desarrollo_x_largo', unidad: f.unidad, valor: f.cantidad, formula: f.formula, fuentes: f.unidad === 'u' ? 'fortificacion/perno-*' : 'fortificacion/malla-*', elementos: f.unidad === 'u' ? 'pernos' : 'malla', naturaleza: f.naturaleza, estado: 'TRAZADA', procedencia: 'patron_declarado_dibujado' });
+  return { detalle: detalle.map((d) => ({ ...d, fila: 'detalle' })), totales: [], alternativas_no_sumables: model.quantities.filter((q) => q.thickness_m !== t).map((q) => ({ ...q, nota: 'Alternativa comparativa: NO se suma ni se presupuesta.' })) };
+}
+
 export function tunnelModel({ length = 150, width = 5.5, wall = 2.5, selected = 0.06, project = 'Túnel minero académico', revision = 'R01', date = 'PENDIENTE', institution = 'PENDIENTE', author = 'PENDIENTE', fortificacion = null } = {}) {
   if (![length, width, wall, selected].every(Number.isFinite) || length <= 0 || width <= 0 || wall <= 0 || ![0.06, 0.08].includes(selected) || width <= selected * 2) throw new UserError('DATOS_INVALIDOS', 'Dimensiones positivas y alternativa de 0,06 o 0,08 m requeridas.');
   for (const s of [project, revision, date, institution, author]) if (typeof s !== 'string' || s.length > 90 || /[\r\n\u0000-\u001f]/.test(s)) throw new UserError('METADATOS_INVALIDOS', 'Texto de cajetín inválido o demasiado largo.');
@@ -110,7 +127,7 @@ export function tunnelModel({ length = 150, width = 5.5, wall = 2.5, selected = 
   if (fortificacion) views.push(fortificacionVista({ r, wall, length, f: fortificacion }));
   const elements = tagElements(views, { length, area });
   if (fortificacion) elements.push({ id: 'pernos', tipo: 'fortificacion', unidad: 'u', fuente: 'fortificacion/perno-1', magnitudes: {}, vistas: ['fortificacion'] }, { id: 'contorno-fortificado', tipo: 'superficie', unidad: 'm', fuente: 'fortificacion/fort-arch', magnitudes: {}, vistas: ['fortificacion'] });
-  return { schema: 'tw.drawing/1', unit: 'm', elements, provenance: 'Datos autorizados del ejercicio TW12; hipótesis académicas explícitas', metadata: { project, revision, date, institution, author, reviewer: 'PENDIENTE', approval: 'PENDIENTE', stage: 'REVISIÓN ACADÉMICA', source: 'Modelo TW12', coordinateSystem: 'NO CONFIRMADO' }, quantities, views, length_m: length, fortificacion, sheets: [{ id: '01', title: 'Planta general', views: ['planta'] }, { id: '02', title: 'Perfil longitudinal', views: ['perfil'] }, { id: '03', title: 'Sección transversal', views: ['seccion'] }, { id: '04', title: 'Detalles de revestimiento', views: details.map(v => v.id) }, ...(fortificacion ? [{ id: '05', title: 'Fortificación tipo', views: ['fortificacion'] }] : [])], warnings: ['EJERCICIO ACADÉMICO. No apto para construcción.', fortificacion ? 'Fortificación según patrón declarado; sin validación geotécnica.' : 'Sin validación geotécnica ni fortificación aprobada.', 'Espesores comparativos; no constituyen diseño estructural.'] };
+  return { schema: 'tw.drawing/1', unit: 'm', selected_thickness_m: selected, elements, provenance: 'Datos autorizados del ejercicio TW12; hipótesis académicas explícitas', metadata: { project, revision, date, institution, author, reviewer: 'PENDIENTE', approval: 'PENDIENTE', stage: 'REVISIÓN ACADÉMICA', source: 'Modelo TW12', coordinateSystem: 'NO CONFIRMADO' }, quantities, views, length_m: length, fortificacion, sheets: [{ id: '01', title: 'Planta general', views: ['planta'] }, { id: '02', title: 'Perfil longitudinal', views: ['perfil'] }, { id: '03', title: 'Sección transversal', views: ['seccion'] }, { id: '04', title: 'Detalles de revestimiento', views: details.map(v => v.id) }, ...(fortificacion ? [{ id: '05', title: 'Fortificación tipo', views: ['fortificacion'] }] : [])], warnings: ['EJERCICIO ACADÉMICO. No apto para construcción.', fortificacion ? 'Fortificación según patrón declarado; sin validación geotécnica.' : 'Sin validación geotécnica ni fortificación aprobada.', 'Espesores comparativos; no constituyen diseño estructural.'] };
 }
 
 export function compose(model, { paper = 'A3', orientation = 'landscape', margin = 12 } = {}) {

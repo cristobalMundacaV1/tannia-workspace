@@ -30,7 +30,7 @@ function construir(target, dist, salida) {
   return { out, dest, mcpb };
 }
 
-test('paquete INGENIERÍA construido en este equipo con destino win32-x64: manifiesto «win32», binario nativo de Windows verificado contra el lockfile y 90 herramientas (85 + entrega_estado, proyecto_migracion, metodo, recibos_verificar, proyecto_modalidad)', { timeout: 300000 }, () => {
+test('paquete INGENIERÍA construido en este equipo con destino win32-x64: manifiesto «win32», binario nativo de Windows verificado contra el lockfile y 92 herramientas (85 + entrega_estado, proyecto_migracion, metodo, recibos_verificar, proyecto_modalidad + TW-PRO-E2E: expediente_recibir, encargo)', { timeout: 300000 }, () => {
   const dist = fs.mkdtempSync(path.join(os.tmpdir(), 'tw12-dist ')); const salida = fs.mkdtempSync(path.join(os.tmpdir(), 'tw12-out '));
   try {
     const { out, dest, mcpb } = construir('win32-x64', dist, salida);
@@ -38,7 +38,7 @@ test('paquete INGENIERÍA construido en este equipo con destino win32-x64: manif
     assert.deepEqual(manifest.compatibility.platforms, ['win32'], 'no debe heredar la plataforma del constructor');
     assert.ok(!manifest.compatibility.platforms.includes('linux') && !manifest.compatibility.platforms.includes('darwin'));
     assert.equal(manifest.server.mcp_config.env.TANNIA_ENGINEERING, 'on');
-    assert.equal(manifest.tools.length, 90); assert.ok(manifest.tools.some(t => t.name === 'tannia_planos'));
+    assert.equal(manifest.tools.length, 92); assert.ok(manifest.tools.some(t => t.name === 'tannia_expediente_recibir') && manifest.tools.some(t => t.name === 'tannia_encargo')); assert.ok(manifest.tools.some(t => t.name === 'tannia_planos'));
     const nativeDir = path.join(dest, 'server', 'node_modules', '@napi-rs');
     assert.deepEqual(fs.readdirSync(nativeDir).sort(), ['canvas', 'canvas-win32-x64-msvc'], 'solo el binario del destino');
     const binario = path.join(nativeDir, 'canvas-win32-x64-msvc', 'skia.win32-x64-msvc.node');
