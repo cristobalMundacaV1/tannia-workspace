@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0-rc.7 — 2026-11-18 (prueba de planos sin depender de la instalación; candidato para UAT, NO aceptado)
+- PROBAR_PLANOS.cmd ya no exige encontrar la extensión instalada por Claude Desktop (falso «no se detecta» en la UAT de rc.6): usa la extensión incluida en el ZIP, verificada por su huella, la prepara en una carpeta temporal y muestra un diagnóstico (instalación encontrada o no, Node.js usado). Códigos de salida claros; probado en CI Windows con y sin instalación y con paquete alterado.
+- rc.6 no se reutiliza para bytes distintos.
+
+## 0.3.0-rc.6 — 2026-11-18 (corrige el fallo real de AutoCAD 2027 en rc.5; candidato para UAT, NO aceptado)
+- AutoCAD 2027 descartaba el DXF de planos de rc.5 («Error en la tabla DIMSTYLE / eHandleInUse»): el handle de cada estilo de cota se escribía con el código 5 en vez de 105. Corregido.
+- Se elimina la variable de cabecera $MSLTSCALE que AutoCAD 2027 informaba como desconocida.
+- El inspector de apertura ahora rechaza ambos defectos; rc.5 no debe usarse.
+- Cuadros, leyendas y notas ya no se desbordan en AutoCAD: la altura de TEXT era el cuerpo del PDF y AutoCAD la toma como altura de mayúsculas (~1,4× más ancho). Ahora altura = 0,716 × cuerpo y misma línea base; nuevo gate de paridad espacial DXF↔IR.
+- Escala gráfica con sus dos extremos rotulados («0» y «0,50 m»), en vez de «0 / 0,50 m».
+
+## 0.3.0-rc.5 — 2026-11-18 (cierre del motor de planos, PR #38; candidato para UAT controlada, NO aceptado, sin AutoCAD 2027 real)
+- DXF: se abre encuadrado en Modelo (vista inicial y extensiones) y cada lámina tiene su presentación con viewport general; estructura AC1024 completa. Corrige el «DXF aparentemente vacío» de la UAT (pendiente de confirmar en AutoCAD 2027).
+- Planos con simbología de catálogo (propuesta, no normativa), tramas de materiales declarados, leyenda generada de lo usado, llamadas D1–D4 con detalles, y cuadros geométrico, de cantidades, de pernos y de materiales calculados de la misma fuente que la cubicación.
+- PDF y DXF salen de una misma representación (Drawing IR v2) y se contrastan entre sí antes de entregar.
+- Láminas A3/A2/A1 por paneles: si no cabe, se crean láminas de continuación; nunca se reduce la escala ni el texto.
+- Segundo caso de prueba: muro con vano (edificación).
+- Datos no declarados (placa, tuerca, solera, drenaje, ancho de paño, especificaciones) quedan PENDIENTES y visibles.
+- Prueba de planos sin Claude: `PROBAR_PLANOS.cmd` y juego de referencia `PLANOS-PRUEBA` en el ZIP; procedimiento `UAT-PLANOS-AUTOCAD-2027.md`.
+- Cubicación desde DXF: el espacio papel ya no se mide. CSV de fortificación con columnas planas.
+
 ## 0.3.0-rc.3 — 2026-11-18 (revisión independiente PR #36; NO aceptado, sin AutoCAD real)
 - Toda operación de AutoCAD que pueda interrumpir el escritorio (abrir copia, agregar líneas, DWG, 3D, vista, verificación) pide autorización humana específica del documento; sin ella no se ejecuta.
 - Un DWG ya generado solo se reutiliza si sigue íntegro; si cambió, se aparta y se vuelve a generar.

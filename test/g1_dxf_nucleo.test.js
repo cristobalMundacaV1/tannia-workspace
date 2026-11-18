@@ -36,12 +36,12 @@ test('PL-05: un círculo de la especificación es CIRCLE nativo (no ARC 0–360)
   assert.deepEqual(verificarDxfContraModelo(dxf, c).problemas, []);
 });
 
-test('PL-06: tipo de línea declarado → LTYPE con los mismos elementos que el PDF; capa continua = CONTINUOUS', () => {
+test('PL-06: tipo de línea declarado → LTYPE con los mismos elementos que el PDF; capa continua = Continuous (nombre canónico de AutoCAD)', () => {
   const c = compose(modeloDesdeEspecificacion(espec())); const S = analizarDxf(buildDrawingDxf(c));
   const lt = S.TABLES.find((e) => e.tipo === 'LTYPE' && e.codigos.some(([k, x]) => k === 2 && x === 'TW_EJE2'));
   assert.ok(lt, 'existe TW_EJE2'); assert.deepEqual(lt.codigos.filter(([k]) => k === 49).map(([, x]) => Number(x)), [6, -2, 1, -2]);
   const capa = (nm) => S.TABLES.find((e) => e.tipo === 'LAYER' && e.codigos.some(([k, x]) => k === 2 && x === nm)).codigos.find(([k]) => k === 6)[1];
-  assert.equal(capa('EJE2'), 'TW_EJE2'); assert.equal(capa('MURO'), 'CONTINUOUS');
+  assert.equal(capa('EJE2'), 'TW_EJE2'); assert.equal(capa('MURO'), 'Continuous');
   const t = tunel(); const St = analizarDxf(buildDrawingDxf(t)); const eje = St.TABLES.find((e) => e.tipo === 'LTYPE' && e.codigos.some(([k, x]) => k === 2 && x === 'TW_EJE'));
   assert.deepEqual(eje.codigos.filter(([k]) => k === 49).map(([, x]) => Number(x)), LAYERS.EJE.dash.map((x, i) => (i % 2 ? -x : x)), 'oráculo: patrón declarado en LAYERS');
   assert.ok(buildDrawingDxf(t).includes('$PSLTSCALE\n70\n1'), 'PSLTSCALE = 1');

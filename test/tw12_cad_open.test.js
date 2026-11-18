@@ -107,7 +107,7 @@ test('CAD-OPEN-01 recuperación: importación aislada + puerta → DXF→DWG gua
   });
   const r1 = await c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: 'open01', composition: c0 });
   assert.equal(r1.dwg_validado_autocad_real, false); assert.equal(r1.verificacion_layouts.ok, true); assert.equal(r1.verificacion_importacion.ok, true);
-  assert.deepEqual(r1.verificacion_importacion.resumen, { layouts: 4, viewports: 5, cotas: 9, con_traza: 20, entidades_modelo: 29 });
+  assert.deepEqual(r1.verificacion_importacion.resumen, { layouts: 4, viewports: 5, cotas: 9, con_traza: 20, entidades_modelo: 34 }); // 29 geométricas + 3 HATCH de revestimiento declarado + 2 marcas de corte A-A (PR #38: representación, no medible)
   const r2 = await c.guardarLaminas('Piloto', { dxf: e.rel, dwg: dwgRel, operacion: 'open01', composition: c0 });
   assert.equal(r2.reused, true); assert.deepEqual(seq, ['importar', 'laminas_a_dwg', 'inspeccionar'], 'la 2.ª exportación (verificada) no toca AutoCAD: ni importación ni guardado repetidos');
 });

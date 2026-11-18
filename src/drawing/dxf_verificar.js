@@ -2,7 +2,9 @@
 // No reutiliza el escritor: lee el texto DXF con un analizador propio y compara entidad por entidad
 // (tipo, capa, coordenadas), cotas (valor físico frente a distancia dibujada × DIMLFAC), duplicados
 // de cotas en papel y tipos de línea. Cualquier error deliberado de escala, entidad o cota la hace fallar.
-import { capasDe, patronLinea } from './model.js';
+import { capasDe, patronLinea, colocacionDe } from './model.js';
+import { buildIR } from './ir.js';
+import { paridadDxf } from './paridad.js';
 
 const TOL = 1e-6;
 
@@ -27,16 +29,16 @@ const todos = (e, c) => e.codigos.filter(([k]) => k === c).map(([, v]) => v);
 const r6 = (x) => (Math.abs(x) < 5e-7 ? 0 : Math.round(x * 1e6) / 1e6).toFixed(6);
 const ang = (a) => r6(((a % 360) + 360) % 360);
 
-/** Firmas esperadas a partir del modelo (colocación documentada: vista i en y = i·1000, Y × exageración). */
-const transformador = (model) => { const T = new Map(); model.views.forEach((v, i) => { const ex = v.verticalScale ? v.scale / v.verticalScale : 1; T.set(v.id, (p) => [p[0], p[1] * ex + i * 1000]); }); return T; };
+/** Firmas esperadas a partir del modelo (colocación documentada en la composición —colocacionModelo—; Y × exageración). */
+const transformador = (composition) => { const T = new Map(); const off = colocacionDe(composition); composition.model.views.forEach((v) => { const ex = v.verticalScale ? v.scale / v.verticalScale : 1; const o = off[v.id]; T.set(v.id, (p) => [p[0] + o[0], p[1] * ex + o[1]]); }); return T; };
 // Identidad (XDATA TANNIA_TRACE): forma parte de la firma; geometría idéntica con ref/elemento/vista/rol alterados NO coincide.
 const trazaModelo = (e, vista) => (e.ref ? `|elemento=${e.element}|vista=${vista}|rol=${e.role}|ref=${e.ref}` : '');
 function trazaDxf(e) {
   const i = e.codigos.findIndex(([c, v]) => c === 1001 && v === 'TANNIA_TRACE'); if (i < 0) return '';
   const vals = []; for (let k = i + 1; k < e.codigos.length && e.codigos[k][0] === 1000; k++) vals.push(e.codigos[k][1]); return vals.length ? `|${vals.join('|')}` : '';
 }
-function esperadas(model) {
-  const out = []; const T = transformador(model);
+function esperadas(composition) {
+  const model = composition.model; const out = []; const T = transformador(composition);
   for (const v of model.views) {
     const P = T.get(v.id);
     for (const e of v.entities) {
@@ -60,16 +62,16 @@ const multiset = (xs) => xs.reduce((m, x) => m.set(x, (m.get(x) || 0) + 1), new 
 /** @returns {{ok:boolean, problemas:string[], resumen:object}} */
 export function verificarDxfContraModelo(dxf, composition) {
   const model = composition.model; const S = analizarDxf(dxf); const problemas = [];
-  const ents = S.ENTITIES || []; const bloques = S.BLOCKS || [];
+  const todas = [...(S.ENTITIES || []), ...(S.BLOCKS || [])]; const ents = (S.ENTITIES || []).filter((e) => g(e, 67) !== '1'); const bloques = todas;
   // 1) Geometría: el espacio modelo contiene EXACTAMENTE las entidades del modelo (multiconjunto de firmas).
-  const esp = multiset(esperadas(model)); const obt = multiset(ents.map(firmaDxf).filter(Boolean));
+  const esp = multiset(esperadas(composition)); const obt = multiset(ents.map(firmaDxf).filter(Boolean));
   for (const [k, c] of esp) if ((obt.get(k) || 0) !== c) problemas.push(`entidad esperada ${c}× y presente ${obt.get(k) || 0}×: ${k}`);
   for (const [k, c] of obt) if (!esp.has(k)) problemas.push(`entidad no esperada (${c}×): ${k}`);
   if (ents.some((e) => e.tipo === 'ARC' && Math.abs(((n(e, 51) - n(e, 50)) % 360)) < TOL)) problemas.push('círculo completo emitido como ARC de 360°');
   // 2) Cotas: una DIMENSION por cota del modelo; valor físico = distancia dibujada × DIMLFAC.
   const dims = ents.filter((e) => e.tipo === 'DIMENSION'); const nDims = model.views.reduce((t, v) => t + v.dimensions.length, 0);
   if (dims.length !== nDims) problemas.push(`cotas nativas ${dims.length} ≠ cotas del modelo ${nDims}`);
-  let k = 0; const T = transformador(model);
+  let k = 0; const T = transformador(composition);
   const cerca = (e, cx, cy, p) => Math.abs(n(e, cx) - p[0]) <= TOL && Math.abs(n(e, cy) - p[1]) <= TOL;
   model.views.forEach((v) => v.dimensions.forEach((d) => {
     const e = dims[k++]; if (!e) return; const P = T.get(v.id);
@@ -84,9 +86,10 @@ export function verificarDxfContraModelo(dxf, composition) {
     } else if (Math.abs(n(e, 42) - d.value) > 1e-6) problemas.push(`cota radial ${v.id}#${k}: ${n(e, 42)} ≠ ${d.value}`);
   }));
   // 3) Sin duplicados en papel: ningún texto de papel repite el rótulo de una cota (las cotas las muestra el viewport).
-  const enPapel = bloques.filter((e) => g(e, 67) === '1' && e.tipo === 'TEXT').map((e) => g(e, 1));
+  // Los rótulos de la escala gráfica (ids «:barra:») miden la barra, no son cotas.
+  const enPapel = bloques.filter((e) => g(e, 67) === '1' && e.tipo === 'TEXT' && !e.codigos.some(([c, v]) => c === 1000 && /^ir=.*:barra:/.test(v))).map((e) => g(e, 1));
   const rotulos = new Set(model.views.flatMap((v) => v.dimensions.map((d) => d.kind === 'radial' ? `R ${d.value}` : `${d.value}`)));
-  const dup = enPapel.filter((t) => /^R? ?[\d.,]+ m$/.test(t || '') || rotulos.has(String(t).replace(/ m$/, '').replace(',', '.')));
+  const dup = enPapel.filter((t) => /^R? ?[\d.,]+ m$/.test(t || '') || (/ m$/.test(t || '') && rotulos.has(String(t).replace(/ m$/, '').replace(',', '.'))));
   if (dup.length) problemas.push(`cotas duplicadas como texto en el papel: ${dup.slice(0, 5).join(' | ')}`);
   // 4) Tipos de línea: cada capa referencia el patrón declarado; el patrón existe con sus elementos exactos.
   const tabla = (S.TABLES || []); const lts = new Map(tabla.filter((e) => e.tipo === 'LTYPE').map((e) => [g(e, 2), todos(e, 49).map(Number)]));
@@ -96,5 +99,14 @@ export function verificarDxfContraModelo(dxf, composition) {
     if (g(capa, 6) !== pat.nombre) problemas.push(`capa ${nombre}: tipo de línea ${g(capa, 6)} ≠ ${pat.nombre}`);
     else if (pat.elementos.length && JSON.stringify(lts.get(pat.nombre)) !== JSON.stringify(pat.elementos)) problemas.push(`tipo de línea ${pat.nombre}: elementos ${JSON.stringify(lts.get(pat.nombre))} ≠ ${JSON.stringify(pat.elementos)}`);
   }
-  return { ok: problemas.length === 0, problemas, resumen: { entidades_modelo: [...esp.values()].reduce((a, b) => a + b, 0), cotas: dims.length, tipos_de_linea: lts.size } };
+  // 5) Regiones y símbolos (PR #38): un HATCH por región declarada y un INSERT por símbolo del modelo, cada uno con su id de IR.
+  const irDe = (e) => { const i = e.codigos.findIndex(([c, v]) => c === 1000 && String(v).startsWith('ir=')); return i >= 0 ? String(e.codigos[i][1]).slice(3) : null; };
+  const regiones = model.views.flatMap((v) => (v.regions || []).map((r) => `hatch:${v.id}/${r.id}`)); const hatches = ents.filter((e) => e.tipo === 'HATCH').map(irDe);
+  for (const r of regiones) if (!hatches.includes(r)) problemas.push(`región sin HATCH en el modelo: ${r}`);
+  for (const h of hatches) if (!regiones.includes(h)) problemas.push(`HATCH no declarado: ${h}`);
+  const simbolos = model.views.flatMap((v) => (v.symbols || []).map((x) => `sym:${v.id}/${x.id}`)); const inserts = ents.filter((e) => e.tipo === 'INSERT').map(irDe);
+  for (const x of simbolos) if (!inserts.includes(x)) problemas.push(`símbolo sin INSERT en el modelo: ${x}`);
+  // 6) Composición tw.sheets/2: el papel completo (cuadros, leyendas, llamadas, cajetín) se contrasta con la IR por id y capa.
+  if (composition.schema === 'tw.sheets/2') { const par = paridadDxf(buildIR(composition), dxf); for (const p of par.problemas) problemas.push(`paridad IR: ${p}`); }
+  return { ok: problemas.length === 0, problemas, resumen: { entidades_modelo: [...esp.values()].reduce((a, b) => a + b, 0), cotas: dims.length, tipos_de_linea: lts.size, hatch: hatches.length, simbolos: inserts.length } };
 }

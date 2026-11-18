@@ -37,7 +37,8 @@ test('BG-R01: un DWG ya publicado solo se reutiliza si su huella, la del DXF, la
     for (const [nombre, mutar, motivo] of casos) {
       mutar(); const antes = sim.invocaciones().length;
       const e = await s.hasta(await s.crear({ proyecto: P, tipo: 'dwg' }));
-      assert.equal(e.estado_interno, 'TERMINADO', nombre); const res = e.pasos[0].resultado;
+      // Diagnóstico completo si falla (causa del paso, no solo el estado): necesario para investigar fallas solo-Windows.
+      assert.equal(e.estado_interno, 'TERMINADO', `${nombre}: ${e.mensaje_para_la_persona} | ${JSON.stringify(leerTrabajo(home, e.trabajo).pasos.map((p) => ({ estado: p.estado, error: p.error, motivo: p.motivo ?? null })))}`); const res = e.pasos[0].resultado;
       assert.notEqual(res.reutilizado, true, `${nombre}: NO debe reutilizarse`);
       assert.equal(sim.invocaciones().length, antes + 2, `${nombre}: se vuelve a convertir y releer`);
       assert.ok(res.reconciliado && res.reconciliado.motivos.some((m) => motivo.test(m)), `${nombre}: ${JSON.stringify(res.reconciliado)}`);

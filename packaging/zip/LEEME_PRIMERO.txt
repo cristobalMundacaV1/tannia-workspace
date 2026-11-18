@@ -24,6 +24,14 @@ Node.js ni otros programas. AutoCAD completo es opcional (solo para funciones de
 Privacidad: sus archivos se procesan en su equipo, pero lo que Claude lee de ellos se envía al
 servicio de Claude. No use planos de clientes sin su autorización.
 
+PROBAR LOS PLANOS SIN CLAUDE (UAT AutoCAD 2027)
+  - La carpeta PLANOS-PRUEBA trae los planos de referencia de esta versión (túnel UAT y muro
+    con vano): PDF, PNG, DXF y verificaciones. Abra una COPIA del DXF en AutoCAD 2027 y siga
+    documentos/UAT-PLANOS-AUTOCAD-2027.md (complete el registro y devuélvalo).
+  - PROBAR_PLANOS.cmd vuelve a generar esos planos con la extensión INCLUIDA en este ZIP (no
+    necesita que Claude Desktop la haya instalado), en una carpeta nueva de Documentos, sin abrir
+    Claude ni AutoCAD. Requiere Node.js; si no lo encuentra, use la carpeta PLANOS-PRUEBA.
+
 Si algo falla: ejecute DIAGNOSTICO.cmd y lea documentos/RECUPERACION_Y_DESINSTALACION.md.
 Integridad: SHA256SUMS.txt lista la huella de cada archivo. Extensión: {{MCPB}}
 SHA-256 de la extensión: {{SHA_MCPB}}

@@ -44,16 +44,31 @@ function abrirDentro(raiz, file, flags) {
   } catch (e) { fs.closeSync(fd); try { fs.rmSync(file, { force: true }); } catch { /* ya no existe */ } throw e; }
 }
 
+/**
+ * rename con reintentos acotados ante bloqueos TRANSITORIOS de Windows (EPERM/EACCES/EBUSY cuando otro proceso tiene el destino
+ * abierto para lectura en ese instante; observado en CI Windows con el registro de un trabajo en segundo plano). Máx. ~1,5 s;
+ * cualquier otro error, o el mismo tras agotar los intentos, se propaga sin cambios.
+ */
+export function renombrarConReintento(origen, destino) {
+  const espera = new Int32Array(new SharedArrayBuffer(4));
+  for (let i = 0; ; i++) {
+    try { fs.renameSync(origen, destino); return; } catch (e) {
+      if (!['EPERM', 'EACCES', 'EBUSY'].includes(e.code) || i >= 15) throw e;
+      Atomics.wait(espera, 0, 0, Math.min(25 * (i + 1), 200));
+    }
+  }
+}
+
 /** Escritura atómica con respaldo. Con `{ raiz }` valida la contención ANTES de cada paso y confirma el destino tras escribir. */
 export function atomicWriteJson(file, obj, { raiz } = {}) {
   const dir = path.dirname(file); const tmp = `${file}.${process.pid}.tmp`; const datos = JSON.stringify(obj, null, 2);
-  if (!raiz) { fs.mkdirSync(dir, { recursive: true }); if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.bak`); fs.writeFileSync(tmp, datos); fs.renameSync(tmp, file); return; }
+  if (!raiz) { fs.mkdirSync(dir, { recursive: true }); if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.bak`); fs.writeFileSync(tmp, datos); renombrarConReintento(tmp, file); return; }
   verificarContencion(raiz, dir); fs.mkdirSync(dir, { recursive: true }); verificarContencion(raiz, dir);
   if (fs.existsSync(file)) { verificarContencion(raiz, file); verificarContencion(raiz, `${file}.bak`); fs.copyFileSync(file, `${file}.bak`); }
   verificarContencion(raiz, tmp); const fd = abrirDentro(raiz, tmp, 'wx');
   try { fs.writeSync(fd, datos); } finally { fs.closeSync(fd); }
   verificarContencion(raiz, dir);
-  fs.renameSync(tmp, file);
+  renombrarConReintento(tmp, file);
   try { verificarContencion(raiz, file); } catch (e) { try { fs.rmSync(file, { force: true }); } catch { /* ya no existe */ } throw e; }
 }
 

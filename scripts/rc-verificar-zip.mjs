@@ -15,6 +15,12 @@ import ExcelJS from 'exceljs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { ElicitRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { spawnSync } from 'node:child_process';
+// Oráculos INDEPENDIENTES del paquete instalado (código del repositorio en el mismo SHA): inspección DXF 5d y paridad 5e.
+import { inspeccionarDxf } from '../src/drawing/dxf_inspect.js';
+import { paridadDxf, paridadPdf } from '../src/drawing/paridad.js';
+import { renderPdf } from '../src/drawing/render.js';
+import { firmaRaster, compararFirma } from '../src/drawing/golden.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const zipPath = path.resolve(process.argv[2] || '');
@@ -47,7 +53,7 @@ async function conectar(respuestas) {
 const T = async (n, a = {}) => { const r = await cliente.callTool({ name: n, arguments: a }); if (r.isError) throw new Error(`${n}: ${r.content?.[0]?.text?.slice(0, 400)}`); return r.structuredContent; };
 const TE = async (n, a, code) => { const r = await cliente.callTool({ name: n, arguments: a }); afirmar(r.isError && r.structuredContent?.error === code, `${n} debía fallar con ${code}: ${r.content?.[0]?.text?.slice(0, 300)}`); return r.structuredContent; };
 function instalar() { fs.rmSync(extDir, { recursive: true, force: true }); fs.mkdirSync(extDir, { recursive: true }); return extraer(fs.readFileSync(path.join(raizZip, manifestZip.extension.archivo)), extDir); }
-let manifestZip;
+let manifestZip; let planos5b = null;
 
 const PROY = 'Edificio Ñuñoa – Revisión A';
 const pj = () => path.join(datos, 'Proyectos', PROY);
@@ -68,7 +74,7 @@ try {
     for (const l of lineas) { const [h, ...r] = l.split('  '); const f = path.join(raizZip, ...r.join('  ').split('/')); afirmar(fs.existsSync(f), `falta ${r}`); afirmar(sha(fs.readFileSync(f)) === h, `huella distinta: ${r}`); ok++; }
     manifestZip = JSON.parse(fs.readFileSync(path.join(raizZip, 'release-manifest.json'), 'utf8'));
     afirmar(sha(fs.readFileSync(path.join(raizZip, manifestZip.extension.archivo))) === manifestZip.extension.sha256, 'huella de la extensión distinta del manifiesto');
-    for (const req of ['INSTALAR.cmd', 'DIAGNOSTICO.cmd', 'LEEME_PRIMERO.txt', 'documentos/GUIA_RAPIDA.md', 'documentos/RECUPERACION_Y_DESINSTALACION.md', 'VERSION_Y_COMPATIBILIDAD.json', 'AVISOS_DE_TERCEROS.md']) afirmar(fs.existsSync(path.join(raizZip, ...req.split('/'))), `falta ${req}`);
+    for (const req of ['PROBAR_PLANOS.cmd', 'documentos/UAT-PLANOS-AUTOCAD-2027.md', 'PLANOS-PRUEBA/REFERENCIA.json', 'INSTALAR.cmd', 'DIAGNOSTICO.cmd', 'LEEME_PRIMERO.txt', 'documentos/GUIA_RAPIDA.md', 'documentos/RECUPERACION_Y_DESINSTALACION.md', 'VERSION_Y_COMPATIBILIDAD.json', 'AVISOS_DE_TERCEROS.md']) afirmar(fs.existsSync(path.join(raizZip, ...req.split('/'))), `falta ${req}`);
     const inst = fs.readFileSync(path.join(raizZip, 'INSTALAR.cmd'), 'utf8'); afirmar(inst.includes(manifestZip.extension.sha256) && !inst.includes('{{'), 'INSTALAR.cmd sin huella o con plantilla sin completar');
     afirmar(/\r\n/.test(inst), 'INSTALAR.cmd debe tener fin de línea CRLF');
     informe.version = manifestZip.version; informe.commit = manifestZip.commit; informe.extension_sha256 = manifestZip.extension.sha256;
@@ -94,7 +100,7 @@ try {
     return { servidor: cliente.getServerVersion(), herramientas: tools.length, procedimientos: prompts, ventana_del_cliente: d.autorizacion_humana.ventana_del_cliente };
   });
   // G0 / PL-01 (issue #32): el PAQUETE distribuido (no el servidor de desarrollo) expone el motor de planos con la configuración del manifiesto.
-  await paso('5b. motor de planos del paquete: tannia_planos expuesto y 5 láminas del túnel generadas (DXF AC1024 + PDF)', async () => {
+  await paso('5b. motor de planos del paquete: tannia_planos expuesto y láminas 01–05 del túnel generadas + 06 detalles D1–D4 (DXF AC1024 + PDF)', async () => {
     afirmar(manifest.server.mcp_config.env?.TANNIA_ENGINEERING === 'on', 'el manifiesto no declara TANNIA_ENGINEERING=on (configuración de producción)');
     afirmar(manifest.tools.some((t) => t.name === 'tannia_planos'), 'el manifiesto no declara tannia_planos');
     const tools = (await cliente.listTools()).tools.map((t) => t.name); afirmar(tools.includes('tannia_planos'), 'el servidor instalado no publica tannia_planos');
@@ -109,11 +115,12 @@ try {
     }
     const F = { perno_longitud: 2.4, espaciamiento_transversal: 1.5, espaciamiento_longitudinal: 1.5, malla: true, traslapo_malla_pct: 10 };
     const g = await T('tannia_planos', { proyecto: P, accion: 'generar_tunel', datos: { length: 150, width: 5.5, wall: 2.5, selected: 0.06, fortificacion: F } });
-    const laminas = g.files.filter((f) => /lamina-.*\.pdf$/.test(f)); afirmar(laminas.length === 5, `láminas PDF: ${laminas.length} ≠ 5`);
+    const laminas = g.files.filter((f) => /lamina-.*\.pdf$/.test(f)); afirmar(laminas.length === 6 && ['01', '02', '03', '04', '05', '06'].every((n) => laminas.some((f) => f.endsWith(`lamina-${n}.pdf`))), `láminas PDF: ${laminas.length} ≠ 6 (01–05 originales + 06 D1–D4)`);
     const dxfs = g.files.filter((f) => /\.dxf$/i.test(f)); afirmar(dxfs.length >= 1, 'sin DXF');
     const raiz = path.join(datos, 'Proyectos', P, g.folder);
     for (const f of dxfs) { const t = fs.readFileSync(fs.existsSync(path.join(raiz, f)) ? path.join(raiz, f) : path.join(datos, 'Proyectos', P, f), 'latin1'); afirmar(/\$ACADVER\r?\n\s*1\r?\n\s*AC1024/.test(t), `${f}: no es AC1024`); afirmar(/\nDIMENSION\r?\n/.test(t), `${f}: sin cotas nativas`); }
     afirmar(g.fortificacion?.some((x) => x.partida === 'Pernos de anclaje'), 'sin cubicación de fortificación');
+    planos5b = { dir: raiz, files: g.files, revision: g.revision };
     return { tannia_planos: true, laminas: laminas.length, dxf: dxfs, revision: g.revision };
   });
   // CAD-BG: el PAQUETE instalado ejecuta trabajos en segundo plano (mismo server/index.js relanzado con --trabajo, oculto y de prioridad baja).
@@ -128,6 +135,51 @@ try {
     if (!mismoSistema) { afirmar(e.estado_interno === 'FALLÓ' && /componente gr[aá]fico|COMPONENTE_GRAFICO/i.test(`${e.mensaje_para_la_persona} ${reg.pasos[0].error}`), `fuera de Windows x64 se esperaba un fallo claro del componente gráfico: ${e.mensaje_para_la_persona}`); return { crear_ms: msCrear, estado: e.estado_interno, nota: `planos NO generados en ${process.platform}-${process.arch} (binario win32); se exige en rc-zip-windows`, recursos: reg.recursos }; }
     afirmar(e.estado_interno === 'TERMINADO', `estado ${e.estado_interno}: ${e.mensaje_para_la_persona}`);
     return { crear_ms: msCrear, estado: e.estado_interno, mensaje: e.mensaje_para_la_persona, pasos: e.pasos.map((p) => p.estado), recursos: reg.recursos };
+  });
+  // PR #38 / PL-RC-5D: el DXF del PAQUETE (juego de referencia del ZIP y, en Windows x64, el generado por el servidor instalado en 5b)
+  // abre de forma utilizable según el inspector independiente y contiene exactamente la IR (ids, capas, tramas, cuadros, llamadas).
+  const REF = () => path.join(raizZip, 'PLANOS-PRUEBA');
+  const juego = (dir) => { const out = {}; for (const p of fs.readdirSync(dir)) { const d = path.join(dir, p); if (!fs.statSync(d).isDirectory()) continue; const f = fs.readdirSync(d); out[p] = { dir: d, files: f }; } return out; };
+  const comprobarDxf = (dir, files) => {
+    const dxf = fs.readFileSync(path.join(dir, files.find((f) => /planos\.dxf$/.test(f))), 'utf8'); const ir = JSON.parse(fs.readFileSync(path.join(dir, files.find((f) => /-ir\.json$/.test(f))), 'utf8'));
+    const ins = inspeccionarDxf(dxf); afirmar(ins.ok, `inspección DXF: ${JSON.stringify(ins.problemas.slice(0, 4))}`);
+    const par = paridadDxf(ir, dxf); afirmar(par.ok, `paridad DXF↔IR: ${par.problemas.slice(0, 3).join(' | ')}`);
+    afirmar(/\n0\nHATCH\n/.test(dxf), 'sin HATCH en el DXF'); afirmar(!ir.tables.length || ir.tables.every((t) => dxf.includes(`cuadro=${t}`)), 'faltan cuadros en el DXF');
+    return { layouts: ins.metricas.presentaciones.map((l) => l.nombre), ocupacion_encuadre: Number(ins.metricas.ocupacion_encuadre.toFixed(3)), vista_inicial: ins.metricas.vista_inicial, hatch: (dxf.match(/\n0\nHATCH\n/g) || []).length, sha256: sha(Buffer.from(dxf, 'utf8')) };
+  };
+  await paso('5d. DXF del paquete: apertura utilizable (extensiones, *Active, layouts, viewports con geometría), IDs, tramas y cuadros', async () => {
+    afirmar(fs.existsSync(REF()), 'el ZIP no trae PLANOS-PRUEBA (juego de referencia)'); const out = {};
+    for (const [n, j] of Object.entries(juego(REF()))) out[n] = comprobarDxf(j.dir, j.files);
+    afirmar(out['Prueba planos tunel UAT']?.layouts.length >= 6, 'el túnel de referencia no tiene 6 presentaciones');
+    if (planos5b) out.instalado_5b = comprobarDxf(planos5b.dir, planos5b.files);
+    else out.instalado_5b = `NO EJECUTADO en ${process.platform}-${process.arch} (binario nativo win32-x64); se exige en rc-zip-windows`;
+    out.autocad_2027 = 'NO VERIFICADO: requiere AutoCAD 2027 real (documentos/UAT-PLANOS-AUTOCAD-2027.md)';
+    return out;
+  });
+  // PL-RC-5E: artefactos de DOS dominios (PDF/PNG/CSV/JSON/manifiesto) con paridad PDF↔IR, firmas visuales aprobadas, CSV tipado y,
+  // en Windows x64, regeneración SIN Claude con el servidor instalado (--planos-prueba) idéntica byte a byte al juego de referencia.
+  await paso('5e. calidad y paridad documental de 2 dominios + prueba autónoma sin Claude desde el paquete instalado', async () => {
+    const goldens = JSON.parse(fs.readFileSync(path.join(raiz, 'test', 'fixtures_drawing', 'golden_firmas.json'), 'utf8')); const out = {};
+    for (const [n, j] of Object.entries(juego(REF()))) {
+      const ir = JSON.parse(fs.readFileSync(path.join(j.dir, j.files.find((f) => /-ir\.json$/.test(f))), 'utf8'));
+      const pdf = fs.readFileSync(path.join(j.dir, j.files.find((f) => /conjunto\.pdf$/.test(f)))); const par = await paridadPdf(ir, pdf); afirmar(par.ok, `${n}: paridad PDF↔IR ${par.problemas.slice(0, 2).join(' | ')}`);
+      const clave = /tunel/.test(n) ? 'tunel' : 'edi'; const pages = await renderPdf(pdf, { dpi: 72, pixels: true });
+      pages.forEach((p, i) => { const r = compararFirma(firmaRaster(p.pixels), goldens[clave][i]); afirmar(r.ok, `${n} lámina ${i + 1}: firma visual fuera de lo aprobado ${JSON.stringify(r)}`); });
+      for (const f of j.files.filter((x) => x.endsWith('.csv'))) afirmar(!/object Object/.test(fs.readFileSync(path.join(j.dir, f), 'utf8')), `${n}/${f}: CSV con «[object Object]»`);
+      const v = JSON.parse(fs.readFileSync(path.join(j.dir, j.files.find((f) => f.endsWith('verificacion.json'))), 'utf8')); afirmar(v.dxf_inspeccion.ok && v.paridad.dxf.ok && v.paridad.pdf.ok, `${n}: verificacion.json sin gates verdes`);
+      afirmar(j.files.filter((f) => f.endsWith('.png')).length === pages.length, `${n}: PNG ≠ láminas`);
+      out[n] = { laminas: pages.length, paridad_pdf: true, firmas_visuales: 'dentro de lo aprobado', csv_tipado: true };
+    }
+    const ref = JSON.parse(fs.readFileSync(path.join(REF(), 'REFERENCIA.json'), 'utf8')); afirmar(ref.commit === manifestZip.commit && ref.version === manifestZip.version, 'el juego de referencia no es de este commit/versión');
+    if (process.platform === 'win32' && process.arch === 'x64') {
+      const dest = path.join(base, 'Prueba planos sin Claude ñ'); const r = spawnSync(process.execPath, [path.join(extDir, 'server', 'index.js'), '--planos-prueba', dest], { encoding: 'utf8', timeout: 600000, env: { ...process.env, TANNIA_SIN_DIALOGO: '1' } });
+      afirmar(r.status === 0, `--planos-prueba falló (${r.status}): ${(r.stderr || r.stdout).slice(0, 400)}`); const inf = JSON.parse(fs.readFileSync(path.join(dest, 'INFORME-PRUEBA-PLANOS.json'), 'utf8'));
+      afirmar(inf.ok && inf.version === manifestZip.version, 'informe de la prueba autónoma sin gates verdes');
+      const distintos = []; for (const p of inf.proyectos) for (const [f, h] of Object.entries(p.archivos)) if (/(\.dxf|\.pdf|\.csv|-ir\.json|-modelo\.json|-composicion\.json|cantidades\.json)$/.test(f) && ref.archivos[p.nombre]?.[f] && ref.archivos[p.nombre][f] !== h) distintos.push(`${p.nombre}/${f}`);
+      afirmar(!distintos.length, `regeneración en Windows distinta del juego de referencia: ${distintos.slice(0, 4).join(', ')}`);
+      out.sin_claude = { ok: true, proyectos: inf.proyectos.map((p) => ({ nombre: p.nombre, revision: p.revision, laminas: p.laminas })), reproducible_bytes: 'DXF, PDF, CSV, IR, modelo, composición y cantidades idénticos al juego de referencia (PNG y verificacion.json dependen del rasterizador del sistema)' };
+    } else out.sin_claude = `NO EJECUTADO en ${process.platform}-${process.arch}: el servidor del paquete usa el binario gráfico win32-x64; se exige en rc-zip-windows`;
+    return out;
   });
   let aprob1;
   await paso('6. flujo profesional de extremo a extremo (plano → cubicación → APU → verificación → presupuesto/memoria → aprobación → entrega)', async () => {

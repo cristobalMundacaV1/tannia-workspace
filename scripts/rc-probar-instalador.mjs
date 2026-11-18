@@ -35,6 +35,14 @@ try {
   const r4 = correr(a, 'DIAGNOSTICO.cmd'); const rep = path.join(os.tmpdir(), 'Diagnostico-Tannia-Workspace.txt');
   const txt = fs.existsSync(rep) ? fs.readFileSync(rep, 'latin1') : '';
   caso('DIAGNOSTICO.cmd: informe de solo lectura con huella del paquete', r4.codigo === 0 && /Integridad del paquete/.test(txt) && /Esperado:/.test(txt), { codigo: r4.codigo, extracto: txt.slice(0, 800) });
+  // PROBAR_PLANOS.cmd (UAT PO rc.6: «no se detecta en Claude Desktop»): usa el .mcpb del ZIP, sin depender de la ruta de instalación.
+  const destP = path.join(base, 'Prueba planos ñ'); const envP = { ...env, TANNIA_PRUEBA_DESTINO: destP, TANNIA_NODE: process.execPath, APPDATA: path.join(base, 'AppData sin Claude') };
+  const r5 = spawnSync('cmd.exe', ['/d', '/c', 'PROBAR_PLANOS.cmd'], { cwd: a, env: envP, encoding: 'latin1', windowsHide: true, timeout: 600000 });
+  const infP = path.join(destP, 'INFORME-PRUEBA-PLANOS.json'); const okP = r5.status === 0 && fs.existsSync(infP) && JSON.parse(fs.readFileSync(infP, 'utf8')).ok === true;
+  caso('PROBAR_PLANOS.cmd: sin extensión instalada genera los 2 corpus desde el paquete del ZIP (gates verdes)', okP && /No se encontro una instalacion/.test(r5.stdout), { codigo: r5.status, salida: String(r5.stdout).slice(-900) });
+  const c = extraer(path.join(base, 'Extraído C alterado')); fs.appendFileSync(path.join(c, fs.readdirSync(c).find((n) => n.endsWith('.mcpb'))), 'x');
+  const r6 = spawnSync('cmd.exe', ['/d', '/c', 'PROBAR_PLANOS.cmd'], { cwd: c, env: { ...envP, TANNIA_PRUEBA_DESTINO: path.join(base, 'Prueba alterada') }, encoding: 'latin1', windowsHide: true, timeout: 120000 });
+  caso('PROBAR_PLANOS.cmd: paquete alterado ⇒ no ejecuta nada (código 2)', r6.status === 2 && /danado o fue modificado/.test(r6.stdout) && !fs.existsSync(path.join(base, 'Prueba alterada')), { codigo: r6.status, salida: String(r6.stdout).slice(-500) });
 } catch (e) { fallos++; inf.error = String(e.message).slice(0, 400); } finally {
   inf.resultado = fallos ? 'FALLA' : 'OK'; fs.writeFileSync(salida, JSON.stringify(inf, null, 2)); fs.rmSync(base, { recursive: true, force: true }); process.exit(fallos ? 1 : 0);
 }

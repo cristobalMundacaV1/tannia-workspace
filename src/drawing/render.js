@@ -1,6 +1,6 @@
 // Raster QA is evidence in addition to, never a substitute for, physical/vector checks.
 import { UserError } from '../mcp/util.js';
-export async function renderPdf(buffer, { dpi = 144 } = {}) {
+export async function renderPdf(buffer, { dpi = 144, pixels: conPixeles = false } = {}) {
   if (!Number.isFinite(dpi) || dpi < 72 || dpi > 300) throw new UserError('DPI_INVALIDO', 'Resolución de revisión inválida.');
   let canvas;
   // G0: si el componente gráfico nativo no corresponde a este equipo, se informa con claridad (no «error inesperado»).
@@ -24,7 +24,7 @@ export async function renderPdf(buffer, { dpi = 144 } = {}) {
         }
       }
       const ratio = ink / (surface.width * surface.height);
-      pages.push({ page: n, png: surface.toBuffer('image/png'), qa: { ok: ratio > 0.003 && ratio < 0.5 && edgeInk === 0, inkRatio: ratio, edgeInk, width: surface.width, height: surface.height, dpi, human_review: 'PENDING' } });
+      pages.push({ page: n, png: surface.toBuffer('image/png'), ...(conPixeles ? { pixels: { data: pixels, width: surface.width, height: surface.height } } : {}), qa: { ok: ratio > 0.003 && ratio < 0.5 && edgeInk === 0, inkRatio: ratio, edgeInk, width: surface.width, height: surface.height, dpi, human_review: 'PENDING' } });
     }
     return pages;
   } finally { await doc.destroy(); }

@@ -15,10 +15,15 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci
+      # PR #38 (gates 5d/5e): lector DXF INDEPENDIENTE obligatorio en CI (no se acepta el «skip» del oráculo ezdxf).
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python -m pip install ezdxf==1.4.5
       - name: Motor de recálculo XLSX (LibreOffice) para pruebas sin caché
         if: runner.os == 'Linux'
         run: command -v soffice || (sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libreoffice-calc)
       - run: npm test
+        env: { TW_REQUIRE_EZDXF: '1' }
       - run: npm run build
       - run: npm run pack
       - uses: actions/upload-artifact@v4

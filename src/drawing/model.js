@@ -2,6 +2,7 @@
 // No CAD or filesystem dependency. Presentation never changes source geometry.
 import { seccionArco, areaSeccion } from '../geo/lineal.js';
 import { UserError } from '../mcp/util.js';
+import { regionRevestimiento, detallesTunel, cuadrosTunel } from './tunnel_details.js';
 
 export const PAPERS = { A3: [420, 297], A2: [594, 420], A1: [841, 594] };
 export const LAYERS = {
@@ -19,7 +20,7 @@ export const LAYERS = {
 export const capasDe = (model) => ({ ...LAYERS, ...(model?.layers || {}) });
 /** PL-06: definición ÚNICA del tipo de línea de una capa (mm de papel, trazo/hueco alternados). PDF y DXF usan esta misma función. */
 export function patronLinea(nombre, capa) {
-  const d = capa?.dash; if (!Array.isArray(d) || !d.length) return { nombre: 'CONTINUOUS', elementos: [] };
+  const d = capa?.dash; if (!Array.isArray(d) || !d.length) return { nombre: 'Continuous', elementos: [] };
   if (d.length % 2 || !d.every((x) => Number.isFinite(x) && x > 0)) throw new Error(`Patrón de línea inválido en la capa ${nombre}`);
   return { nombre: `TW_${String(nombre).replace(/[^A-Za-z0-9_]/g, '_')}`, elementos: d.map((x, i) => (i % 2 ? -x : x)) };
 }
@@ -81,9 +82,9 @@ export function fortificacionVista({ r, wall, length, f }) {
   // bloque de hipótesis/pendientes. Los pernos se numeran en el dibujo para poder citarlos en el cuadro.
   const c2 = (x, d = 2) => x.toFixed(d).replace('.', ',');
   const anillos = Math.ceil(length / f.espaciamiento_longitudinal - 1e-9) + 1;
-  const notes = [`CUADRO DE PERNOS (calculado): L = ${c2(Lp)} m; ${n} por anillo (P1 a P${n}) a ${c2(paso, 3)} m sobre el contorno (máximo declarado ${c2(f.espaciamiento_transversal)} m); ${anillos} anillos = ceil(${length} / ${c2(f.espaciamiento_longitudinal)}) + 1; TOTAL ${n * anillos} pernos.`, f.malla ? `Malla en hastiales y bóveda, traslapo ${f.traslapo_malla_pct} % (representación esquemática a 3 cm del contorno).` : 'Sin malla declarada.', 'HIPÓTESIS: patrón de fortificación DECLARADO; no es un diseño geotécnico verificado.', 'PENDIENTES: clasificación del macizo, tipo de perno y lechada, placa y tuerca (no dibujadas) y validación por especialista.'];
+  const resumen = `CUADRO DE PERNOS (calculado): L = ${c2(Lp)} m; ${n} por anillo (P1 a P${n}) a ${c2(paso, 3)} m sobre el contorno (máximo declarado ${c2(f.espaciamiento_transversal)} m); ${anillos} anillos = ceil(${length} / ${c2(f.espaciamiento_longitudinal)}) + 1; TOTAL ${n * anillos} pernos.`; const notes = [f.malla ? `Malla en hastiales y bóveda, traslapo ${f.traslapo_malla_pct} % (representación esquemática a 3 cm del contorno).` : 'Sin malla declarada.', 'HIPÓTESIS: patrón de fortificación DECLARADO; no es un diseño geotécnico verificado.', 'PENDIENTES: clasificación del macizo, tipo de perno y lechada, placa y tuerca (no dibujadas) y validación por especialista.'];
   const labels = ents.filter((e) => e.layer === 'PERNOS').map((e, i) => ({ at: e.b, dy: e.b[1] >= wall ? -3 : 3, text: `P${i + 1}` }));
-  return { id: 'fortificacion', title: 'Sección tipo de fortificación', scale: 75, entities: ents, dimensions: dims, labels, notes };
+  return { id: 'fortificacion', title: 'Sección tipo de fortificación', scale: 75, entities: ents, dimensions: dims, labels, notes, resumen };
 }
 
 /** Cantidades de fortificación MEDIDAS sobre la vista dibujada (única autoridad geométrica). */
@@ -126,37 +127,49 @@ export function tunnelModel({ length = 150, width = 5.5, wall = 2.5, selected = 
   const stations = []; for (let s = 0; s < length; s += 25) stations.push(s); stations.push(length);
   const plan = { id: 'planta', title: 'Planta general', scale: 500, entities: [line('axis', 'EJE', [0, 0], [length, 0]), line('north-edge', 'EXCAVACION', [0, r], [length, r]), line('south-edge', 'EXCAVACION', [0, -r], [length, -r]), line('cut-aa', 'CORTE', [length / 2, -3 * r], [length / 2, 3 * r])], dimensions: [dim('length', [0, -r], [length, -r], 12)], labels: [...stations.map(s => ({ at: [s, 0], dy: -10, text: `0+${String(s).padStart(3, '0')}` })), { at: [length / 2, 3 * r], dy: -5, text: 'A' }, { at: [length / 2, -3 * r], dy: 3, text: 'A' }], notes: ['Trazado recto hipotético. Orientación geográfica no confirmada.', 'Corte A-A en 0+075: ver lámina 03.'] };
   const profile = { id: 'perfil', title: 'Perfil longitudinal', scale: 500, verticalScale: 100, entities: [line('grade', 'EJE', [0, 0], [length, 0]), line('roof', 'EXCAVACION', [0, wall + r], [length, wall + r]), line('portal-start', 'EXCAVACION', [0, 0], [0, wall + r]), line('portal-end', 'EXCAVACION', [length, 0], [length, wall + r])], dimensions: [dim('profile-length', [0, 0], [length, 0], 12), dim('profile-height', [0, 0], [0, wall + r], -14)], labels: stations.map(s => ({ at: [s, 0], dy: 7, text: `0+${String(s).padStart(3, '0')}` })), notes: ['Rasante horizontal hipotética: pendiente 0,00 %. Sin topografía.', 'Datum local 0,00 m arbitrario, NO es cota geográfica.', 'Escala H 1:500 / V 1:100. Exageración vertical 5x.'] };
-  const cross = { id: 'seccion', title: 'Sección A-A / 0+075', scale: 50, entities: [...section('outer', 'EXCAVACION', r, wall), ...section('inner', 'INTERIOR', interior, wall)], dimensions: [dim('width', [-r, 0], [r, 0], 12), dim('wall', [r, 0], [r, wall], 10), dim('height', [-r, 0], [-r, wall + r], -12), { id: 'radius', kind: 'radial', center: [0, wall], radius: r, angle: 45, value: r, unit: 'm' }], labels: [], notes: [`CUADRO GEOMÉTRICO: ancho ${width.toFixed(2).replace('.', ',')} m · hastial ${wall.toFixed(2).replace('.', ',')} m · radio de bóveda ${r.toFixed(2).replace('.', ',')} m · altura total ${(wall + r).toFixed(2).replace('.', ',')} m · contorno (hastiales + bóveda) ${(2 * wall + Math.PI * r).toFixed(3).replace('.', ',')} m.`, `Área excavada: ${area.toFixed(4)} m². Área interior: ${quantities.find(q => q.thickness_m === selected).interior_area_m2.toFixed(4)} m².`, `Alternativa representada: ${selected * 100} cm. Sin revestimiento de solera.`] };
+  const cross = { id: 'seccion', title: 'Sección A-A / 0+075', scale: 50, entities: [...section('outer', 'EXCAVACION', r, wall), ...section('inner', 'INTERIOR', interior, wall)], dimensions: [dim('width', [-r, 0], [r, 0], 12), dim('wall', [r, 0], [r, wall], 10), dim('height', [-r, 0], [-r, wall + r], -12), { id: 'radius', kind: 'radial', center: [0, wall], radius: r, angle: 45, value: r, unit: 'm' }], labels: [], resumen: `CUADRO GEOMÉTRICO: ancho ${width.toFixed(2).replace('.', ',')} m · hastial ${wall.toFixed(2).replace('.', ',')} m · radio de bóveda ${r.toFixed(2).replace('.', ',')} m · altura total ${(wall + r).toFixed(2).replace('.', ',')} m · contorno (hastiales + bóveda) ${(2 * wall + Math.PI * r).toFixed(3).replace('.', ',')} m.`, notes: [`Área excavada: ${area.toFixed(4)} m². Área interior: ${quantities.find(q => q.thickness_m === selected).interior_area_m2.toFixed(4)} m².`, `Alternativa representada: ${selected * 100} cm. Sin revestimiento de solera.`] };
   const details = [0.06, 0.08].map(t => ({ id: `detalle-${t * 100}`, title: `Detalle hastial / alternativa ${t * 100} cm`, scale: 10, entities: [line(`outer-${t}`, 'EXCAVACION', [0, 0], [0, 1]), line(`inner-${t}`, `ALTERNATIVA_${t * 100}`, [t, 0], [t, 1])], dimensions: [dim(`thickness-${t}`, [0, 0.5], [t, 0.5], 12)], labels: [], notes: [`Espesor geométrico ${t * 100} cm. No es diseño de sostenimiento.`] }));
+  // Regiones de material DECLARADO (representación, no medición): revestimiento elegido en la sección y en cada detalle.
+  cross.regions = [regionRevestimiento('seccion-rev', r, wall, selected)];
+  for (const d of details) { const t = Number(d.id.split('-')[1]) / 100; d.regions = [{ id: `${d.id}-rev`, trama: 'SHOTCRETE_REGION', material: { nombre: `Shotcrete e = ${t * 100} cm (alternativa comparativa)`, origen: 'Alternativas académicas declaradas del ejercicio TW12 (6 y 8 cm)', estado: 'DECLARADO_SIN_VALIDAR', especificacion: 'PENDIENTE' }, element: 'revestimiento-comparativo', contorno: [[0, 0], [t, 0], [t, 1], [0, 1]], huecos: [] }]; }
+  // Marcas de corte A-A en planta (sentido de vista declarado como convención del motor, a confirmar).
+  plan.symbols = [{ id: 'corte-a1', symbol: 'SECTION_MARK', at: [length / 2, 3 * r], rot: 0, element: 'corte-aa' }, { id: 'corte-a2', symbol: 'SECTION_MARK', at: [length / 2, -3 * r], rot: 0, element: 'corte-aa' }];
+  plan.notes.push('Flechas del corte A-A: vista hacia cadenamiento creciente (convención del motor; confirmar).');
   const views = [plan, profile, cross, ...details];
-  if (fortificacion) views.push(fortificacionVista({ r, wall, length, f: fortificacion }));
+  let callouts = [];
+  if (fortificacion) {
+    views.push(fortificacionVista({ r, wall, length, f: fortificacion }));
+    const det = detallesTunel({ r, wall, t: selected, f: fortificacion }); views.push(...det.views); callouts = det.callouts;
+  }
   const elements = tagElements(views, { length, area });
-  if (fortificacion) elements.push({ id: 'pernos', tipo: 'fortificacion', unidad: 'u', fuente: 'fortificacion/perno-1', magnitudes: {}, vistas: ['fortificacion'] }, { id: 'contorno-fortificado', tipo: 'superficie', unidad: 'm', fuente: 'fortificacion/fort-arch', magnitudes: {}, vistas: ['fortificacion'] });
-  return { schema: 'tw.drawing/1', unit: 'm', selected_thickness_m: selected, elements, provenance: 'Datos autorizados del ejercicio TW12; hipótesis académicas explícitas', metadata: { project, revision, date, institution, author, reviewer: 'PENDIENTE', approval: 'PENDIENTE', stage: 'REVISIÓN ACADÉMICA', source: 'Modelo TW12', coordinateSystem: 'NO CONFIRMADO' }, quantities, views, length_m: length, fortificacion, sheets: [{ id: '01', title: 'Planta general', views: ['planta'] }, { id: '02', title: 'Perfil longitudinal', views: ['perfil'] }, { id: '03', title: 'Sección transversal', views: ['seccion'] }, { id: '04', title: 'Detalles de revestimiento', views: details.map(v => v.id) }, ...(fortificacion ? [{ id: '05', title: 'Fortificación tipo', views: ['fortificacion'] }] : [])], warnings: ['EJERCICIO ACADÉMICO. No apto para construcción.', fortificacion ? 'Fortificación según patrón declarado; sin validación geotécnica.' : 'Sin validación geotécnica ni fortificación aprobada.', 'Espesores comparativos; no constituyen diseño estructural.'] };
+  if (fortificacion) elements.push({ id: 'pernos', tipo: 'fortificacion', unidad: 'u', fuente: 'fortificacion/perno-1', magnitudes: {}, vistas: ['fortificacion'] }, { id: 'contorno-fortificado', tipo: 'superficie', unidad: 'm', fuente: 'fortificacion/fort-arch', magnitudes: {}, vistas: ['fortificacion'] }, { id: 'malla', tipo: 'fortificacion', unidad: 'm2', fuente: null, magnitudes: {}, vistas: ['fortificacion', 'D1', 'D2', 'D3', 'D4'] }, { id: 'revestimiento', tipo: 'revestimiento', unidad: 'm3', fuente: null, magnitudes: {}, vistas: ['seccion', 'D1', 'D2', 'D3'] });
+  const sheets = [{ id: '01', title: 'Planta general', views: ['planta'] }, { id: '02', title: 'Perfil longitudinal', views: ['perfil'] }, { id: '03', title: 'Sección transversal', views: ['seccion'] }, { id: '04', title: 'Detalles de revestimiento', views: details.map(v => v.id) }, ...(fortificacion ? [{ id: '05', title: 'Fortificación tipo', views: ['fortificacion'] }, { id: '06', title: 'Detalles de fortificación D1 a D4', views: views.filter((v) => v.detail_ref).map((v) => v.id) }] : [])];
+  const model = { schema: 'tw.drawing/1', unit: 'm', selected_thickness_m: selected, elements, provenance: 'Datos autorizados del ejercicio TW12; hipótesis académicas explícitas', metadata: { project, revision, date, institution, author, reviewer: 'PENDIENTE', approval: 'PENDIENTE', stage: 'REVISIÓN ACADÉMICA', source: 'Modelo TW12', coordinateSystem: 'NO CONFIRMADO' }, geometria: { width, wall }, quantities, views, callouts, length_m: length, fortificacion, sheets, warnings: ['EJERCICIO ACADÉMICO. No apto para construcción.', fortificacion ? 'Fortificación según patrón declarado; sin validación geotécnica.' : 'Sin validación geotécnica ni fortificación aprobada.', 'Espesores comparativos; no constituyen diseño estructural.'] };
+  model.tables = cuadrosTunel(model, { cantidadesFortificacion, cantidadesTunelContrato });
+  return model;
 }
 
-export function compose(model, { paper = 'A3', orientation = 'landscape', margin = 12 } = {}) {
-  if (!PAPERS[paper] || !['landscape', 'portrait'].includes(orientation) || !Number.isFinite(margin) || margin < 8 || margin > 30) throw new UserError('PAPEL_INVALIDO', 'Formato, orientación o margen no válido.');
-  const size = orientation === 'landscape' ? PAPERS[paper] : [...PAPERS[paper]].reverse();
-  const sheets = model.sheets.map(sheet => {
-    const usable = size[0] - 2 * margin; const gap = 18; const count = sheet.views.length;
-    const slotW = (usable - (count - 1) * gap) / count; const slotH = size[1] - 2 * margin - 105;
-    const views = sheet.views.map((id, i) => {
-      const v = model.views.find(x => x.id === id); if (!v) throw new UserError('VISTA_AUSENTE', id);
-      if (!(v.scale > 0) || !Number.isFinite(v.scale)) throw new UserError('ESCALA_INVALIDA', id);
-      const box = bounds(v.entities); const sx = 1000 / v.scale; const sy = 1000 / (v.verticalScale || v.scale);
-      const w = (box.max[0] - box.min[0]) * sx; const h = (box.max[1] - box.min[1]) * sy;
-      if (w + 40 > slotW || h + 40 > slotH) throw new UserError('VISTA_NO_CABE', `La vista ${id} no cabe a escala 1:${v.scale}.`, 'Seleccione un papel mayor o una lámina adicional. La escala no se ha cambiado.');
-      const cx = margin + slotW * (i + 0.5) + i * gap; const cy = margin + 12 + slotH / 2;
-      const center = [(box.min[0] + box.max[0]) / 2, (box.min[1] + box.max[1]) / 2];
-      return { ...v, bounds: box, viewport: { center, paperCenter: [cx, cy], width: w + 40, height: h + 40, scale: sx, verticalScale: sy, locked: true }, transform: { sx, sy, tx: cx - center[0] * sx, ty: cy + center[1] * sy } };
-    });
-    const layers = [...new Set(views.flatMap(v => v.entities.map(e => e.layer)))]; const C = capasDe(model);
-    for (const id of layers) if (!C[id]) throw new UserError('CAPA_NO_DECLARADA', `La capa «${id}» no está declarada en el modelo.`);
-    return { ...sheet, paper, size, margin, views, legend: layers.map(id => ({ id, ...C[id] })), titleBlock: { x: margin, y: size[1] - margin - 40, width: usable, height: 40 } };
-  });
-  return { schema: 'tw.sheets/1', model, sheets, status: 'needs_review' };
+/**
+ * Colocación de las vistas en el espacio modelo del DXF (P0): las vistas se disponen en filas compactas, separadas por una
+ * holgura proporcional, en vez de apilarse cada 1000 m (la extensión de 0–5007 m dejaba cada vista diminuta al abrir).
+ * Contrato compartido por el escritor y los verificadores: desplazamiento [dx, dy] que se suma a la geometría ya exagerada.
+ */
+export function colocacionModelo(model) {
+  const cajas = model.views.map((v) => { const b = bounds(v.entities); const ex = v.verticalScale ? v.scale / v.verticalScale : 1; return { id: v.id, min: [b.min[0], b.min[1] * ex], max: [b.max[0], b.max[1] * ex] }; });
+  const ancho = Math.max(...cajas.map((c) => c.max[0] - c.min[0])); const gap = Math.max(2, 0.08 * ancho);
+  const off = {}; let x = 0; let y = 0; let fila = 0;
+  for (const c of cajas) {
+    const w = c.max[0] - c.min[0]; const h = c.max[1] - c.min[1];
+    if (x > 0 && x + w > ancho * 1.0001) { y -= fila + gap; x = 0; fila = 0; }
+    off[c.id] = [Number((x - c.min[0]).toFixed(6)), Number((y - c.max[1]).toFixed(6))]; x += w + gap; fila = Math.max(fila, h);
+  }
+  return off;
 }
+/** Colocación de una composición: la guardada (revisiones nuevas) o la heredada (revisiones antiguas: vista i en y = i·1000). */
+export const colocacionDe = (composition) => composition.placement || Object.fromEntries(composition.model.views.map((v, i) => [v.id, [0, i * 1000]]));
+
+// Compositor por paneles (A3/A2/A1, paginación explícita): ver composer.js. Se reexporta para compatibilidad.
+export { compose } from './composer.js';
 
 export function verifyDimensions(model) {
   const issues = [];
