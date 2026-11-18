@@ -2,7 +2,9 @@
 import { UserError } from '../mcp/util.js';
 export async function renderPdf(buffer, { dpi = 144 } = {}) {
   if (!Number.isFinite(dpi) || dpi < 72 || dpi > 300) throw new UserError('DPI_INVALIDO', 'Resolución de revisión inválida.');
-  const canvas = await import('@napi-rs/canvas');
+  let canvas;
+  // G0: si el componente gráfico nativo no corresponde a este equipo, se informa con claridad (no «error inesperado»).
+  try { canvas = await import('@napi-rs/canvas'); } catch (e) { throw new UserError('COMPONENTE_GRAFICO_NO_DISPONIBLE', `No se pudo cargar el componente que dibuja las vistas previas en este equipo (${process.platform}-${process.arch}). No se generó ni modificó ningún archivo.`, 'Instala el paquete de Tannia Workspace que corresponde a tu sistema (Windows x64) o ejecuta el diagnóstico.'); }
   Object.assign(globalThis, { DOMMatrix: canvas.DOMMatrix, ImageData: canvas.ImageData, Path2D: canvas.Path2D });
   const lib = await import('pdfjs-dist/legacy/build/pdf.mjs');
   if (!globalThis.pdfjsWorker) globalThis.pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs');

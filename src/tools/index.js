@@ -532,8 +532,12 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   registerProyectos(reg, { sandbox });
   registerArquitectura(reg, { sandbox, cad });
   if (cicActivo()) registerCic(reg, { sandbox, server, herramientas: () => [...new Set(TOOL_NAMES)] }); // TW-11: desactivado por defecto (72 herramientas)
-  if (process.env.TANNIA_ENGINEERING === 'on') registerDrawing(reg, { sandbox, cad, server });
+  // PL-01: el motor de planos es capacidad del PRODUCTO distribuido (el manifiesto declara TANNIA_ENGINEERING=on). Solo «off» lo desactiva.
+  if (motorPlanosActivo()) registerDrawing(reg, { sandbox, cad, server });
 }
+
+/** Configuración soportada de producción: motor de planos activo salvo TANNIA_ENGINEERING=off explícito. */
+export function motorPlanosActivo(env = process.env) { return !/^(off|0|false|no)$/i.test(String(env.TANNIA_ENGINEERING ?? 'on').trim()); }
 
 /** Origen de precios y porcentajes: Tannia solo puede declarar lo registrado; nunca lo atribuye a la usuaria. */
 function origenEconomico(pr) {

@@ -56,6 +56,8 @@ const [a, b] = InMemoryTransport.createLinkedPair();
 const client = new Client({ name: 'build', version: '1' });
 await Promise.all([server.connect(a), client.connect(b)]);
 const tools = (await client.listTools()).tools.map((t) => ({ name: t.name, description: t.description }));
+// PL-01: un build sin el motor de planos no es un candidato válido (prueba negativa en test/rc_pl01_habilitacion.test.js).
+if (!tools.some((t) => t.name === 'tannia_planos')) { console.error('build: el catálogo no incluye tannia_planos'); process.exit(1); }
 await client.close(); fs.rmSync(tmp, { recursive: true, force: true });
 
 const manifest = {
@@ -70,7 +72,7 @@ const manifest = {
   server: {
     type: 'node',
     entry_point: 'server/index.js',
-    mcp_config: { command: 'node', args: ['${__dirname}/server/index.js'], env: { TANNIA_HOME: '${user_config.carpeta_tannia}' } },
+    mcp_config: { command: 'node', args: ['${__dirname}/server/index.js'], env: { TANNIA_HOME: '${user_config.carpeta_tannia}', TANNIA_ENGINEERING: 'on' } },
   },
   tools,
   tools_generated: false,
@@ -84,6 +86,10 @@ const manifest = {
   compatibility: { platforms: ['win32', 'darwin', 'linux'], runtimes: { node: '>=18.0.0' } },
 };
 fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest, null, 2));
+// R-03: identidad de compilación visible en el diagnóstico (qué código exacto se instaló). Sin fecha, para conservar la reproducibilidad.
+{ const { execFileSync: ex } = await import('node:child_process'); let commit = 'desconocido'; let arbol_limpio = false;
+  try { commit = ex('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(); arbol_limpio = ex('git', ['status', '--porcelain', '--', 'src', 'scripts', 'package.json', 'package-lock.json'], { cwd: root, encoding: 'utf8' }).trim() === ''; } catch { /* sin git: se declara desconocido */ }
+  fs.writeFileSync(path.join(out, 'server', 'compilacion.json'), JSON.stringify({ schema: 'tw.compilacion/1', version: VERSION, commit, arbol_limpio }, null, 2)); }
 fs.copyFileSync(path.join(root, 'src', 'drawing', 'FONT_LICENSE.txt'), path.join(out, 'FONT_LICENSE.txt'));
 for (const f of ['LICENSE-THIRD-PARTY.txt']) if (fs.existsSync(path.join(root, f))) fs.copyFileSync(path.join(root, f), path.join(out, f));
 // Reproducibilidad: fechas fijas para que el .mcpb sea idéntico bit a bit con las mismas entradas.

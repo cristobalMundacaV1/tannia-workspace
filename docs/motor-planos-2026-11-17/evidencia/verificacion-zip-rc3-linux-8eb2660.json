@@ -1,0 +1,156 @@
+{
+  "zip": "Tannia-Workspace-0.2.0-rc.3-windows-x64.zip",
+  "plataforma": "linux 6.18.44-fc-v553 x64",
+  "node": "v22.23.4",
+  "inicio": "2026-11-18T00:27:37.159Z",
+  "pasos": [
+    {
+      "paso": "1. huella del ZIP",
+      "ok": true,
+      "ms": 23,
+      "detalle": {
+        "sha256": "074d589cd91e2c964342f21c8682402d1053549ef7a8abe0c63744d0e92159a1"
+      }
+    },
+    {
+      "paso": "2. extracción en ruta con espacios y ñ",
+      "ok": true,
+      "ms": 75,
+      "detalle": {
+        "entradas": 272,
+        "carpeta": "Tannia-Workspace-0.2.0-rc.3-windows-x64"
+      }
+    },
+    {
+      "paso": "3. SHA256SUMS de cada archivo y manifiesto de la entrega",
+      "ok": true,
+      "ms": 60,
+      "detalle": {
+        "archivos_verificados": 270,
+        "version": "0.2.0-rc.3",
+        "commit": "8eb2660e24bfbbf806018cbdfb104e8fcdf10de8"
+      }
+    },
+    {
+      "paso": "4. instalación en perfil limpio (extensión extraída como la instala Claude Desktop)",
+      "ok": true,
+      "ms": 609,
+      "detalle": {
+        "archivos": 17,
+        "nombre": "tannia-workspace",
+        "version": "0.2.0-rc.3",
+        "plataformas": [
+          "win32"
+        ]
+      }
+    },
+    {
+      "paso": "5. registro y conexión MCP (initialize, herramientas, procedimientos, diagnóstico)",
+      "ok": true,
+      "ms": 647,
+      "detalle": {
+        "servidor": {
+          "name": "tannia-workspace",
+          "version": "0.2.0-rc.3"
+        },
+        "herramientas": 78,
+        "procedimientos": [
+          "tw-desarrollar-proyecto",
+          "tw-recibir-expediente",
+          "tw-auditar-cad",
+          "tw-cubicar-edificacion",
+          "tw-presupuestar-y-entregar",
+          "tw-recuperar-sesion"
+        ],
+        "ventana_del_cliente": true
+      }
+    },
+    {
+      "paso": "5b. motor de planos del paquete: tannia_planos expuesto y 5 láminas del túnel generadas (DXF AC1024 + PDF)",
+      "ok": true,
+      "ms": 242,
+      "detalle": {
+        "tannia_planos": true,
+        "generacion_5_laminas": "NO EJECUTADA en linux-x64 (binario nativo win32-x64); se exige en rc-zip-windows",
+        "error_claro": true
+      }
+    },
+    {
+      "paso": "6. flujo profesional de extremo a extremo (plano → cubicación → APU → verificación → presupuesto/memoria → aprobación → entrega)",
+      "ok": true,
+      "ms": 192,
+      "detalle": {
+        "total": 115531,
+        "oraculo": 115531,
+        "xlsx": "05 Presupuestos/Presupuesto R8 20261118-002738.xlsx",
+        "memoria": "06 Informes/Memoria R8 20261118-002738.pdf",
+        "revision": "R8",
+        "recibo": "rec-f2e8248ce79b4846",
+        "entrega": "07 Entregables/Entrega R8 2026-11-18 b10512b2",
+        "ventanas_mostradas_a_la_persona": 3
+      }
+    },
+    {
+      "paso": "7. verificación de los entregables generados",
+      "ok": true,
+      "ms": 46,
+      "detalle": {
+        "carpeta": "Entrega R8 2026-11-18 b10512b2",
+        "archivos": 2,
+        "total_xlsx": 115531,
+        "original_intacto": true
+      }
+    },
+    {
+      "paso": "8. cambio después de entregar: precio nuevo ⇒ archivos y aprobación nuevos; la entrega anterior no se toca",
+      "ok": true,
+      "ms": 68,
+      "detalle": {
+        "total_nuevo": 129216,
+        "entrega_nueva": "07 Entregables/Entrega R9 2026-11-18 020b273c"
+      }
+    },
+    {
+      "paso": "9. interrupción abrupta del servidor y recuperación sin estado a medias",
+      "ok": true,
+      "ms": 589,
+      "detalle": {
+        "revision": "R10",
+        "pendientes": 1,
+        "json_legibles": 4,
+        "proceso_terminado": true
+      }
+    },
+    {
+      "paso": "10. actualización / reinstalación de la extensión con datos conservados",
+      "ok": true,
+      "ms": 1124,
+      "detalle": {
+        "estado": "borrador",
+        "revision": "R10",
+        "archivos_de_datos": 34
+      }
+    },
+    {
+      "paso": "11. desinstalación: se elimina la extensión y los proyectos quedan intactos",
+      "ok": true,
+      "ms": 31,
+      "detalle": {
+        "proyectos": [
+          "Edificio Ñuñoa – Revisión A",
+          "Túnel UAT-02 (verificador G0)"
+        ],
+        "archivos_conservados": 34
+      }
+    }
+  ],
+  "zip_sha256": "074d589cd91e2c964342f21c8682402d1053549ef7a8abe0c63744d0e92159a1",
+  "zip_bytes": 18083276,
+  "version": "0.2.0-rc.3",
+  "commit": "8eb2660e24bfbbf806018cbdfb104e8fcdf10de8",
+  "extension_sha256": "561d1588968e8816e96b06c6417dd3fd6de28ee1dba38e8dc37c8ea2336e0c5c",
+  "original_sha256": "c14a41e840f0ed280334716e76926e3971030a4faed99ca3b7bf6120eee8cd8e",
+  "fin": "2026-11-18T00:27:40.866Z",
+  "resultado": "OK",
+  "alcance": "Prueba del artefacto ZIP con Node y el protocolo MCP real en esta plataforma. NO prueba Claude Desktop (interfaz, instalación por doble clic, ventanas de confirmación reales), ni AutoCAD, ni revisión profesional."
+}

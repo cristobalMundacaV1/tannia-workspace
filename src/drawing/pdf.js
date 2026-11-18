@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit/js/pdfkit.standalone.js';
 import { openPdf } from '../pdf/pdf.js';
 import { UserError } from '../mcp/util.js';
-import { capasDe, prefijoDe, verifyDimensions } from './model.js';
+import { capasDe, prefijoDe, verifyDimensions, patronLinea } from './model.js';
 import { drawingFont } from './font.js';
 
 export const PT = 72 / 25.4;
@@ -15,7 +15,7 @@ function crosses(a, b, box) {
   } return true;
 }
 export function sceneForSheet(composition, sheet) {
-  const scene = []; const addLine = (a, b, layer = 'COTAS') => scene.push({ kind: 'line', a, b, layer });
+  const scene = []; const addLine = (a, b, layer = 'COTAS', role) => scene.push({ kind: 'line', a, b, layer, ...(role ? { role } : {}) });
   const text = (value, x, y, size = 2.5, maxWidth = 150, align = 'left') => { const entry = { kind: 'text', value, x, y, size, maxWidth, align }; scene.push(entry); return entry; };
   const meta = composition.model.metadata; const w = sheet.size[0]; const h = sheet.size[1]; const m = sheet.margin;
   scene.push({ kind: 'rect', x: m, y: m, w: w - 2 * m, h: h - 2 * m });
@@ -35,14 +35,14 @@ export function sceneForSheet(composition, sheet) {
     for (const d of v.dimensions) {
       if (d.kind === 'radial') {
         const a = xy(d.center); const angle = d.angle * Math.PI / 180; const b = xy([d.center[0] + d.radius * Math.cos(angle), d.center[1] + d.radius * Math.sin(angle)]);
-        addLine(a, b); text(`R ${number(d.value)} m`, a[0] - 35, a[1] - 10, 2.5, 30).movable = true; continue;
+        addLine(a, b, 'COTAS', 'dimension'); Object.assign(text(`R ${number(d.value)} m`, a[0] - 35, a[1] - 10, 2.5, 30), { movable: true, role: 'dimension' }); continue;
       }
       const a = xy(d.a); const b = xy(d.b); const horizontal = Math.abs(d.b[1] - d.a[1]) < 1e-9;
       let c; let e;
-      if (horizontal) { const y = Math.max(a[1], b[1]) + d.offset; c = [a[0], y]; e = [b[0], y]; const short = Math.abs(e[0] - c[0]) < 14; text(`${number(d.value)} m`, short ? Math.max(c[0], e[0]) + 9 : (c[0] + e[0]) / 2, short ? y - 1.5 : y + 1, 2.5, 35, 'center').movable = true; }
-      else { const x = a[0] + d.offset; c = [x, a[1]]; e = [x, b[1]]; text(`${number(d.value)} m`, x + (d.offset < 0 ? -10 : 10), (a[1] + b[1]) / 2, 2.5, 22, 'center').movable = true; }
-      addLine(a, c); addLine(b, e); addLine(c, e);
-      for (const p of [c, e]) addLine([p[0] - 1, p[1] + 1], [p[0] + 1, p[1] - 1]);
+      if (horizontal) { const y = Math.max(a[1], b[1]) + d.offset; c = [a[0], y]; e = [b[0], y]; const short = Math.abs(e[0] - c[0]) < 14; Object.assign(text(`${number(d.value)} m`, short ? Math.max(c[0], e[0]) + 9 : (c[0] + e[0]) / 2, short ? y - 1.5 : y + 1, 2.5, 35, 'center'), { movable: true, role: 'dimension' }); }
+      else { const x = a[0] + d.offset; c = [x, a[1]]; e = [x, b[1]]; Object.assign(text(`${number(d.value)} m`, x + (d.offset < 0 ? -10 : 10), (a[1] + b[1]) / 2, 2.5, 22, 'center'), { movable: true, role: 'dimension' }); }
+      addLine(a, c, 'COTAS', 'dimension'); addLine(b, e, 'COTAS', 'dimension'); addLine(c, e, 'COTAS', 'dimension');
+      for (const p of [c, e]) addLine([p[0] - 1, p[1] + 1], [p[0] + 1, p[1] - 1], 'COTAS', 'dimension');
     }
     text(v.title, v.viewport.paperCenter[0], m + 17, 3, v.viewport.width + 20, 'center');
     const barM = v.scale >= 100 ? 25 : v.scale >= 50 ? 2 : 0.2; const barW = barM * t.sx;
@@ -136,7 +136,7 @@ export function buildSheetsPdf(composition, onlyId = null) {
       doc.addPage({ size: sheet.size.map(v => v * PT), margin: 0 });
       for (const e of scenes[index]) {
         doc.save(); const layer = capasDe(composition.model)[e.layer] || { weight: 0.18 }; doc.lineWidth(layer.weight * PT).strokeColor('black').fillColor('black');
-        if (layer.dash) doc.dash(layer.dash[0] * PT, { space: layer.dash[1] * PT });
+        const patron = patronLinea(e.layer, layer); if (patron.elementos.length) doc.dash(patron.elementos.map((x) => Math.abs(x) * PT));
         if (e.kind === 'line') doc.moveTo(e.a[0] * PT, e.a[1] * PT).lineTo(e.b[0] * PT, e.b[1] * PT).stroke();
         if (e.kind === 'path') { e.points.forEach((p, i) => doc[i ? 'lineTo' : 'moveTo'](p[0] * PT, p[1] * PT)); doc.stroke(); }
         if (e.kind === 'rect') doc.rect(e.x * PT, e.y * PT, e.w * PT, e.h * PT).stroke();

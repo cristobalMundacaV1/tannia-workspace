@@ -4,6 +4,8 @@ import { tunnelModel, compose, verifyDimensions, cantidadesFortificacion, prefij
 import { modeloDesdeEspecificacion } from './especificacion.js';
 import { buildSheetsPdf, verifyPdf, sceneForSheet, validateScene } from './pdf.js';
 import { buildDrawingDxf } from './dxf.js';
+import { verificarDxfContraModelo } from './dxf_verificar.js';
+import { documentoCantidades } from './cantidades_contrato.js';
 import { digest } from '../cad/operations.js';
 import { commitConHistorial, verificarManifiesto } from '../project/transaccion.js';
 import { readJson, verificarContencion } from '../project/store.js';
@@ -54,6 +56,9 @@ export class DrawingService {
     add('modelo.json', JSON.stringify(model, null, 2)); add('composicion.json', JSON.stringify(composition, null, 2));
     const dxfText = buildDrawingDxf(composition); const layoutQa = verifyLayouts(viewportsFromDxf(dxfText), expectedLayouts(composition));
     if (!layoutQa.ok) throw new UserError('LAYOUTS_INVALIDOS', 'El DXF generado no cumple la verificación estructural de layouts y viewports.', '', layoutQa);
+    // G1: el DXF se contrasta entidad por entidad con el modelo canónico (verificador independiente del escritor).
+    const dxfQa = verificarDxfContraModelo(dxfText, composition);
+    if (!dxfQa.ok) throw new UserError('DXF_DIVERGE_DEL_MODELO', 'El DXF generado no coincide con el modelo; no se entrega.', '', dxfQa);
     add('planos.dxf', dxfText); add('planos.tannia-modelo.json', JSON.stringify(buildQuantityModel(model, dxfText), null, 2));
     for (const sheet of composition.sheets) {
       const pdf = await buildSheetsPdf(composition, sheet.id); const rendered = await renderPdf(pdf);
@@ -68,8 +73,11 @@ export class DrawingService {
     add('conjunto.pdf', combined);
     const csv = (rows) => { const cols = [...new Set(rows.flatMap((q) => Object.keys(q)))]; return `${cols.join(';')}\n${rows.map((q) => cols.map((c) => q[c] ?? '').join(';')).join('\n')}\n`; };
     if (model.quantities?.length) add('cantidades.csv', csv(model.quantities));
+    if (model.quantity_totals?.length) add('cantidades-totales.csv', csv(model.quantity_totals)); // separado: no sumar con el detalle
+    // Solo los modelos con filas clasificadas (especificación genérica) emiten el contrato; las alternativas de revestimiento del túnel aún no (PENDIENTE).
+    if (model.quantities?.length && model.quantities.every((f) => f.fila)) add('cantidades.json', JSON.stringify(documentoCantidades(model, { modelo_sha256: digest(model), revision: id }), null, 2)); // contrato tw.cantidades/1
     const fort = cantidadesFortificacion(model); if (fort) add('fortificacion.csv', csv(fort));
-    add('verificacion.json', JSON.stringify({ dimensions: verifyDimensions(model), composition: sceneQa, layouts_dxf: layoutQa, pdf: pdfQa, combined: combinedQa, dwg: 'NOT_RUN', ready_for_delivery: false, warnings: model.warnings }, null, 2));
+    add('verificacion.json', JSON.stringify({ dimensions: verifyDimensions(model), composition: sceneQa, layouts_dxf: layoutQa, dxf_vs_modelo: dxfQa, pdf: pdfQa, combined: combinedQa, dwg: 'NOT_RUN', ready_for_delivery: false, warnings: model.warnings }, null, 2));
     const entry = { id, files: all.map(a => a.nombre), model_sha256: digest(model), status: 'review_candidate', origin: model.provenance };
     const next = { schema: 'tw.drawing.history/1', head: id, versiones: [entry], redo: [] };
     commitConHistorial({ dir, historial: history, id, archivos: all, base: prior?.head || null, nuevo: prior ? null : next, entrada: entry, raiz: root });
