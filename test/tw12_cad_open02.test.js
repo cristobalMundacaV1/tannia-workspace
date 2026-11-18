@@ -1,6 +1,8 @@
 // CAD-OPEN-02: excepción tras Documents.Add (documento aislado vacío), diagnóstico visible para clientes que no leen structuredContent,
 // registro persistente del estado parcial, bloqueo de nuevas importaciones, inspección de solo lectura y reconciliación sin borrar marcas.
 // El runner SIMULA lo que devuelven los scripts: no acredita nada sobre AutoCAD 2027 real.
+import { politicaDePrueba } from './helpers_com.js';
+import { ElicitRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -29,7 +31,9 @@ async function mcp({ runner }) {
   const home = tmpHome('TW12 open02 ñ ');
   const { server } = createServer({ home, cadRunner: runner, platform: 'win32', detectar: () => ({ instalado: true, estado: 'instalado', compatible: true }) });
   if (prev === undefined) delete process.env.TANNIA_ENGINEERING; else process.env.TANNIA_ENGINEERING = prev;
-  const [a, b] = InMemoryTransport.createLinkedPair(); const client = new Client({ name: 't', version: '1' }); await Promise.all([server.connect(a), client.connect(b)]);
+  const [a, b] = InMemoryTransport.createLinkedPair(); const client = new Client({ name: 't', version: '1' }, { capabilities: { elicitation: {} } });
+  client.setRequestHandler(ElicitRequestSchema, async () => ({ action: 'accept', content: { aprobar: true, nombre: 'Persona de prueba' } })); // BG-R03: la persona autoriza usar AutoCAD
+  await Promise.all([server.connect(a), client.connect(b)]);
   await client.callTool({ name: 'tannia_proyecto_crear', arguments: { nombre: 'Piloto' } });
   const root = path.join(home, 'Proyectos', 'Piloto'); const rel = '03 Trabajo/copia.dxf'; fs.writeFileSync(path.join(root, rel), dxf);
   const op = dirOperaciones(root);
@@ -174,7 +178,7 @@ import { expectedLayouts } from '../src/drawing/layouts_check.js';
 test('CAD-OPEN-02 exportar_dwg (guardarLaminas) también queda bloqueada por un documento aislado pendiente: sin importar, sin SaveAs, sin diario', async () => {
   const home = tmpHome('TW12 open02b ñ '); const sb = new Sandbox(home); createProject(sb, 'Piloto'); const root = sb.projectRoot('Piloto'); const rel = '03 Trabajo/copia.dxf'; fs.writeFileSync(path.join(root, rel), dxf); fs.mkdirSync(path.join(root, '03 Trabajo', 'CAD'), { recursive: true });
   const c0 = compose(tunnelModel({})); const exp = expectedLayouts(c0); void exp; const llamadas = [];
-  const cad = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async (script, input, opts) => {
+  const cad = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: async (script, input, opts) => {
     if (esReconc(script)) { llamadas.push('reconciliar'); return JSON.stringify({ ok: true, data: { aislado_presente: true, entidades_aislado: 0, documentos: [], ocupacion: { quiescente: true, cmdactive: 0 }, procesos: [1] } }); }
     if (input.dwg) { llamadas.push('guardar'); return JSON.stringify({ ok: true, data: {} }); }
     llamadas.push('importar'); opts.trazas.push(...ETAPAS_HASTA_IMPORT); return JSON.stringify(FALLO_EN_IMPORT);

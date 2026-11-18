@@ -1,3 +1,4 @@
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -42,10 +43,10 @@ test('TW12 strict session rejects wrong route, multiple processes, read-only, bu
   const { sb, root } = environment(); const rel = '03 Trabajo/copia.dwg'; const file = path.join(root, rel); fs.writeFileSync(file, 'AC1032 fake test fixture');
   const baseline = { ruta: file, procesos: [123], ocupado: false, solo_lectura: false, guardado: true };
   for (const [patch, code] of [[{ ruta: path.join(root, 'otro.dwg') }, 'DOCUMENTO_DISTINTO'], [{ procesos: [1, 2] }, 'SESION_AMBIGUA'], [{ ocupado: true }, 'AUTOCAD_OCUPADO'], [{ solo_lectura: true }, 'DOCUMENTO_SOLO_LECTURA'], [{ guardado: false }, 'CAMBIOS_SIN_GUARDAR']]) {
-    let calls = 0; const cad = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async () => { calls++; return JSON.stringify({ ok: true, data: { ...baseline, ...patch } }); } });
+    let calls = 0; const cad = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: async () => { calls++; return JSON.stringify({ ok: true, data: { ...baseline, ...patch } }); } });
     await assert.rejects(cad.lineasRecuperables('Piloto', { archivo: rel, operacion: `test${calls}${code}`, lineas: [{ x1: 0, y1: 0, x2: 1, y2: 1 }] }), { code }); assert.equal(calls, 1);
   }
-  const closed = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async () => JSON.stringify({ ok: false, codigo: 'DOCUMENTO_NO_ABIERTO' }) });
+  const closed = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: async () => JSON.stringify({ ok: false, codigo: 'DOCUMENTO_NO_ABIERTO' }) });
   await assert.rejects(closed.sesion('Piloto', rel), { code: 'DOCUMENTO_NO_ABIERTO' });
   assert.match(SCRIPTS.abrir_copia, /Documents\.Item/); assert.ok(SCRIPTS.abrir_copia.indexOf('Documents.Item') < SCRIPTS.abrir_copia.indexOf('Documents.Open'));
   const script = buildScript('agregar_lineas'); for (const text of ['ReadOnly', 'Get-FileHash', 'IsQuiescent', 'ruta_esperada']) assert.ok(script.includes(text));
@@ -192,7 +193,7 @@ test('TW12 guardarLaminas: structural mismatch in the saved DWG fails verificati
   const dxfRel = '03 Trabajo/CAD/modelos/x/planos.dxf'; const dwgRel = '03 Trabajo/CAD/modelos/x/planos.dwg';
   fs.mkdirSync(path.join(root, path.dirname(dxfRel)), { recursive: true }); fs.writeFileSync(path.join(root, dxfRel), buildDrawingDxf(c));
   const dwgAbs = path.join(root, dwgRel);
-  const make = mutate => new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async (script, input) => {
+  const make = mutate => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: async (script, input) => {
     if (input.dxf && !input.dwg) return JSON.stringify({ ok: true, data: dataImportado(buildDrawingDxf(c)) }); // paso 1: importación aislada (puerta aprobada)
     if (/SaveAs/.test(script)) { fs.writeFileSync(dwgAbs, 'AC1032 synthetic stub, not a real DWG'); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true } }); }
     const layouts = mock(exp); mutate(layouts); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true, unidades: 6, layouts } });

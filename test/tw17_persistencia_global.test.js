@@ -1,5 +1,6 @@
 // TW09-01: la persistencia no puede certificarse con contradicciones globales (caso real: 51 entidades antes y 0 tras reabrir
 // con SHA idéntico). Servidor COM simulado con interruptores; cada defecto debe producir un estado NO "verificada".
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -19,7 +20,7 @@ function entorno() {
 const solidos = (n) => Array.from({ length: n }, (_, i) => ({ tipo: 'AcDb3dSolid', capa: i % 2 ? 'TW3D_MURO_INT' : 'TW3D_MURO_EXT', props: { Volume: 1e9 + i, Centroid: [i * 100, 0, 1000], BBoxMin: [i * 100 - 50, -50, 0], BBoxMax: [i * 100 + 50, 50, 2000] } }));
 const textoNota = { tipo: 'AcDbText', capa: 'TW3D_NOTAS', props: { TextString: 'n', InsertionPoint: [0, 0, 0], Height: 200, Alignment: 0 } };
 const ents = [...solidos(50), textoNota];
-const com = (e, o = {}) => new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(ents, { activePath: e.dwg, ...o }) });
+const com = (e, o = {}) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(ents, { activePath: e.dwg, ...o }) });
 
 test('REPRODUCCIÓN del caso real: 51 entidades antes y 0 tras reabrir con SHA idéntico NUNCA es "verificada"', async () => {
   const e = entorno();
@@ -55,9 +56,9 @@ test('persistencia a gran escala (2000 entidades) y textos Unicode conservan el 
   const e = entorno();
   try {
     const grande = [...solidos(2000), { tipo: 'AcDbText', capa: 'TW3D_NOTAS', props: { TextString: 'BAÑO ñandú', InsertionPoint: [0, 0, 0], Height: 200, Alignment: 0 } }];
-    const c = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(grande, { activePath: e.dwg, maxHandles: 160 }) });
+    const c = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(grande, { activePath: e.dwg, maxHandles: 160 }) });
     const r = await c.verificarPersistencia('P', { archivo: e.rel }); assert.equal(r.persistencia, 'verificada'); assert.equal(r.verificacion_global.conteos.despues_enumerado, 2001);
-    const mal = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(grande, { activePath: e.dwg, maxHandles: 160, reaperturaConteoCero: true }) });
+    const mal = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(grande, { activePath: e.dwg, maxHandles: 160, reaperturaConteoCero: true }) });
     assert.equal((await mal.verificarPersistencia('P', { archivo: e.rel })).persistencia, 'fallida');
   } finally { e.done(); }
 });
@@ -66,11 +67,11 @@ test('ciclo COM: cero documentos, lecturas por ruta, reintentos solo en lecturas
   const e = entorno();
   try {
     // AutoCAD abierto sin ningún dibujo: el estado lo informa y las operaciones sobre el dibujo se niegan con un código claro
-    const vacio = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado([], { activePath: null, sinDocumento: true }) });
+    const vacio = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado([], { activePath: null, sinDocumento: true }) });
     const st = await vacio.estadoSeguro(); assert.equal(st.sin_documento, true); assert.equal(st.documentos, 0); assert.equal(st.ubicacion_documento.clase, 'sin_documento'); assert.equal(st.ruta, undefined);
     for (const f of [() => vacio.verificarPersistencia('P', { archivo: e.rel }), () => vacio.vista3d('P', {}), () => vacio.inspeccionarSolidos('P', {}), () => vacio.transformarSolido('P', { handle: 'A1', operacion: 'mover' })]) await assert.rejects(f, (x) => x.code === 'AUTOCAD_SIN_DOCUMENTO');
     // las lecturas viajan con la ruta esperada: se resuelve el documento por ruta, no por "activo"
-    const calls = []; const c = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(ents, { activePath: e.dwg, calls }) });
+    const calls = []; const c = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(ents, { activePath: e.dwg, calls }) });
     await c.verificarPersistencia('P', { archivo: e.rel });
     const lecturas = calls.filter((x) => ['leer_lote', 'enumerar', 'resumen'].includes(x.name)); assert.ok(lecturas.length >= 6 && lecturas.every((x) => x.input.ruta_esperada === e.dwg), 'todas las lecturas indican la ruta del documento');
     const cierre = calls.find((x) => x.name === 'cerrar_reabrir').input; assert.equal(cierre.esperadas, 51);
@@ -79,7 +80,7 @@ test('ciclo COM: cero documentos, lecturas por ruta, reintentos solo en lecturas
     assert.ok(!buildScript('construir_3d').includes("codigo = 'SIN_DOCUMENTO'") && buildScript('leer_lote').includes("codigo = 'SIN_DOCUMENTO'") && buildScript('leer_lote').includes('ruta_esperada'));
     // reintento seguro: una escritura con AutoCAD ocupado NO se repite; una lectura sí
     let intentos = 0; const ocupado = JSON.stringify({ ok: false, etapa: 'x', hresult: '0x8001010A' });
-    const w = new AutoCadCom({ sandbox: e.sb, platform: 'win32', sleep: async () => {}, runner: async () => { intentos++; return ocupado; } });
+    const w = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', sleep: async () => {}, runner: async () => { intentos++; return ocupado; } });
     await assert.rejects(() => w.construir3d('P', { dwgRel: '03 Trabajo/Modelos3D/M/v9_3D.dwg', primitivas: [{ id: 'S1', capa: 'TW3D_LOSA', tipo: 'caja', esperado: {} }], capas: [], nota: 'n' })); assert.equal(intentos, 1, 'construir_3d no se reintenta');
     intentos = 0; await assert.rejects(() => w.estado()); assert.equal(intentos, 3, 'una lectura se reintenta (1 + 2)');
     assert.ok(REINTENTO_SEGURO.has('leer_lote') && !REINTENTO_SEGURO.has('agregar_lineas') && !REINTENTO_SEGURO.has('transformar_solido') && !REINTENTO_SEGURO.has('cerrar_reabrir'));

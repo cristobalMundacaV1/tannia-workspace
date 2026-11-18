@@ -1,5 +1,6 @@
 // Motor 3D general: geometría con casos SINTÉTICOS (ninguna vivienda codificada), operaciones, versiones, coherencia con el 2D,
 // construcción en AutoCAD (servidor COM simulado) y herramientas MCP. Los valores esperados se calculan analíticamente en el test.
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -219,7 +220,7 @@ test('AutoCAD (servidor COM simulado): construir DWG 3D nuevo, verificar cada s�
     const M = new Modelos3d(e.sb, e.A); const modelo = { ...recinto(7000, 5000, 200, 2600, { S: [{ id: 'P', tipo: 'puerta', posicion_mm: 1500, ancho_mm: 900, alto_mm: 2100 }], N: [{ id: 'V', tipo: 'ventana', posicion_mm: 3500, ancho_mm: 1800, alto_mm: 1200, antepecho_mm: 900 }] }), cubiertas: [{ id: 'C', nivel: 'N1', tipo: 'dos_aguas', pendiente_pct: 30, eje_cumbrera: 'x' }], losas: [{ id: 'L', nivel: 'N1', espesor_mm: 150, contorno: [[-100, -100], [7100, -100], [7100, 5100], [-100, 5100]] }] };
     const r = M.crear('Obra', { nombre: 'Prueba', modelo }); const rt = M.rutas('Obra', 'Prueba'); const dwgAbs = rt.abs_dwg;
     const escribe = (f) => { assert.ok(fs.existsSync(path.dirname(f)), 'la carpeta de destino existe antes de SaveAs (AutoCAD no la crea)'); fs.writeFileSync(f, Buffer.concat([Buffer.from('AC1032'), Buffer.alloc(4000, 1)])); };
-    const calls = []; const mk = (o = {}) => new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado([], { activePath: dwgAbs, escribeDwg: escribe, calls, ...o }) });
+    const calls = []; const mk = (o = {}) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado([], { activePath: dwgAbs, escribeDwg: escribe, calls, ...o }) });
     const env = r.reg.resumen_geometria.envolvente_mm;
     const args = { dwgRel: rt.dwg, primitivas: r.reg.primitivas, capas: r.reg.capas, nota: r.reg.nota, nota_pos: [env.min[0], env.min[1] - 1500, 0] };
     const out = await mk().construir3d('Obra', args);
@@ -238,7 +239,7 @@ test('AutoCAD (servidor COM simulado): construir DWG 3D nuevo, verificar cada s�
     fs.rmSync(dwgAbs); await assert.rejects(() => mk({ falloConstruir: true, escribeDwg: undefined }).construir3d('Obra', args), (x) => x.code === 'AUTOCAD_ERROR'); assert.equal(fs.existsSync(dwgAbs), false);
     escribe(dwgAbs);
     // verificación sólido a sólido
-    const sim = (o) => { const base = r.reg.primitivas.map((p) => ({ tipo: 'AcDb3dSolid', capa: p.capa, props: { Volume: p.esperado.volumen, Centroid: [...p.esperado.centroide], ...(o.sinBbox ? {} : { BBoxMin: [...p.esperado.bbox_min], BBoxMax: [...p.esperado.bbox_max] }) } })); base.push({ tipo: 'AcDbText', capa: 'TW3D_NOTAS', props: { TextString: 'n', InsertionPoint: [0, 0, 0], Height: 200, Alignment: 0 } }); return new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(base, { activePath: dwgAbs, ...o }) }); };
+    const sim = (o) => { const base = r.reg.primitivas.map((p) => ({ tipo: 'AcDb3dSolid', capa: p.capa, props: { Volume: p.esperado.volumen, Centroid: [...p.esperado.centroide], ...(o.sinBbox ? {} : { BBoxMin: [...p.esperado.bbox_min], BBoxMax: [...p.esperado.bbox_max] }) } })); base.push({ tipo: 'AcDbText', capa: 'TW3D_NOTAS', props: { TextString: 'n', InsertionPoint: [0, 0, 0], Height: 200, Alignment: 0 } }); return new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(base, { activePath: dwgAbs, ...o }) }); };
     const v = await sim({}).verificarSolidos('Obra', { dwgRel: rt.dwg, primitivas: r.reg.primitivas }); assert.equal(v.estado, 'fiel'); assert.equal(v.solidos.coinciden, r.reg.primitivas.length); assert.equal(v.estructura.ok, true);
     const sb = await sim({ sinBbox: true }).verificarSolidos('Obra', { dwgRel: rt.dwg, primitivas: r.reg.primitivas }); assert.equal(sb.estado, 'no_concluyente'); assert.equal(sb.solidos.caja_envolvente.no_informada, r.reg.primitivas.length);
     // persistencia completa (cerrar y reabrir) con sólidos
@@ -249,7 +250,7 @@ test('AutoCAD (servidor COM simulado): construir DWG 3D nuevo, verificar cada s�
     const ins = await sim({}).inspeccionarSolidos('Obra', {}); assert.equal(ins.total_solidos, r.reg.primitivas.length); assert.ok(ins.por_capa.TW3D_LOSA.solidos >= 1); assert.deepEqual(ins.envolvente_mm.min.slice(0, 2), env.min.slice(0, 2));
     const tr = await sim({}).transformarSolido('Obra', { handle: ins.solidos[0].handle, operacion: 'mover', dx: 100, dy: 0, dz: 0 }); assert.equal(tr.despues.centroide[0], tr.antes.centroide[0] + 100); assert.match(tr.aviso, /NO coincide/);
     await assert.rejects(() => sim({}).transformarSolido('Obra', { handle: 'zz', operacion: 'mover' }), (x) => x.code === 'DATO_INVALIDO'); await assert.rejects(() => sim({}).transformarSolido('Obra', { handle: 'A1', operacion: 'escalar' }), (x) => x.code === 'DATO_INVALIDO');
-    const activoOriginal = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado([], { activePath: path.join(e.root, '02 Originales', 'o.dwg') }) });
+    const activoOriginal = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado([], { activePath: path.join(e.root, '02 Originales', 'o.dwg') }) });
     await assert.rejects(() => activoOriginal.vista3d('Obra', {}), (x) => x.code === 'ORIGINAL_PROTEGIDO'); await assert.rejects(() => activoOriginal.transformarSolido('Obra', { handle: 'A1', operacion: 'mover' }), (x) => x.code === 'ORIGINAL_PROTEGIDO');
     assert.equal(fs.readFileSync(path.join(e.root, '02 Originales', 'o.dwg'), 'utf8'), 'ORIGINAL');
   } finally { e.done(); }

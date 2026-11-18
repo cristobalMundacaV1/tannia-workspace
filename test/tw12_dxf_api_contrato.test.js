@@ -1,6 +1,7 @@
 // CAD-OPEN-01 (3.ª incidencia): regresiones del contrato oficial de Autodesk — Documents.Open abre DWG; el DXF se importa.
 // Fuente: https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-ActiveX-Reference/files/GUID-9ED7A548-7978-4BFD-8462-E2FA747E8880.htm
 // Estas pruebas NO acreditan que AutoCAD 2027 real conserve layouts/viewports/XDATA al importar: ver docs/tw12/PROCEDIMIENTO_PRUEBA_DXF_AUTOCAD_2027.md.
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -41,7 +42,7 @@ test('un .dxf NUNCA se envía a abrir_copia/Documents.Open: abrirCopia(DXF) desp
   fs.writeFileSync(path.join(root, '03 Trabajo', 'copia.dxf'), dxf);
   const dwgBytes = Buffer.concat([Buffer.from('AC1032'), Buffer.alloc(2000)]); fs.writeFileSync(path.join(root, '03 Trabajo', 'copia.dwg'), dwgBytes);
   const scripts = [];
-  const c = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async (script, input) => { scripts.push({ open: /Documents\.Open\(/.test(script), add: /Documents\.Add\(/.test(script), importar: /\.Import\(/.test(script), input }); return JSON.stringify({ ok: true, data: input.dxf ? dataImportado(dxf) : { documento: 'copia.dwg', ruta: input.ruta, reutilizado: false } }); } });
+  const c = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: async (script, input) => { scripts.push({ open: /Documents\.Open\(/.test(script), add: /Documents\.Add\(/.test(script), importar: /\.Import\(/.test(script), input }); return JSON.stringify({ ok: true, data: input.dxf ? dataImportado(dxf) : { documento: 'copia.dwg', ruta: input.ruta, reutilizado: false } }); } });
   await c.abrirCopia('Piloto', '03 Trabajo/copia.dxf');
   assert.deepEqual(scripts.map((s) => [s.open, s.add, s.importar]), [[false, true, true]], 'DXF: Add + Import, jamás Open');
   scripts.length = 0; await c.abrirCopia('Piloto', '03 Trabajo/copia.dwg');
@@ -157,7 +158,7 @@ test('puerta de fidelidad EXHAUSTIVA antes de SaveAs: layouts, viewports (centro
   for (const [nombre, mutar] of Object.entries(perdidas)) {
     // entorno limpio por caso: una importación incompleta deja una marca persistente que bloquea la siguiente
     const home = tmpHome('TW12 fid ñ '); const sb = new Sandbox(home); createProject(sb, 'Piloto'); const root = sb.projectRoot('Piloto'); fs.writeFileSync(path.join(root, rel), dxf); fs.mkdirSync(path.join(root, '03 Trabajo', 'CAD'), { recursive: true });
-    const llamadas = []; const c = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: async (script, input) => { llamadas.push(input.dwg ? 'SaveAs' : 'importar'); return JSON.stringify({ ok: true, data: input.dwg ? {} : dataImportado(dxf, { mutar }) }); } });
+    const llamadas = []; const c = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: async (script, input) => { llamadas.push(input.dwg ? 'SaveAs' : 'importar'); return JSON.stringify({ ok: true, data: input.dwg ? {} : dataImportado(dxf, { mutar }) }); } });
     await assert.rejects(c.guardarLaminas('Piloto', { dxf: rel, dwg: dwgRel, operacion: `fid-${nombre}`, composition: c0 }), (e) => e.code === 'IMPORTACION_DXF_INCOMPLETA' && e.detalle.issues.length > 0, nombre);
     assert.deepEqual(llamadas, ['importar'], `${nombre}: SaveAs nunca se despacha`); assert.ok(!fs.existsSync(path.join(root, dwgRel)));
   }

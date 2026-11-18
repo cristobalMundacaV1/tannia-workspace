@@ -1,6 +1,7 @@
 // CAD-OPEN-01: abrir_copia / exportar_dwg — diagnóstico por etapa, clasificación de causas, sin reintentos ciegos.
 // No hay PowerShell/AutoCAD aquí: el runner simula la respuesta JSON que producen los scripts (contrato verificado por pruebas estáticas
 // de los scripts y por el protocolo real). Nada de esto acredita que AutoCAD 2027 real abra la copia.
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -19,7 +20,7 @@ function entorno() {
   const rel = '03 Trabajo/copia.dxf'; const abs = path.join(root, rel); const dxf = buildDrawingDxf(compose(tunnelModel({}))); fs.writeFileSync(abs, dxf);
   return { sb, root, rel, abs, dxf };
 }
-const cad = (sb, runner) => new AutoCadCom({ sandbox: sb, platform: 'win32', runner });
+const cad = (sb, runner) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner });
 const DIBUJO1 = { nombre: 'Dibujo1.dwg', con_ruta_en_disco: false, guardado: false };
 
 test('CAD-OPEN-01 script: una sola apertura, sin reintento tras error, rutas sin excepción, etapas y ocupación explícitas', () => {

@@ -116,6 +116,19 @@ try {
     afirmar(g.fortificacion?.some((x) => x.partida === 'Pernos de anclaje'), 'sin cubicación de fortificación');
     return { tannia_planos: true, laminas: laminas.length, dxf: dxfs, revision: g.revision };
   });
+  // CAD-BG: el PAQUETE instalado ejecuta trabajos en segundo plano (mismo server/index.js relanzado con --trabajo, oculto y de prioridad baja).
+  await paso('5c. trabajo en segundo plano desde el paquete instalado (planos + cubicaciones sin bloquear el servidor; prioridad baja)', async () => {
+    const P = 'Obra segundo plano (verificador CAD-BG)'; await T('tannia_proyecto_crear', { nombre: P });
+    const t0 = Date.now(); const c = await T('tannia_trabajos', { accion: 'crear', proyecto: P, tipo: 'cubicaciones', datos: { length: 150, width: 5.5, wall: 2.5, selected: 0.06 } }); const msCrear = Date.now() - t0;
+    afirmar(msCrear < 3000, `crear tardó ${msCrear} ms (debe responder de inmediato)`);
+    let e; for (let i = 0; i < 400; i++) { e = await T('tannia_trabajos', { accion: 'estado', trabajo: c.trabajo }); if (['TERMINADO', 'REQUIERE_INTERVENCIÓN', 'FALLÓ', 'CANCELADO'].includes(e.estado_interno)) break; await new Promise((r) => setTimeout(r, 300)); }
+    const reg = JSON.parse(fs.readFileSync(path.join(datos, '.tannia-trabajos', `${c.trabajo}.json`), 'utf8'));
+    afirmar(reg.recursos?.prioridad === os.constants.priority.PRIORITY_BELOW_NORMAL, `prioridad del proceso de fondo: ${JSON.stringify(reg.recursos)}`);
+    const mismoSistema = process.platform === 'win32' && process.arch === 'x64';
+    if (!mismoSistema) { afirmar(e.estado_interno === 'FALLÓ' && /componente gr[aá]fico|COMPONENTE_GRAFICO/i.test(`${e.mensaje_para_la_persona} ${reg.pasos[0].error}`), `fuera de Windows x64 se esperaba un fallo claro del componente gráfico: ${e.mensaje_para_la_persona}`); return { crear_ms: msCrear, estado: e.estado_interno, nota: `planos NO generados en ${process.platform}-${process.arch} (binario win32); se exige en rc-zip-windows`, recursos: reg.recursos }; }
+    afirmar(e.estado_interno === 'TERMINADO', `estado ${e.estado_interno}: ${e.mensaje_para_la_persona}`);
+    return { crear_ms: msCrear, estado: e.estado_interno, mensaje: e.mensaje_para_la_persona, pasos: e.pasos.map((p) => p.estado), recursos: reg.recursos };
+  });
   let aprob1;
   await paso('6. flujo profesional de extremo a extremo (plano → cubicación → APU → verificación → presupuesto/memoria → aprobación → entrega)', async () => {
     await T('tannia_proyecto_crear', { nombre: PROY });

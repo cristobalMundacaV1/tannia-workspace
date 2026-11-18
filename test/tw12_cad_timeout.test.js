@@ -1,5 +1,6 @@
 // CAD-OPEN-01 (2.ª incidencia): tiempo agotado con progreso por etapas, resultado incierto y reconciliación sin repetir Documents.Open.
 // Los mocks NO acreditan integración con AutoCAD real; el proceso falso de la primera prueba sí ejercita el spawn/kill reales de runPowerShell.
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -48,7 +49,7 @@ const OK_LIBRE = { ocupacion: { quiescente: true, cmdactive: 0 }, procesos: [7] 
 
 test('texto visible del tiempo agotado en la importación: código, última etapa, duración y estado incierto; detalle saneado', async () => {
   const e = entorno(); let capturado;
-  const c = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: async (s, i) => {
+  const c = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: async (s, i) => {
     if (esReconc(s)) { assert.equal(i.nombre_aislado, 'Drawing2.dwg', 'se reconcilia por el nombre del documento aislado creado'); return JSON.stringify({ ok: true, data: { aislado_presente: false, documentos: [{ nombre: 'Dibujo1.dwg', con_ruta_en_disco: false, guardado: false }], ...OK_LIBRE } }); }
     throw timeoutError(BLOQUEADO_EN_IMPORT, 120000);
   } });
@@ -61,7 +62,7 @@ test('texto visible del tiempo agotado en la importación: código, última etap
 
 test('importación tardía/incompleta: tras el timeout se reconcilia; NO se repite Import, NO se guarda y NO se cierra nada; la marca persiste hasta limpiar', async () => {
   const e = entorno(); const log = []; let estado = 'presente';
-  const c = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: async (script, input, opts) => {
+  const c = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: async (script, input, opts) => {
     if (esReconc(script)) { log.push('reconciliar'); assert.equal(opts.timeoutMs, 15000, 'la reconciliación tiene su propio límite corto'); return JSON.stringify({ ok: true, data: { aislado_presente: estado === 'presente', entidades_aislado: estado === 'presente' ? 29 : null, documentos: [{ nombre: 'Dibujo1.dwg', con_ruta_en_disco: false, guardado: false }], ...OK_LIBRE } }); }
     log.push('importar'); if (estado === 'presente') throw timeoutError(BLOQUEADO_EN_IMPORT, 120000);
     return JSON.stringify({ ok: true, data: dataImportado(e.dxf) });
@@ -78,7 +79,7 @@ test('importación tardía/incompleta: tras el timeout se reconcilia; NO se repi
 
 test('estado incierto no verificable: mientras no se pueda reconciliar no se inicia ninguna importación', async () => {
   const e = entorno(); const log = [];
-  const c = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: async (script) => {
+  const c = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: async (script) => {
     const rec = esReconc(script); log.push(rec ? 'reconciliar' : 'importar');
     if (rec) throw timeoutError([{ etapa: 'consulta_ocupacion', estado: 'inicio', t_ms: 4 }], 15000);
     throw timeoutError(BLOQUEADO_EN_IMPORT, 120000);
@@ -92,7 +93,7 @@ test('estado incierto no verificable: mientras no se pueda reconciliar no se ini
 test('exportar_dwg: un timeout al importar no crea una escritura incierta en el diario; tras limpiar el estado continúa una sola vez', async () => {
   const e = entorno(); const c0 = compose(tunnelModel({})); const exp = expectedLayouts(c0); const dwgRel = '03 Trabajo/CAD/out.dwg'; fs.mkdirSync(path.join(e.root, '03 Trabajo', 'CAD'), { recursive: true }); const dwgAbs = path.join(e.root, dwgRel);
   let fase = 'timeout'; const seq = [];
-  const c = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: async (script, input) => {
+  const c = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: async (script, input) => {
     if (input.dwg) { seq.push('guardar'); fs.writeFileSync(dwgAbs, 'AC1032 synthetic'); return JSON.stringify({ ok: true, data: { ruta: dwgAbs, guardado: true } }); }
     if (esReconc(script)) { seq.push('reconciliar'); return JSON.stringify({ ok: true, data: { aislado_presente: false, documentos: [], ...OK_LIBRE } }); }
     if (input.dxf) { seq.push('importar'); if (fase === 'timeout') throw timeoutError(BLOQUEADO_EN_IMPORT, 120000); return JSON.stringify({ ok: true, data: dataImportado(e.dxf) }); }
