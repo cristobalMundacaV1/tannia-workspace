@@ -40,6 +40,11 @@ test('túnel: las cantidades salen en tw.cantidades/1 (solo la alternativa elegi
   const P = 2 * 3 + Math.PI * 2.5; const nAnillo = Math.ceil(P / 1.5 - 1e-9); const anillos = Math.ceil(150 / 1.5 - 1e-9) + 1; assert.equal(pernos.valor, nAnillo * anillos);
   const malla = cantidadPartida(doc, 'Malla de acero'); cerca(malla.valor, (2 * 3 + Math.PI * (2.5 - 0.03)) * 150 * 1.1, 1e-9);
   for (const x of doc.detalle) { assert.equal(x.fila, 'detalle'); assert.ok(x.formula && x.metodo && x.procedencia, JSON.stringify(x)); }
+  // G08: el cuadro de pernos IMPRESO en la lámina dice el mismo total que la cubicación (una sola autoridad) y los pernos van rotulados
+  const modelo = JSON.parse(fs.readFileSync(path.join(home, 'Proyectos', 'Túnel G06', '06 Informes', 'Planos', r.files.find((x) => x.endsWith('-modelo.json'))), 'utf8'));
+  const vf = modelo.views.find((v) => v.id === 'fortificacion'); const cuadro = vf.notes.find((t) => /^CUADRO DE PERNOS/.test(t));
+  assert.match(cuadro, new RegExp(`TOTAL ${pernos.valor} pernos`)); assert.equal(vf.labels.length, nAnillo); assert.equal(vf.labels[0].text, 'P1');
+  assert.ok(modelo.views.find((v) => v.id === 'seccion').notes.some((t) => /^CUADRO GEOMÉTRICO: ancho 5,00 m · hastial 3,00 m · radio de bóveda 2,50 m/.test(t)));
 });
 
 async function preparar(home, respuestas = []) {
