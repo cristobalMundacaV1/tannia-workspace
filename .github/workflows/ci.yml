@@ -1,7 +1,7 @@
 name: ci
 on:
   push:
-    branches: ['claude/**', 'feat/**', 'fix/**']
+    branches: ['claude/**', 'feat/**', 'fix/**', 'astra/**']
   pull_request:
 jobs:
   test:
@@ -28,6 +28,7 @@ jobs:
 
   # Candidato de instalación: se construye UNA vez y se prueba el MISMO ZIP (misma huella) en Ubuntu y en Windows.
   rc-zip:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

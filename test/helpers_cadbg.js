@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 import { tmpHome, startClient, call, data, ROOT } from './helpers.js';
 
@@ -10,10 +11,15 @@ export const FINAL = new Set(['TERMINADO', 'REQUIERE_INTERVENCIÓN', 'FALLÓ', '
 export const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 export function hogar(config = {}) { const home = tmpHome(); fs.mkdirSync(path.join(home, '.tannia-trabajos'), { recursive: true }); fs.writeFileSync(path.join(home, '.tannia-trabajos', 'config.json'), JSON.stringify({ memoria_libre_minima_mb: 0, ...config })); return home; }
 export function simulador(dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acc ')), modo = 'normal') {
-  const exe = path.join(dir, 'accoreconsole-simulado'); const ctl = path.join(dir, 'modo.txt'); const log = path.join(dir, 'invocaciones.jsonl');
-  fs.writeFileSync(exe, `#!/bin/sh\nexec "${process.execPath}" "${path.join(ROOT, 'test', 'proc', 'accoreconsole_simulado.mjs')}" "$@"\n`, { mode: 0o755 }); fs.writeFileSync(ctl, modo);
+  // Native Node executable: no Unix shebang, cmd.exe, shell quoting or child wrapper.
+  // The test-only preload runs solely in this named executable, never in the MCP/worker.
+  const exe = path.join(dir, process.platform === 'win32' ? 'accoreconsole-simulado.exe' : 'accoreconsole-simulado');
+  try { fs.linkSync(process.execPath, exe); } catch { fs.copyFileSync(process.execPath, exe); }
+  const ctl = path.join(dir, 'modo.txt'); const log = path.join(dir, 'invocaciones.jsonl');
+  fs.writeFileSync(ctl, modo);
+  const preload = pathToFileURL(path.join(ROOT, 'test', 'proc', 'accoreconsole_preload.mjs')).href;
   const lineas = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []);
-  return { exe, ctl, log, modo: (m) => fs.writeFileSync(ctl, m), invocaciones: () => lineas().filter((x) => !x.fin), intervalos: () => { const ls = lineas(); return ls.filter((x) => !x.fin).map((x) => ({ pid: x.pid, ini: x.t_inicio, fin: ls.find((y) => y.fin && y.pid === x.pid)?.t_fin ?? null })); }, env: { TANNIA_ACCORECONSOLE: exe, TANNIA_SIM_ACC_CTL: ctl, TANNIA_SIM_ACC_LOG: log, TANNIA_ACCORECONSOLE_VERSION: 'SIMULADOR' } };
+  return { exe, ctl, log, modo: (m) => fs.writeFileSync(ctl, m), invocaciones: () => lineas().filter((x) => !x.fin), intervalos: () => { const ls = lineas(); return ls.filter((x) => !x.fin).map((x) => ({ pid: x.pid, ini: x.t_inicio, fin: ls.find((y) => y.fin && y.pid === x.pid)?.t_fin ?? null })); }, env: { NODE_OPTIONS: `--import=${preload}`, TANNIA_ACCORECONSOLE: exe, TANNIA_SIM_ACC_CTL: ctl, TANNIA_SIM_ACC_LOG: log, TANNIA_ACCORECONSOLE_VERSION: 'SIMULADOR' } };
 }
 export async function sesion(home, env = {}) {
   const c = await startClient(home, undefined, { TANNIA_AVISOS: 'off', ...env });
