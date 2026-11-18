@@ -13,7 +13,7 @@ test('configuración de producción: activo por defecto y solo «off» explícit
   for (const v of ['off', 'OFF', '0', 'false', 'no']) assert.equal(motorPlanosActivo({ TANNIA_ENGINEERING: v }), false, v);
 });
 
-test('servidor SIN flags (entorno de la usuaria): publica tannia_planos y genera las 5 láminas del túnel con fortificación', { timeout: 180000 }, async () => {
+test('servidor SIN flags (entorno de la usuaria): publica tannia_planos y genera las 6 láminas del túnel con fortificación (5 originales + detalles D1–D4)', { timeout: 180000 }, async () => {
   const home = tmpHome('PL01 sin flags ñ '); const saved = process.env; process.env = sinFlags();
   const c = await startClient(home, undefined, {}); process.env = saved;
   try {
@@ -22,7 +22,7 @@ test('servidor SIN flags (entorno de la usuaria): publica tannia_planos y genera
     await call(c.client, 'tannia_proyecto_crear', { nombre: 'Tunel PL01' });
     const r = await call(c.client, 'tannia_planos', { proyecto: 'Tunel PL01', accion: 'generar_tunel', datos: { length: 150, width: 5.5, wall: 2.5, selected: 0.06, fortificacion: { perno_longitud: 2.4, espaciamiento_transversal: 1.5, espaciamiento_longitudinal: 1.5, malla: true, traslapo_malla_pct: 10 } } });
     assert.ok(!r.isError, r.content?.[0]?.text); const d = data(r);
-    assert.equal(d.files.filter((f) => /lamina-.*\.pdf$/.test(f)).length, 5);
+    assert.equal(d.files.filter((f) => /lamina-.*\.pdf$/.test(f)).length, 6);
     const ver = JSON.parse(fs.readFileSync(path.join(home, 'Proyectos', 'Tunel PL01', d.folder, d.files.find((f) => f.endsWith('verificacion.json'))), 'utf8'));
     assert.equal(ver.dxf_vs_modelo.ok, true, 'gate DXF↔modelo registrado en la evidencia');
   } finally { await c.close(); fs.rmSync(home, { recursive: true, force: true }); }

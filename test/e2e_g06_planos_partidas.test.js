@@ -42,9 +42,12 @@ test('túnel: las cantidades salen en tw.cantidades/1 (solo la alternativa elegi
   for (const x of doc.detalle) { assert.equal(x.fila, 'detalle'); assert.ok(x.formula && x.metodo && x.procedencia, JSON.stringify(x)); }
   // G08: el cuadro de pernos IMPRESO en la lámina dice el mismo total que la cubicación (una sola autoridad) y los pernos van rotulados
   const modelo = JSON.parse(fs.readFileSync(path.join(home, 'Proyectos', 'Túnel G06', '06 Informes', 'Planos', r.files.find((x) => x.endsWith('-modelo.json'))), 'utf8'));
-  const vf = modelo.views.find((v) => v.id === 'fortificacion'); const cuadro = vf.notes.find((t) => /^CUADRO DE PERNOS/.test(t));
-  assert.match(cuadro, new RegExp(`TOTAL ${pernos.valor} pernos`)); assert.equal(vf.labels.length, nAnillo); assert.equal(vf.labels[0].text, 'P1');
-  assert.ok(modelo.views.find((v) => v.id === 'seccion').notes.some((t) => /^CUADRO GEOMÉTRICO: ancho 5,00 m · hastial 3,00 m · radio de bóveda 2,50 m/.test(t)));
+  // PR #38: el cuadro es una TABLA tipada (T-PERNOS / T-GEOM) generada de la misma fuente; el resumen textual se conserva en `resumen`.
+  const vf = modelo.views.find((v) => v.id === 'fortificacion'); assert.match(vf.resumen, new RegExp(`TOTAL ${pernos.valor} pernos`));
+  const tp = modelo.tables.find((t) => t.id === 'T-PERNOS'); assert.equal(tp.rows.find((r) => r.id === 'total').values.zona, `${pernos.valor} pernos`); assert.equal(tp.rows.filter((r) => /^P\d+$/.test(r.id)).length, nAnillo);
+  assert.equal(vf.labels.length, nAnillo); assert.equal(vf.labels[0].text, 'P1');
+  const tg = modelo.tables.find((t) => t.id === 'T-GEOM'); assert.deepEqual(['ancho', 'hastial', 'radio'].map((k) => tg.rows.find((r) => r.id === k).values.val), [5, 3, 2.5]);
+  assert.match(modelo.views.find((v) => v.id === 'seccion').resumen, /^CUADRO GEOMÉTRICO: ancho 5,00 m · hastial 3,00 m · radio de bóveda 2,50 m/);
 });
 
 async function preparar(home, respuestas = []) {

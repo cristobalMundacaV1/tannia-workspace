@@ -1,94 +1,99 @@
-// ASCII DXF with real-unit model geometry, native dimensions and independent layouts.
-// Unicode is encoded using the existing DXF encoder. No script or user code executes.
-import { textoDxf } from '../design/salidas.js';
-import { capasDe, prefijoDe, patronLinea } from './model.js';
+// Exportador DXF (AC1024) de la Drawing IR v2: geometría en metros reales en el espacio modelo (colocación compacta), cotas
+// DIMENSION nativas con estilo por escala, HATCH de regiones declaradas, símbolos como BLOCK + INSERT, y una presentación por
+// lámina con viewport general + viewports de contenido bloqueados. Vista inicial *Active y $EXTMIN/$EXTMAX encuadran todo el
+// modelo al abrir (P0: el DXF del UAT abría «aparentemente vacío»). Sin scripts ni código ejecutable.
+import { capasDe, prefijoDe, patronLinea, colocacionDe, bounds } from './model.js';
 import { UserError } from '../mcp/util.js';
-import { sceneForSheet } from './pdf.js';
+import { DxfDocumento } from './dxf_doc.js';
+import { densificar } from './regions.js';
+import { TRAMAS, SIMBOLOS } from './catalog.js';
+import { buildIR } from './ir.js';
 
-export function buildDrawingDxf(composition) {
-  let next = 256; const handle = () => (next++).toString(16).toUpperCase();
-  const root = handle(); const dictionary = handle(); const modelBlock = handle(); const modelLayout = handle();
-  const layers = Object.fromEntries([...Object.keys(capasDe(composition.model)), 'PAPEL', 'MODEL_DIMS'].map(n => [n, handle()]));
-  const layouts = composition.sheets.map(s => ({ sheet: s, block: handle(), layout: handle(), name: `${prefijoDe(composition.model)}-${s.id}` }));
-  const offsets = Object.fromEntries(composition.model.views.map((v, i) => [v.id, [0, i * 1000]]));
-  const pairs = list => list.map(([c, v]) => `${c}\n${typeof v === 'number' ? Number(v.toFixed(9)) : v}`).join('\n') + '\n';
-  const section = (n, content) => pairs([[0, 'SECTION'], [2, n]]) + content + pairs([[0, 'ENDSEC']]);
-  const point = (code, p) => [[code, p[0]], [code + 10, p[1]], [code + 20, p[2] || 0]];
-  const xdata = e => e.ref ? [[1001, 'TANNIA_TRACE'], [1000, `elemento=${e.element}`], [1000, `vista=${e.view}`], [1000, `rol=${e.role}`], [1000, `ref=${e.ref}`]] : [];
-  const entity = (kind, owner, layer, extra, layout) => pairs([[0, kind], [5, handle()], [330, owner], [100, 'AcDbEntity'], [8, layer], ...(layout ? [[67, 1], [410, layout]] : []), ...extra]);
-  const line = (a, b, owner, layer, layout) => entity('LINE', owner, layer, [[100, 'AcDbLine'], ...point(10, a), ...point(11, b)], layout);
-  const text = (value, p, height, owner, layer, layout, center = false) => entity('TEXT', owner, layer, [[100, 'AcDbText'], ...point(10, p), [40, height], [1, textoDxf(value)], [7, 'STANDARD'], [72, center ? 1 : 0], ...point(11, p), [100, 'AcDbText'], [73, 0]], layout);
-  let entities = ''; const dimensionBlocks = [];
-  for (const view of composition.model.views) {
-    const offset = offsets[view.id]; const exaggeration = view.verticalScale ? view.scale / view.verticalScale : 1;
-    const p = a => [a[0] + offset[0], a[1] * exaggeration + offset[1]];
-    for (const e of view.entities) {
-      const tr = xdata({ ...e, view: view.id });
-      if (e.kind === 'line') entities += entity('LINE', modelBlock, e.layer, [[100, 'AcDbLine'], ...point(10, p(e.a)), ...point(11, p(e.b)), ...tr]);
+const LW = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
+const lw = (mm) => LW.reduce((b, x) => (Math.abs(x - mm * 100) < Math.abs(b - mm * 100) ? x : b), 25);
+const ACI_TRAMA = { SHOTCRETE_REGION: 3, WIRE_MESH_REGION: 4, MESH_OVERLAP_ZONE: 1, MASONRY_WALL: 8, CONCRETE: 8 };
+export const CAPAS_PAPEL = { PAPEL: { color: 7, w: 0.25 }, TW_TABLAS: { color: 7, w: 0.18 }, TW_LEYENDA: { color: 7, w: 0.18 }, TW_NOTAS: { color: 7, w: 0.18 }, TW_LLAMADAS: { color: 1, w: 0.25 }, TW_SIMBOLOS: { color: 1, w: 0.25 }, MODEL_DIMS: { color: 8, w: 0.18 } };
+const num = (n) => n.toFixed(2).replace('.', ',');
+
+export function buildDrawingDxf(composition, { ir = null } = {}) {
+  const I = ir || buildIR(composition); const model = composition.model; const C = capasDe(model); const off = colocacionDe(composition);
+  const doc = new DxfDocumento({ insunits: 6 }); doc.appid('TANNIA_TRACE'); doc.appid('TANNIA_IR');
+  const irx = (id, extra = []) => [[1001, 'TANNIA_IR'], [1000, `ir=${id}`], ...extra.map((x) => [1000, x])];
+  doc.layer('TW_VIEWPORTS', { color: 8, plot: false });
+  for (const [n, c] of Object.entries(C)) { const pat = patronLinea(n, c); if (pat.elementos.length) doc.ltype(pat.nombre, pat.elementos); doc.layer(n, { color: c.color || 7, ltype: pat.elementos.length ? pat.nombre : 'Continuous', lineweight: lw(c.weight || 0.18) }); }
+  for (const [n, c] of Object.entries(CAPAS_PAPEL)) doc.layer(n, { color: c.color, lineweight: lw(c.w) });
+  for (const [k, t] of Object.entries(TRAMAS)) doc.layer(`TRAMA_${k}`, { color: ACI_TRAMA[k] || 8, lineweight: lw(t.grosor) });
+  // Símbolos del catálogo como bloques en mm de papel (se insertan a escala de la vista en el modelo y 1:1 en papel).
+  const usados = new Set([...I.model.filter((p) => p.symbol_ref).map((p) => p.symbol_ref), ...I.sheets.flatMap((s) => s.primitives.filter((p) => p.symbol_ref).map((p) => p.symbol_ref))]);
+  for (const s of usados) { const b = doc.block(`TW_${s}`); for (const g of SIMBOLOS[s].geometria) { if (g.kind === 'line') doc.line(b, '0', g.a, g.b); else doc.circle(b, '0', g.center, g.radius); } }
+  const ext = { min: [Infinity, Infinity], max: [-Infinity, -Infinity] }; const track = (p) => { ext.min = [Math.min(ext.min[0], p[0]), Math.min(ext.min[1], p[1])]; ext.max = [Math.max(ext.max[0], p[0]), Math.max(ext.max[1], p[1])]; };
+  const views = new Map(model.views.map((v) => [v.id, v]));
+  // TANNIA_TRACE conserva EXACTAMENTE su contrato previo (elemento, vista, rol, ref) en la geometría medible; los metadatos de la IR
+  // (id, trama, material, símbolo) van en una aplicación aparte, TANNIA_IR, para no alterar consumidores de la trazabilidad.
+  const traza = (p, v) => [...(p.kind === 'line' || p.kind === 'arc' || p.kind === 'circle' ? [[1001, 'TANNIA_TRACE'], [1000, `elemento=${p.physical_element_ref}`], [1000, `vista=${v.id}`], [1000, `rol=${p.role}`], [1000, `ref=${p.source_ref}`]] : []), ...irx(p.id, [...(p.hatch_ref ? [`trama=${p.hatch_ref}`, `material=${p.material?.nombre ?? 'sin material'}`, `elemento=${p.physical_element_ref}`, 'medible=no'] : []), ...(p.symbol_ref ? [`simbolo=${p.symbol_ref}`, `elemento=${p.physical_element_ref}`, 'medible=no'] : []), ...(p.view_id && !(p.kind === 'line' || p.kind === 'arc' || p.kind === 'circle') ? [`vista=${p.view_id}`] : [])])];
+  let nDim = 0;
+  for (const p of I.model) {
+    const v = views.get(p.view_id); const o = off[v.id]; const ex = v.verticalScale ? v.scale / v.verticalScale : 1; const P = (a) => { const q = [a[0] + o[0], a[1] * ex + o[1]]; track(q); return q; };
+    const xd = { xdata: traza(p, v) };
+    if (p.kind === 'line') doc.line(doc.model, p.layer, P(p.geom.a), P(p.geom.b), xd);
+    else if (p.kind === 'arc' || p.kind === 'circle') {
       // PL-04: un arco con exageración vertical sería elíptico en el PDF y circular en el DXF. Se rechaza en vez de divergir.
-      else if (exaggeration !== 1) throw new UserError('ARCO_EN_PERFIL_EXAGERADO', `Vista ${view.id}: no se admiten arcos ni círculos con escala vertical distinta de la horizontal.`);
-      // PL-05: un círculo completo es CIRCLE nativo, no un ARC de 0 a 360°.
-      else if (e.end - e.start >= 360) entities += entity('CIRCLE', modelBlock, e.layer, [[100, 'AcDbCircle'], ...point(10, p(e.center)), [40, e.radius], ...tr]);
-      else entities += entity('ARC', modelBlock, e.layer, [[100, 'AcDbCircle'], ...point(10, p(e.center)), [40, e.radius], [100, 'AcDbArc'], [50, e.start], [51, e.end], ...tr]);
+      if (ex !== 1) throw new UserError('ARCO_EN_PERFIL_EXAGERADO', `Vista ${v.id}: no se admiten arcos ni círculos con escala vertical distinta de la horizontal.`);
+      const b = bounds([{ kind: 'arc', ...p.geom }]); P(b.min); P(b.max);
+      const c = [p.geom.center[0] + o[0], p.geom.center[1] + o[1]];
+      if (p.kind === 'circle') doc.circle(doc.model, p.layer, c, p.geom.radius, xd); else doc.arc(doc.model, p.layer, c, p.geom.radius, p.geom.start, p.geom.end, xd);
+    } else if (p.kind === 'hatch') {
+      for (const q of densificar(p.loops[0])) P(q);
+      const loops = p.loops.map((l) => l.map((q) => { const r = P(q); return q[2] ? [r[0], r[1], q[2]] : r; }));
+      doc.hatch(doc.model, p.layer, { loops, nombre: '_USER', familias: TRAMAS[p.hatch_ref].familias.map((f) => ({ angulo: f.angulo, paso: (f.paso * v.scale) / 1000 })), opt: xd });
+    } else if (p.kind === 'symbol') {
+      const R = Math.max(...SIMBOLOS[p.symbol_ref].geometria.flatMap((g) => (g.kind === 'line' ? [...g.a, ...g.b].map(Math.abs) : [Math.abs(g.center[0]) + g.radius, Math.abs(g.center[1]) + g.radius]))) * p.scale_m_per_mm;
+      const c = P(p.at); track([c[0] - R, c[1] - R]); track([c[0] + R, c[1] + R]);
+      doc.insert(doc.model, 'TW_SIMBOLOS', `TW_${p.symbol_ref}`, c, p.scale_m_per_mm, p.rot, xd);
     }
-    for (const [i, d] of view.dimensions.entries()) {
-      const name = `*D${dimensionBlocks.length + 1}`; const block = handle(); const scale = view.scale / 1000; const h = 2.5 * scale;
-      let representation = ''; let data;
+    else if (p.kind === 'dimension') {
+      const d = p.dim; const scale = v.scale / 1000; const h = 2.5 * scale; const style = doc.dimstyle(`TW_1-${v.scale}`, { dimscale: scale, post: '<> m' });
+      const blk = doc.block(`*D${++nDim}`, { anonymous: true }); let data;
       if (d.kind === 'linear') {
-        const a = p(d.a); const b = p(d.b); const horizontal = Math.abs(a[1] - b[1]) < 1e-9;
-        const c = horizontal ? [a[0], a[1] - d.offset * scale] : [a[0] + d.offset * scale, a[1]];
-        const e = horizontal ? [b[0], c[1]] : [c[0], b[1]]; const mid = [(c[0] + e[0]) / 2, (c[1] + e[1]) / 2 + h];
-        representation += line(a, c, block, 'MODEL_DIMS') + line(b, e, block, 'MODEL_DIMS') + line(c, e, block, 'MODEL_DIMS') + text(d.value.toFixed(2), mid, h, block, 'MODEL_DIMS', null, true);
+        const a = P(d.a); const b = P(d.b); const horizontal = Math.abs(a[1] - b[1]) < 1e-9;
+        const c = horizontal ? [a[0], a[1] - d.offset * scale] : [a[0] + d.offset * scale, a[1]]; const e = horizontal ? [b[0], c[1]] : [c[0], b[1]];
+        const mid = [(c[0] + e[0]) / 2, (c[1] + e[1]) / 2 + (horizontal ? h : 0)]; track(c); track(e);
+        const tw = (`${num(d.value)} m`.length * h * 0.75) / 2 + h; track([mid[0] - tw, mid[1] - tw]); track([mid[0] + tw, mid[1] + tw]);
+        doc.line(blk, 'MODEL_DIMS', a, c); doc.line(blk, 'MODEL_DIMS', b, e); doc.line(blk, 'MODEL_DIMS', c, e);
+        doc.text(blk, 'MODEL_DIMS', `${num(d.value)} m`, horizontal ? mid : [mid[0] - h * 0.6, mid[1]], h, { align: 'center' });
         // PL-07: en un perfil exagerado la distancia dibujada vertical es value·ex; DIMLFAC = 1/ex hace que AutoCAD, al recalcular, muestre el valor físico.
         const geom = Math.hypot(b[0] - a[0], b[1] - a[1]); const factor = geom > 0 ? d.value / geom : 1;
         const dstyle = Math.abs(factor - 1) > 1e-9 ? [[1001, 'ACAD'], [1000, 'DSTYLE'], [1002, '{'], [1070, 144], [1040, factor], [1002, '}']] : [];
-        data = [[100, 'AcDbDimension'], [2, name], ...point(10, e), ...point(11, mid), [70, 33], [3, 'STANDARD'], [42, geom], [100, 'AcDbAlignedDimension'], ...point(13, a), ...point(14, b), ...dstyle];
+        data = [[100, 'AcDbDimension'], [2, blk.name], [10, e[0]], [20, e[1]], [30, 0], [11, mid[0]], [21, mid[1]], [31, 0], [70, 32], [1, ''], [3, style], [42, geom], [100, 'AcDbAlignedDimension'], [13, a[0]], [23, a[1]], [33, 0], [14, b[0]], [24, b[1]], [34, 0], [50, horizontal ? 0 : 90], [100, 'AcDbRotatedDimension'], ...dstyle];
       } else {
-        const c = p(d.center); const a = d.angle * Math.PI / 180; const tip = [c[0] + d.radius * Math.cos(a), c[1] + d.radius * Math.sin(a)]; const mid = [(c[0] + tip[0]) / 2, (c[1] + tip[1]) / 2];
-        representation += line(c, tip, block, 'MODEL_DIMS') + text(`R ${d.value.toFixed(2)}`, mid, h, block, 'MODEL_DIMS');
-        data = [[100, 'AcDbDimension'], [2, name], ...point(10, c), ...point(11, mid), [70, 36], [3, 'STANDARD'], [42, d.value], [100, 'AcDbRadialDimension'], ...point(15, tip), [40, 0]];
+        const c = P(d.center); const ang = (d.angle * Math.PI) / 180; const tip = [c[0] + d.radius * Math.cos(ang), c[1] + d.radius * Math.sin(ang)]; const mid = [(c[0] + tip[0]) / 2, (c[1] + tip[1]) / 2];
+        doc.line(blk, 'MODEL_DIMS', c, tip); doc.text(blk, 'MODEL_DIMS', `R ${num(d.value)} m`, mid, h);
+        data = [[100, 'AcDbDimension'], [2, blk.name], [10, c[0]], [20, c[1]], [30, 0], [11, mid[0]], [21, mid[1]], [31, 0], [70, 36], [1, ''], [3, style], [42, d.value], [100, 'AcDbRadialDimension'], [15, tip[0]], [25, tip[1]], [35, 0], [40, 0]];
       }
-      dimensionBlocks.push({ name, block, representation }); entities += entity('DIMENSION', modelBlock, 'MODEL_DIMS', data);
+      doc.add(doc.model, 'DIMENSION', 'MODEL_DIMS', data, { xdata: irx(p.id, [`vista=${v.id}`]) });
     }
   }
-  const paperContents = {};
-  for (const { sheet, block, name } of layouts) {
-    const start = entities.length;
-    const py = p => [p[0], sheet.size[1] - p[1]];
-    for (const e of sceneForSheet(composition, sheet)) {
-      // Model entities are shown by the viewport. Paper annotations are separate, in mm.
-      // PL-03: las cotas son DIMENSION nativas en el modelo (vistas por el viewport); su dibujo del PDF no se duplica en el papel.
-      if (e.role === 'dimension') continue;
-      if (e.layer && e.layer !== 'COTAS') continue;
-      if (e.kind === 'line') entities += line(py(e.a), py(e.b), block, 'PAPEL', name);
-      if (e.kind === 'rect') { const pts = [[e.x, e.y], [e.x + e.w, e.y], [e.x + e.w, e.y + e.h], [e.x, e.y + e.h]]; for (let i = 0; i < 4; i++) entities += line(py(pts[i]), py(pts[(i + 1) % 4]), block, 'PAPEL', name); }
-      if (e.kind === 'text') entities += text(e.value, py([e.x, e.y + e.size]), e.size, block, 'PAPEL', name, e.align === 'center');
+  if (!Number.isFinite(ext.min[0])) throw new UserError('DXF_SIN_GEOMETRIA', 'El modelo no contiene geometría que escribir.');
+  // Presentaciones: una por lámina (mismo orden y nombre que el PDF). Papel en mm con origen abajo-izquierda.
+  for (const s of I.sheets) {
+    const lay = doc.layout(s.name, { size: s.size }); const H = s.size[1]; const fy = (p) => [p[0], H - p[1]];
+    const xd = (p) => ({ xdata: irx(p.id, [...(p.table_ref ? [`cuadro=${p.table_ref}`] : []), ...(p.legend_ref ? [`leyenda=${p.legend_ref}`] : []), ...(p.callout_ref ? [`llamada=${p.callout_ref}`, `detalle=${p.detail_ref}`] : [])]) });
+    const hechos = new Set();
+    for (const p of s.primitives) {
+      if (p.space === 'model') continue; // visible a través del viewport: escrito una sola vez en el espacio modelo
+      if (p.inst) { if (hechos.has(p.inst.id)) continue; hechos.add(p.inst.id); doc.insert(lay, 'TW_SIMBOLOS', `TW_${p.symbol_ref}`, fy(p.inst.at), p.inst.s, p.inst.rot, xd({ ...p, id: p.inst.id })); continue; }
+      const capa = doc.layers.has(p.layer) ? p.layer : 'PAPEL';
+      if (p.kind === 'line') doc.line(lay, capa, fy(p.a), fy(p.b), xd(p));
+      else if (p.kind === 'rect') doc.lwpolyline(lay, capa, [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.h], [p.x, p.y + p.h]].map(fy), true, xd(p));
+      else if (p.kind === 'path') { if (p.circle) doc.circle(lay, capa, fy(p.circle.center), p.circle.radius, xd(p)); else doc.lwpolyline(lay, capa, p.points.map(fy), !!p.closed, xd(p)); }
+      else if (p.kind === 'hatch') doc.hatch(lay, capa, { loops: p.loops.map((l) => l.map(fy)), nombre: '_USER', familias: TRAMAS[p.hatch_ref].familias, opt: xd(p) });
+      else if (p.kind === 'text') doc.text(lay, capa, p.value, fy([p.x, p.y + p.size]), p.size, { align: p.align, ...xd(p) });
     }
-    sheet.views.forEach((v, i) => {
-      const vp = v.viewport; const off = offsets[v.id]; const ex = v.verticalScale ? v.scale / v.verticalScale : 1;
-      entities += entity('VIEWPORT', block, 'PAPEL', [[100, 'AcDbViewport'], ...point(10, py(vp.paperCenter)), [40, vp.width], [41, vp.height], [68, 1], [69, i + 2], [12, vp.center[0] + off[0]], [22, vp.center[1] * ex + off[1]], ...point(16, [0, 0, 1]), ...point(17, [0, 0, 0]), [45, vp.height / vp.scale], [50, 0], [51, 0], [90, 16384], [331, layers.MODEL_DIMS]], name);
-    });
-    paperContents[block] = entities.slice(start); entities = entities.slice(0, start);
+    for (const vp of s.viewports) {
+      const o = off[vp.view_id]; const v = views.get(vp.view_id); const ex = v.verticalScale ? v.scale / v.verticalScale : 1;
+      doc.viewport(lay, { paperCenter: fy(vp.paperCenter), width: vp.width, height: vp.height, viewCenter: [vp.center[0] + o[0], vp.center[1] * ex + o[1]], viewHeight: vp.height / vp.scale, xdata: irx(`viewport:${s.id}/${vp.view_id}`, [`vista=${vp.view_id}`]) });
+    }
   }
-  const table = (name, records) => pairs([[0, 'TABLE'], [2, name], [5, handle()], [100, 'AcDbSymbolTable'], [70, records.length]]) + records.join('') + pairs([[0, 'ENDTAB']]);
-  // PL-06: tipos de línea desde la MISMA definición que usa el PDF (mm de papel; PSLTSCALE=1 los escala por viewport).
-  const capasM = capasDe(composition.model); const patrones = Object.fromEntries(Object.keys(layers).map((n) => [n, patronLinea(n, capasM[n])]));
-  const ltypes = [...new Map(Object.values(patrones).filter((x) => x.elementos.length).map((x) => [x.nombre, x])).values()];
-  let tables = table('LTYPE', [pairs([[0, 'LTYPE'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbLinetypeTableRecord'], [2, 'CONTINUOUS'], [70, 0], [3, 'Continuous'], [72, 65], [73, 0], [40, 0]]),
-    ...ltypes.map((lt) => pairs([[0, 'LTYPE'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbLinetypeTableRecord'], [2, lt.nombre], [70, 0], [3, lt.elementos.map((x) => (x > 0 ? '__' : ' ')).join('')], [72, 65], [73, lt.elementos.length], [40, lt.elementos.reduce((t, x) => t + Math.abs(x), 0)], ...lt.elementos.flatMap((x) => [[49, x], [74, 0]])]))]);
-  tables += table('LAYER', Object.entries(layers).map(([name, id]) => pairs([[0, 'LAYER'], [5, id], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbLayerTableRecord'], [2, name], [70, 0], [62, capasDe(composition.model)[name]?.color || 7], [6, patrones[name].nombre], [370, Math.round((capasDe(composition.model)[name]?.weight || 0.18) * 100)]])));
-  tables += table('STYLE', [pairs([[0, 'STYLE'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbTextStyleTableRecord'], [2, 'STANDARD'], [70, 0], [40, 0], [41, 1], [50, 0], [71, 0], [42, 2.5], [3, 'Arial.ttf'], [4, '']])]);
-  tables += table('APPID', ['ACAD', 'TANNIA_TRACE'].map(name => pairs([[0, 'APPID'], [5, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbRegAppTableRecord'], [2, name], [70, 0]])));
-  tables += table('DIMSTYLE', [pairs([[0, 'DIMSTYLE'], [105, handle()], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbDimStyleTableRecord'], [2, 'STANDARD'], [70, 0], [40, 1], [41, 0.1], [140, 0.125], [271, 2]])]);
-  const blocks = [{ name: '*Model_Space', block: modelBlock, layout: modelLayout }, ...layouts.map((l, i) => ({ ...l, name: `*Paper_Space${i || ''}` })), ...dimensionBlocks];
-  tables += table('BLOCK_RECORD', blocks.map(b => pairs([[0, 'BLOCK_RECORD'], [5, b.block], [100, 'AcDbSymbolTableRecord'], [100, 'AcDbBlockTableRecord'], [2, b.name], ...(b.layout ? [[340, b.layout]] : [])])));
-  const blockSection = blocks.map(b => entity('BLOCK', b.block, '0', [[100, 'AcDbBlockBegin'], [2, b.name], [70, b.representation ? 1 : 0], ...point(10, [0, 0, 0]), [3, b.name], [1, '']]) + (b.representation || paperContents[b.block] || '') + entity('ENDBLK', b.block, '0', [[100, 'AcDbBlockEnd']])).join('');
-  let objects = pairs([[0, 'DICTIONARY'], [5, root], [330, '0'], [100, 'AcDbDictionary'], [281, 1], [3, 'ACAD_LAYOUT'], [350, dictionary]]);
-  objects += pairs([[0, 'DICTIONARY'], [5, dictionary], [330, root], [100, 'AcDbDictionary'], [281, 1], [3, 'Model'], [350, modelLayout], ...layouts.flatMap(l => [[3, l.name], [350, l.layout]])]);
-  for (const [i, l] of [{ name: 'Model', block: modelBlock, layout: modelLayout, sheet: { size: [420, 297], margin: 12 } }, ...layouts].entries()) {
-    objects += pairs([[0, 'LAYOUT'], [5, l.layout], [330, dictionary], [100, 'AcDbPlotSettings'], [1, ''], [2, 'DWG To PDF.pc3'], [4, ''], [40, l.sheet.margin], [41, l.sheet.margin], [42, l.sheet.margin], [43, l.sheet.margin], [44, l.sheet.size[0]], [45, l.sheet.size[1]], [140, 1], [141, 1], [70, 0], [72, 1], [73, 0], [74, 5], [100, 'AcDbLayout'], [1, l.name], [70, 1], [71, i], [10, 0], [20, 0], [11, l.sheet.size[0]], [21, l.sheet.size[1]], ...point(12, [0, 0, 0]), ...point(14, [0, 0, 0]), ...point(15, [l.sheet.size[0], l.sheet.size[1], 0]), [146, 0], ...point(13, [0, 0, 0]), ...point(16, [1, 0, 0]), ...point(17, [0, 1, 0]), [76, 0], [330, l.block]]);
-  }
-  // $DIMASSOC=1: cotas NO asociativas, declarado (la asociación a geometría requiere AutoCAD real; ver protocolo).
-  const header = pairs([[9, '$ACADVER'], [1, 'AC1024'], [9, '$INSUNITS'], [70, 6], [9, '$MEASUREMENT'], [70, 1], [9, '$LTSCALE'], [40, 1], [9, '$PSLTSCALE'], [70, 1], [9, '$DIMASSOC'], [280, 1], [9, '$TILEMODE'], [70, 1], [9, '$HANDSEED'], [5, (next + 1).toString(16).toUpperCase()]]);
-  return section('HEADER', header) + section('TABLES', tables) + section('BLOCKS', blockSection) + section('ENTITIES', entities) + section('OBJECTS', objects) + pairs([[0, 'EOF']]);
+  return doc.toString({ extmin: [ext.min[0], ext.min[1], 0], extmax: [ext.max[0], ext.max[1], 0], vista: ext });
 }
+export { prefijoDe };

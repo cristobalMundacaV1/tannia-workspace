@@ -70,6 +70,7 @@ export function buildEntity(raw, following = []) {
     handle: first(raw, 5) || null,
     layer: first(raw, 8) || '0',
     traza: parseTraza(raw),
+    paper: String(first(raw, 67) ?? '').trim() === '1',
     extrusion: { x: firstNum(raw, 210, 0), y: firstNum(raw, 220, 0), z: firstNum(raw, 230, 1) },
   };
   switch (t) {
@@ -213,8 +214,11 @@ export function parseDxf(input) {
     for (const b of Object.values(blocks)) { b.entities = buildList(b.raw); delete b.raw; }
   }
   const [s, e] = sections.ENTITIES;
-  const entities = buildList(groupEntities(pairs, s, e));
+  // Solo el ESPACIO MODELO se mide: las entidades de papel (código 67 = 1: cajetín, cuadros, leyendas del layout activo, que
+  // AutoCAD y este motor escriben en ENTITIES) se separan y nunca entran a una cubicación.
+  const todas = buildList(groupEntities(pairs, s, e)); const entities = todas.filter((x) => !x.paper); const paperEntities = todas.filter((x) => x.paper);
   return {
+    paperEntities,
     version: header.$ACADVER || null,
     insunits,
     insunitsName: INSUNITS[insunits] || `desconocido(${insunits})`,

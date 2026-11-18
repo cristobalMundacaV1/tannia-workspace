@@ -4,6 +4,7 @@
 // Coordenadas del modelo en metros (tamaño real); papel en milímetros. Nada se infiere: cotas, escalas y capas son explícitas.
 import { UserError } from '../mcp/util.js';
 import { LAYERS } from './model.js';
+import { ESTILOS, TRAMAS, SIMBOLOS } from './catalog.js';
 import { autoIntersecta, segmentosIntersectan } from '../geo/geom.js';
 
 export const TIPOS_VISTA = ['planta', 'corte', 'elevacion', 'perfil', 'seccion', 'detalle'];
@@ -73,7 +74,8 @@ export function modeloDesdeEspecificacion(e) {
     const color = Number.isInteger(c?.color) && c.color >= 1 && c.color <= 255 ? c.color : 7;
     const weight = num(c?.grosor) && c.grosor >= 0.09 && c.grosor <= 2.11 ? c.grosor : 0.25;
     if (c?.trazo !== undefined && (!Array.isArray(c.trazo) || !c.trazo.length || c.trazo.length % 2 || !c.trazo.every((x) => num(x) && x > 0 && x <= 50))) throw err('TRAZO_INVALIDO', `Capa ${name}: el trazo es una lista par de longitudes en mm de papel (trazo, hueco, …), todas > 0.`);
-    layers[name] = { color, weight, legend: txt(c?.leyenda || name, `leyenda de ${name}`, 60), ...(Array.isArray(c?.trazo) ? { dash: c.trazo } : {}) };
+    if (c?.estilo !== undefined && !ESTILOS[c.estilo]) throw err('ESTILO_INEXISTENTE', `Capa ${name}: el estilo «${c.estilo}» no existe en el catálogo.`);
+    layers[name] = { color, weight, legend: txt(c?.leyenda || name, `leyenda de ${name}`, 60), ...(c?.estilo ? { estilo: c.estilo } : {}), ...(Array.isArray(c?.trazo) ? { dash: c.trazo } : {}) };
   }
   const capasValidas = new Set([...Object.keys(LAYERS), ...Object.keys(layers)]);
   if (!Array.isArray(e.vistas) || !e.vistas.length) throw err('ESPECIFICACION_INVALIDA', 'La especificación necesita al menos una vista.');
@@ -91,13 +93,23 @@ export function modeloDesdeEspecificacion(e) {
     const labels = (v.textos || []).map((t, i) => ({ at: pt(t.en, `Vista ${id}, texto ${i + 1}`), dy: num(t.dy) ? t.dy : 0, text: txt(t.texto, `Vista ${id}, texto ${i + 1}`, 40) }));
     const notes = (v.notas || []).map((n, i) => txt(n, `Vista ${id}, nota ${i + 1}`, 140));
     if (v.escala_vertical && v.escala_vertical !== v.escala && (ents.some((e) => e.kind === 'arc') || dimensions.some((d) => d.kind === 'radial'))) throw err('GEOMETRIA_NO_SOPORTADA', `Vista ${id}: con escala vertical distinta no se admiten arcos, círculos ni cotas radiales (se deformarían en elipses). Use una vista sin exageración.`);
-    return { id, title: txt(v.titulo, `Vista ${id}: título`, 60), type: v.tipo, scale: v.escala, ...(v.escala_vertical ? { verticalScale: v.escala_vertical } : {}), entities: ents, dimensions, labels, notes };
+    // PR #38: regiones de material DECLARADO (trama del catálogo + material con origen), símbolos del catálogo y marca de detalle.
+    const regions = (v.regiones || []).map((r, k) => {
+      const ctx = `Vista ${id}, región ${k + 1}`; const rid = idOk(r.id || `r${k + 1}`, ctx);
+      if (!TRAMAS[r.trama]) throw err('TRAMA_INEXISTENTE', `${ctx}: la trama «${r.trama}» no existe en el catálogo.`);
+      if (TRAMAS[r.trama].material_requerido && !(r.material && typeof r.material.nombre === 'string' && r.material.origen)) throw err('MATERIAL_SIN_ORIGEN', `${ctx}: declare material.nombre y material.origen (el material no se infiere).`);
+      const loop = (l) => (Array.isArray(l) ? l.map((q) => [...pt(q.slice(0, 2), ctx), ...(num(q[2]) ? [q[2]] : [])]) : (() => { throw err('REGION_ABIERTA', `${ctx}: contorno inválido.`); })());
+      return { id: rid, trama: r.trama, material: r.material ? { nombre: txt(r.material.nombre, `${ctx}: material`, 60), origen: txt(r.material.origen, `${ctx}: origen`, 140), estado: 'DECLARADO_SIN_VALIDAR', especificacion: r.material.especificacion ? txt(r.material.especificacion, ctx, 80) : 'PENDIENTE' } : null, element: r.elemento ? idOk(r.elemento, ctx) : 'unbound', contorno: loop(r.contorno), huecos: (r.huecos || []).map(loop), ...(r.etiqueta ? { etiqueta: txt(r.etiqueta, ctx, 60) } : {}) };
+    });
+    const symbols = (v.simbolos || []).map((x, k) => { const ctx = `Vista ${id}, símbolo ${k + 1}`; if (!SIMBOLOS[x.simbolo]) throw err('SIMBOLO_INEXISTENTE', `${ctx}: «${x.simbolo}» no existe en el catálogo.`); return { id: idOk(x.id || `s${k + 1}`, ctx), symbol: x.simbolo, at: pt(x.en, ctx), rot: num(x.rot) ? x.rot : 0, element: x.elemento ? idOk(x.elemento, ctx) : 'unbound' }; });
+    const detalle = v.detalle ? { detail_ref: idOk(v.detalle, `Vista ${id}: detalle`) } : {};
+    return { id, title: txt(v.titulo, `Vista ${id}: título`, 60), type: v.tipo, scale: v.escala, ...(v.escala_vertical ? { verticalScale: v.escala_vertical } : {}), entities: ents, dimensions, labels, notes, regions, symbols, ...detalle, ...(v.esquematico ? { schematic: true } : {}) };
   });
   if (!Array.isArray(e.laminas) || !e.laminas.length) throw err('ESPECIFICACION_INVALIDA', 'La especificación necesita al menos una lámina.');
   const sids = new Set(); const usadas = new Set();
   const sheets = e.laminas.map((l, i) => {
     const id = idOk(l.id, `lámina ${i + 1}`); if (sids.has(id)) throw err('ID_DUPLICADO', `Lámina duplicada «${id}».`); sids.add(id);
-    if (!Array.isArray(l.vistas) || !l.vistas.length || l.vistas.length > 3) throw err('LAMINA_INVALIDA', `Lámina ${id}: entre 1 y 3 vistas.`);
+    if (!Array.isArray(l.vistas) || !l.vistas.length || l.vistas.length > 8) throw err('LAMINA_INVALIDA', `Lámina ${id}: entre 1 y 8 vistas (si no caben, el compositor las distribuye en láminas de continuación).`);
     for (const v of l.vistas) { if (!ids.has(v)) throw err('VISTA_AUSENTE', `Lámina ${id}: la vista «${v}» no existe.`); usadas.add(v); }
     return { id, title: txt(l.titulo, `Lámina ${id}: título`, 60), views: [...l.vistas] };
   });
@@ -125,7 +137,7 @@ export function modeloDesdeEspecificacion(e) {
     schema: 'tw.drawing/1', unit: 'm', layers, elements: fisicos.map((f) => ({ id: idOk(f.id, 'elemento físico'), tipo: f.tipo || 'elemento', unidad: 'm', fuente: (f.fuentes || [])[0] || null, magnitudes: f.magnitudes || {}, vistas: [...new Set((f.fuentes || []).map((r) => r.split('/')[0]))] })),
     provenance: e.origen ? txt(e.origen, 'origen', 140) : 'Especificación explícita aportada en la conversación',
     metadata: { project: P(e.proyecto), revision: P(e.revision), date: P(e.fecha), institution: P(e.institucion), author: P(e.autor), reviewer: 'PENDIENTE', approval: 'PENDIENTE', stage: e.etapa ? txt(e.etapa, 'etapa', 40) : 'REVISIÓN', source: 'Especificación de planos', coordinateSystem: 'NO CONFIRMADO', code, specialty: especialidad },
-    ...(() => { const q = cantidadesDeEspecificacion(e, views); return { quantities: q.detalle, quantity_totals: q.totales }; })(), views, sheets, warnings,
+    ...(() => { const q = cantidadesDeEspecificacion(e, views); return { quantities: q.detalle, quantity_totals: q.totales, tables: cuadrosDeEspecificacion(e, views, q, sids) }; })(), views, sheets, callouts: llamadasDeEspecificacion(e, views), warnings,
   };
 }
 
@@ -257,4 +269,76 @@ export function cantidadesRecinto(model, altura) {
   const corte = model.views.find((v) => v.id === 'corte'); const h = corte ? Math.max(...corte.entities.filter((x) => x.layer === 'MUROS').flatMap((x) => [x.a[1], x.b[1]])) : altura;
   const areaMuroPlanta = ext - int;
   return [{ partida: 'Muros perimetrales', area_planta_m2: areaMuroPlanta, altura_m: h, volumen_m3: areaMuroPlanta * h, superficie_interior_util_m2: int, formula: 'V = (A_ext − A_int) × h, medido sobre la planta y el corte dibujados' }];
+}
+
+// PR #38 C4: llamadas a detalle (bidireccionales) y cuadros técnicos con la MISMA fuente que la cubicación.
+function llamadasDeEspecificacion(e, views) {
+  const out = []; const vistas = new Map(views.map((v) => [v.id, v]));
+  for (const [i, c] of (e.llamadas || []).entries()) {
+    const ctx = `Llamada ${i + 1}`; const det = vistas.get(c.detalle); const orig = vistas.get(c.desde_vista);
+    if (!det || !det.detail_ref) throw err('REFERENCIAS_INVALIDAS', `${ctx}: la vista de detalle «${c.detalle}» no existe o no está marcada como detalle.`);
+    if (!orig) throw err('REFERENCIAS_INVALIDAS', `${ctx}: la vista de origen «${c.desde_vista}» no existe.`);
+    det.back_ref = { view: orig.id };
+    out.push({ id: `C-${det.detail_ref}`, label: det.detail_ref, from_view: orig.id, at: pt(c.en, ctx), target_view: det.id });
+  }
+  return out;
+}
+function cuadrosDeEspecificacion(e, views, q, laminas) {
+  const out = [];
+  for (const [i, c] of (e.cuadros || []).entries()) {
+    const ctx = `Cuadro ${i + 1}`; const id = idOk(c.id || `T${i + 1}`, ctx); const lamina = idOk(c.lamina, `${ctx}: lámina`);
+    if (!laminas.has(lamina)) throw err('LAMINA_AUSENTE', `${ctx}: la lámina ${lamina} no existe.`);
+    if (c.tipo === 'cantidades') {
+      out.push({ id, sheet: lamina, title: txt(c.titulo || 'CUADRO DE CANTIDADES', ctx, 60), source: 'tw.cantidades/1',
+        columns: [{ key: 'partida', label: 'Partida' }, { key: 'valor', label: 'Cantidad', align: 'right' }, { key: 'u', label: 'Unidad' }, { key: 'estado', label: 'Estado' }],
+        rows: [...q.detalle.map((d) => ({ id: d.id, refs: [d.id], quantity_ref: d.id, values: { partida: `${d.valor < 0 ? '(-) ' : ''}${d.descripcion || d.partida}`, valor: d.valor, u: d.unidad, estado: d.estado }, fmt: { valor: d.unidad === 'u' ? 0 : 3 } })),
+          ...q.totales.map((t) => ({ id: t.id, refs: [t.id], quantity_ref: t.id, values: { partida: t.descripcion, valor: t.valor, u: t.unidad, estado: t.estado }, fmt: { valor: t.unidad === 'u' ? 0 : 3 } }))],
+        footnotes: ['Medido sobre la geometría dibujada (TW-MED/1). Los totales son de control: no se suman con el detalle.'] });
+    } else if (c.tipo === 'materiales') {
+      const mats = new Map(); for (const v of views) for (const r of v.regions || []) if (r.material && !mats.has(r.material.nombre)) mats.set(r.material.nombre, r);
+      out.push({ id, sheet: lamina, title: txt(c.titulo || 'CUADRO DE MATERIALES', ctx, 60), source: 'regiones declaradas',
+        columns: [{ key: 'mat', label: 'Material' }, { key: 'origen', label: 'Origen del dato' }, { key: 'eett', label: 'Especificación técnica' }],
+        rows: [...mats.values()].map((r, k) => ({ id: `m${k + 1}`, refs: [r.id], values: { mat: r.material.nombre, origen: r.material.origen, eett: r.material.especificacion } })),
+        footnotes: ['Materiales declarados en la especificación; sin validación profesional.'] });
+    } else throw err('TABLA_INVALIDA', `${ctx}: tipo «${c.tipo}» no soportado (cantidades, materiales).`);
+  }
+  return out;
+}
+
+/**
+ * Segundo corpus (PL-DOMAIN-02): muro de fachada con un vano declarado. Elevación (fuente de la superficie), planta y corte
+ * (representaciones), detalle del vano con datos PENDIENTES, trama del material declarado y cuadros de cantidades y materiales.
+ */
+export function muroConVanoEspecificacion({ largo = 6, alto = 2.6, espesor = 0.2, vano = { x: 2, ancho: 1.5, alto: 1.2, antepecho: 0.9 }, material = { nombre: 'Albañilería de ladrillo', origen: 'Declarado en el caso de prueba EDI (fixture del repositorio)' }, proyecto = 'Muro con vano' } = {}) {
+  for (const [n, v] of Object.entries({ largo, alto, espesor, ...Object.fromEntries(Object.entries(vano).map(([k, x]) => [`vano.${k}`, x])) })) if (!num(v) || v < 0) throw err('DATOS_INVALIDOS', `«${n}» debe ser un número en metros (no se supone).`);
+  if (vano.x <= 0 || vano.x + vano.ancho >= largo || vano.antepecho + vano.alto >= alto) throw err('DATOS_INVALIDOS', 'El vano no cabe dentro del muro.');
+  const R = (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]; const v = vano;
+  const mat = material ? { material, trama: 'MASONRY_WALL' } : null;
+  return {
+    codigo: 'EDI', especialidad: 'edificación', proyecto, revision: 'R01', etapa: 'ANTEPROYECTO',
+    capas: { MUROS: { color: 7, grosor: 0.5, leyenda: 'Muro (contorno)', estilo: 'WALL_CUT' }, VANOS: { color: 3, grosor: 0.25, leyenda: 'Vano declarado', estilo: 'OPENING' }, NPT: { color: 1, grosor: 0.18, leyenda: 'Nivel de piso terminado', trazo: [4, 1], estilo: 'LEVEL_LINE' } },
+    vistas: [
+      { id: 'elevacion', titulo: 'Elevación del muro', tipo: 'elevacion', escala: 50, elementos: [{ id: 'muro', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 0], ancho: largo, alto }, { id: 'vano', tipo: 'rectangulo', capa: 'VANOS', origen: [v.x, v.antepecho], ancho: v.ancho, alto: v.alto }, { id: 'npt', tipo: 'linea', capa: 'NPT', a: [-0.5, 0], b: [largo + 0.5, 0] }],
+        cotas: [{ id: 'largo', tipo: 'lineal', a: [0, 0], b: [largo, 0], desfase: 12 }, { id: 'alto', tipo: 'lineal', a: [largo, 0], b: [largo, alto], desfase: 12 }, { id: 'vano-ancho', tipo: 'lineal', a: [v.x, v.antepecho + v.alto], b: [v.x + v.ancho, v.antepecho + v.alto], desfase: -8 }, { id: 'vano-alto', tipo: 'lineal', a: [v.x, v.antepecho], b: [v.x, v.antepecho + v.alto], desfase: -10 }, { id: 'antepecho', tipo: 'lineal', a: [v.x + v.ancho, 0], b: [v.x + v.ancho, v.antepecho], desfase: 10 }],
+        regiones: mat ? [{ id: 'muro-elev', trama: mat.trama, material: mat.material, elemento: 'muro', contorno: R(0, 0, largo, alto), huecos: [R(v.x, v.antepecho, v.ancho, v.alto)] }] : [],
+        notas: ['Superficie del muro medida en esta elevación (fuente); planta y corte son representaciones y no se miden.'] },
+      { id: 'planta', titulo: 'Planta del muro', tipo: 'planta', escala: 50, elementos: [{ id: 'pilar-izq', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 0], ancho: v.x, alto: espesor }, { id: 'pilar-der', tipo: 'rectangulo', capa: 'MUROS', origen: [v.x + v.ancho, 0], ancho: largo - v.x - v.ancho, alto: espesor }, { id: 'vano-pl', tipo: 'linea', capa: 'VANOS', a: [v.x, espesor / 2], b: [v.x + v.ancho, espesor / 2] }],
+        cotas: [{ id: 'espesor', tipo: 'lineal', a: [0, 0], b: [0, espesor], desfase: -10 }, { id: 'vano-pl', tipo: 'lineal', a: [v.x, 0], b: [v.x + v.ancho, 0], desfase: 10 }],
+        regiones: mat ? [{ id: 'muro-pl-izq', trama: mat.trama, material: mat.material, elemento: 'muro', contorno: R(0, 0, v.x, espesor) }, { id: 'muro-pl-der', trama: mat.trama, material: mat.material, elemento: 'muro', contorno: R(v.x + v.ancho, 0, largo - v.x - v.ancho, espesor) }] : [] },
+      { id: 'corte', titulo: 'Corte por el vano', tipo: 'corte', escala: 20, elementos: [{ id: 'antepecho', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 0], ancho: espesor, alto: v.antepecho }, { id: 'sobre-vano', tipo: 'rectangulo', capa: 'MUROS', origen: [0, v.antepecho + v.alto], ancho: espesor, alto: alto - v.antepecho - v.alto }, { id: 'vano-c', tipo: 'linea', capa: 'VANOS', a: [espesor / 2, v.antepecho], b: [espesor / 2, v.antepecho + v.alto] }, { id: 'npt-c', tipo: 'linea', capa: 'NPT', a: [-0.4, 0], b: [espesor + 0.4, 0] }],
+        cotas: [{ id: 'esp-c', tipo: 'lineal', a: [0, 0], b: [espesor, 0], desfase: 10 }, { id: 'antepecho-c', tipo: 'lineal', a: [espesor, 0], b: [espesor, v.antepecho], desfase: 10 }, { id: 'vano-c', tipo: 'lineal', a: [espesor, v.antepecho], b: [espesor, v.antepecho + v.alto], desfase: 10 }],
+        regiones: mat ? [{ id: 'muro-c1', trama: mat.trama, material: mat.material, elemento: 'muro', contorno: R(0, 0, espesor, v.antepecho) }, { id: 'muro-c2', trama: mat.trama, material: mat.material, elemento: 'muro', contorno: R(0, v.antepecho + v.alto, espesor, alto - v.antepecho - v.alto) }] : [] },
+      { id: 'det-vano', titulo: 'D1 Borde inferior del vano', tipo: 'detalle', escala: 10, detalle: 'D1', elementos: [{ id: 'muro-d', tipo: 'polilinea', capa: 'MUROS', puntos: [[0, v.antepecho - 0.3], [0, v.antepecho], [espesor, v.antepecho], [espesor, v.antepecho - 0.3]] }],
+        cotas: [{ id: 'esp-d', tipo: 'lineal', a: [0, v.antepecho], b: [espesor, v.antepecho], desfase: -10 }],
+        regiones: mat ? [{ id: 'muro-d', trama: mat.trama, material: mat.material, elemento: 'muro', contorno: R(0, v.antepecho - 0.3, espesor, 0.3) }] : [],
+        simbolos: [{ id: 'pend-d', simbolo: 'PENDING_MARK', en: [espesor + 0.08, v.antepecho - 0.12] }],
+        notas: ['D1: alféizar, dintel, marco y sellos NO declarados: PENDIENTES (no se dibujan).'] },
+    ],
+    llamadas: [{ desde_vista: 'corte', en: [espesor, v.antepecho], detalle: 'det-vano' }],
+    laminas: [{ id: '01', titulo: 'Elevación y planta', vistas: ['elevacion', 'planta'] }, { id: '02', titulo: 'Corte y detalle', vistas: ['corte', 'det-vano'] }],
+    cuadros: [{ id: 'T-CANT', lamina: '01', tipo: 'cantidades', titulo: 'CUADRO DE CANTIDADES' }, ...(mat ? [{ id: 'T-MAT', lamina: '02', tipo: 'materiales', titulo: 'CUADRO DE MATERIALES' }] : [])],
+    elementos_fisicos: [{ id: 'muro', tipo: 'muro', fuentes: ['elevacion/muro'], representaciones: ['planta/pilar-izq', 'planta/pilar-der', 'corte/antepecho', 'corte/sobre-vano', 'det-vano/muro-d'] }, { id: 'vano', tipo: 'vano', fuentes: ['elevacion/vano'], representaciones: ['planta/vano-pl', 'corte/vano-c'] }],
+    mediciones: [{ id: 'm-muro', partida: 'Muro de fachada', descripcion: 'Superficie bruta del muro', metodo: 'area', fuentes: ['elevacion/muro'] }, { id: 'm-vano', partida: 'Muro de fachada', descripcion: 'Vano de ventana', metodo: 'area', fuentes: ['elevacion/vano'], signo: -1 }],
+    advertencias: ['Caso de prueba de edificación: geometría y material declarados; sin cálculo estructural.'],
+  };
 }

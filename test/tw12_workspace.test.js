@@ -68,7 +68,9 @@ test('TW12 blocking legibility regressions: tiny section, overlap, corrupt glyph
   const s = structuredClone(base.sheets[2]); const normal = sceneForSheet(base, s);
   const collision = [...normal, { ...normal.find(e => e.kind === 'text') }]; assert.equal(validateScene(collision, s).ok, false);
   const glyph = structuredClone(normal); glyph.find(e => e.kind === 'text').value = 'Secci?n'; assert.equal(validateScene(glyph, s).ok, false);
-  const geom = [...normal, { kind: 'text', value: 'Texto superpuesto', x: 155, y: 130, size: 2.5, maxWidth: 60 }];
+  // El texto se coloca SOBRE la bóveda dibujada (punto tomado de la propia escena: la composición por paneles ya no fija coordenadas).
+  const arco = normal.find(e => e.kind === 'path' && e.layer === 'EXCAVACION'); const [px, py] = arco.points[Math.floor(arco.points.length / 2)];
+  const geom = [...normal, { kind: 'text', value: 'Texto superpuesto', x: px - 10, y: py - 1, size: 2.5, maxWidth: 60 }];
   assert.equal(validateScene(geom, s).ok, false);
   for (const mutate of [v => { v.viewport.scale /= 100; }, v => { v.viewport.center[0] += 1000; }, v => { v.viewport.width = 10; }, v => { v.scale = 50000; }]) {
     const bad = structuredClone(s); mutate(bad.views[0]); assert.equal(validateScene(normal, bad).ok, false);
@@ -80,7 +82,7 @@ test('TW12 PDF: rendered four physical A3 sheets, text and vector content surviv
   assert.equal(pages.length, 4); assert.ok(pages.every(p => p.qa.ok && p.png.length > 10000));
   const qa = await verifyPdf(pdf, c.sheets); assert.equal(qa.ok, true); assert.equal(qa.pages, 4);
   assert.equal((await verifyPdf(await buildSheetsPdf(c, '01'), [c.sheets[2]])).ok, false, 'wrong sheet must fail even though valid PDF');
-  const dxf = buildDrawingDxf(c); assert.match(dxf, /\$INSUNITS\n70\n6/); assert.equal((dxf.match(/0\nVIEWPORT\n/g) || []).length, 5); assert.equal((dxf.match(/0\nDIMENSION\n/g) || []).length, 9);
+  const dxf = buildDrawingDxf(c); assert.match(dxf, /\$INSUNITS\n70\n6/); assert.equal((dxf.match(/0\nVIEWPORT\n/g) || []).length, 9, '5 de contenido + 4 generales (ID 1), uno por presentación'); assert.equal((dxf.match(/0\nDIMENSION\n/g) || []).length, 9);
 });
 
 test('TW12 service preserves originals, emits immutable PDF/DXF/PNG revisions and detects alteration', async () => {
@@ -134,16 +136,18 @@ test('TW12 audit: physical 1:50 section — 5.5 m measures 110 mm in the PDF sce
 
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
-const pyOk = spawnSync('python3', ['-I', '-c', 'import ezdxf'], { encoding: 'utf8' }).status === 0;
+const PY = ['python3', 'python'].find((c) => spawnSync(c, ['-I', '-c', 'import ezdxf'], { encoding: 'utf8' }).status === 0); const pyOk = !!PY;
 test('TW12 oracle (ezdxf, independent reader): 4 layouts, no audit errors, viewport paper size / view height == scale', { skip: pyOk ? false : 'requiere python3 + ezdxf' }, () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw12-ez-')); const file = path.join(dir, 'p.dxf');
   fs.writeFileSync(file, buildDrawingDxf(compose(tunnelModel({}))));
-  const code = `import sys,json,ezdxf\nfrom ezdxf import recover\nd,a=recover.readfile(sys.argv[1])\nout={'errors':len(a.errors),'layouts':[l.name for l in d.layouts],'vp':{l.name:[[v.dxf.width,v.dxf.height,v.dxf.view_height] for v in l.viewports()] for l in d.layouts if l.name!='Model'}}\nprint(json.dumps(out))`;
-  const r = spawnSync('python3', ['-I', '-c', code, file], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr);
+  const code = `import sys,json,ezdxf\nfrom ezdxf import recover\nd,a=recover.readfile(sys.argv[1])\nout={'errors':len(a.errors),'layouts':[l.name for l in d.layouts],'vp':{l.name:[[v.dxf.width,v.dxf.height,v.dxf.view_height] for v in l.viewports() if v.dxf.id!=1] for l in d.layouts if l.name!='Model'},'general':{l.name:[v.dxf.id for v in l.viewports()][:1] for l in d.layouts if l.name!='Model'}}\nprint(json.dumps(out))`;
+  const r = spawnSync(PY, ['-I', '-c', code, file], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr);
   const o = JSON.parse(r.stdout); assert.equal(o.errors, 0); assert.deepEqual(o.layouts, ['Model', 'TW12-01', 'TW12-02', 'TW12-03', 'TW12-04']);
   const scale = { 'TW12-01': 500, 'TW12-03': 50 };
   for (const [name, s] of Object.entries(scale)) for (const [w, h, vh] of o.vp[name]) assert.ok(Math.abs(vh - h * s / 1000) < 1e-6, `${name}: ${vh} vs ${h * s / 1000}`);
   assert.equal(Object.values(o.vp).flat().length, 5);
+  // P0: cada presentación abre con su viewport general (ID 1) antes de los de contenido.
+  for (const ids of Object.values(o.general)) assert.deepEqual(ids, [1]);
 });
 
 import { expectedLayouts, verifyLayouts, viewportsFromDxf } from '../src/drawing/layouts_check.js';
