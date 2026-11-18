@@ -532,10 +532,11 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   registerArq3d(reg, { sandbox, cad });
   registerProyectos(reg, { sandbox });
   registerEncargo(reg, { sandbox });
+  const coordinador = registerTrabajos(reg, { sandbox }); // CAD-BG: trabajos en segundo plano (modo A/B; nunca C automático)
   registerArquitectura(reg, { sandbox, cad });
   if (cicActivo()) registerCic(reg, { sandbox, server, herramientas: () => [...new Set(TOOL_NAMES)] }); // TW-11: desactivado por defecto (72 herramientas)
   // PL-01: el motor de planos es capacidad del PRODUCTO distribuido (el manifiesto declara TANNIA_ENGINEERING=on). Solo «off» lo desactiva.
-  if (motorPlanosActivo()) registerDrawing(reg, { sandbox, cad, server, guardarPartida: (pr, partida) => upsert(pr, partida) });
+  if (motorPlanosActivo()) registerDrawing(reg, { sandbox, cad, server, coordinador, guardarPartida: (pr, partida) => upsert(pr, partida) });
 }
 
 /** Configuración soportada de producción: motor de planos activo salvo TANNIA_ENGINEERING=off explícito. */
@@ -571,6 +572,7 @@ import { registerDiseno } from './diseno.js';
 import { registerArq3d } from './arq3d.js';
 import { registerProyectos } from './proyectos.js';
 import { registerEncargo } from './encargo.js';
+import { registerTrabajos } from './trabajos.js';
 import { registerArquitectura } from './arquitectura.js';
 import { registerCic } from './cic.js';
 import { cicActivo } from '../cic/flag.js';
