@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0-rc.1 — 2026-11-18 (candidato TW-PRO-E2E; NO aceptado, sin AutoCAD ni Claude Desktop reales)
+- Recepción del expediente completo desde UNA ruta (ZIP, RAR con el lector del sistema, carpeta o archivo): extracción segura, originales protegidos, inventario y lectura inicial; instrucciones incrustadas marcadas como dato (issue #31).
+- Encargo profesional: datos con procedencia comprobada (cita literal verificada en el documento), una sola ronda de preguntas, plan por resultados ligado al estado real.
+- Planos → cubicaciones → partidas: las partidas salen de la revisión vigente de planos; un cambio de planos las deja desactualizadas y bloquea la entrega; la entrega incluye los planos de la misma revisión.
+- Corrección A→B→A de planos: volver a un modelo anterior lo hace vigente.
+- Túnel: cantidades en el contrato tw.cantidades/1 (solo la alternativa elegida es sumable); lámina con pernos rotulados, cuadro de pernos y cuadro geométrico.
+- Precios con más de 12 meses: referenciales, sin estado final (antes solo advertencia).
+- Herramientas nuevas: tannia_expediente_recibir, tannia_encargo (92 en el paquete de ingeniería).
+
 
 ## 0.2.0-rc.2 — 2026-11-17 (candidato; no aceptado)
 - Moneda como dimensión tipada; conversión de divisas solo con tasa, fuente y fecha (antes CLP→USD 1:1).

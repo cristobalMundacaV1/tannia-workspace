@@ -69,17 +69,19 @@ test('C: la memoria PDF de UAT-01 tiene exactamente las páginas con contenido (
   assert.equal(B.total, 109480);
 });
 
-test('UAT-02: un presupuesto parcial se rotula como tal y los precios con más de 12 meses se advierten (no se bloquean ni se reescriben)', () => {
+// Cambio de decisión (TW-PRO-E2E G07, C-06, NEG-10): un precio con más de 12 meses sigue sin reescribirse y el cálculo se muestra,
+// pero ahora es REFERENCIAL: bloquea el estado final y la etiqueta lo dice (antes solo se advertía).
+test('UAT-02: un presupuesto parcial se rotula como tal; los precios con más de 12 meses se advierten, no se reescriben y son referenciales (sin estado final)', () => {
   const partidas = [{ codigo: 'F1', descripcion: 'Pernos', unidad: 'u', cantidad: 1010, apu: 'P', cantidad_verificada: true }];
   const apus = [{ codigo: 'P', unidad: 'u', insumos: [{ tipo: 'material', descripcion: 'perno', cantidad: 1, precio_unitario: 25000, fuente_precio: 'APU histórico CODELCO', fecha_precio: '2019-01-15' }] }];
   const cfg = { gastos_generales_pct: 10, utilidades_pct: 5, iva_pct: 19, fecha_referencia_precios: '2026-11-17' };
   const parcial = computeBudget({ partidas, apus, config: { ...cfg, alcance: 'parcial', alcance_descripcion: 'solo fortificación' } });
-  assert.match(parcial.etiqueta_total, /PRESUPUESTO PARCIAL \(solo fortificación\): no es el costo total/);
+  assert.match(parcial.etiqueta_total, /PRESUPUESTO PARCIAL \(solo fortificación\): no es el costo total/); assert.match(parcial.etiqueta_total, /PRECIOS HISTÓRICOS/); assert.equal(parcial.estado_final_posible, false);
   assert.ok(parcial.advertencias.some((a) => /2019-01-15.*7 año\(s\).*No es un precio vigente/.test(a)), parcial.advertencias.join(' | '));
   assert.equal(parcial.total, 34_554_625); // oráculo: 1010×25.000=25.250.000; +10 %+5 % = 29.037.500; IVA 19 % = 5.517.125
   const sinAlcance = computeBudget({ partidas, apus: [{ ...apus[0], insumos: [{ ...apus[0].insumos[0], fecha_precio: '2026-10-01' }] }], config: cfg });
   assert.equal(sinAlcance.alcance, 'no_declarado'); assert.equal(sinAlcance.etiqueta_total, 'TOTAL (alcance no declarado)'); // revisión PR #30: el alcance desconocido se rotula, no se presenta como total de obra
   assert.ok(sinAlcance.advertencias.some((a) => /Alcance del presupuesto no declarado/.test(a)));
   assert.ok(!sinAlcance.advertencias.some((a) => /vigente/.test(a)));
-  assert.equal(computeBudget({ partidas, apus, config: { ...cfg, alcance: 'completo' } }).etiqueta_total, 'TOTAL DE LA OBRA');
+  assert.equal(computeBudget({ partidas, apus: [{ ...apus[0], insumos: [{ ...apus[0].insumos[0], fecha_precio: '2026-10-01' }] }], config: { ...cfg, alcance: 'completo' } }).etiqueta_total, 'TOTAL DE LA OBRA');
 });

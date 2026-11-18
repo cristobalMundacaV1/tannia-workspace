@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { tunnelModel, compose, verifyDimensions, cantidadesFortificacion, prefijoDe } from './model.js';
+import { tunnelModel, compose, verifyDimensions, cantidadesFortificacion, cantidadesTunelContrato, prefijoDe } from './model.js';
 import { modeloDesdeEspecificacion } from './especificacion.js';
 import { buildSheetsPdf, verifyPdf, sceneForSheet, validateScene } from './pdf.js';
 import { buildDrawingDxf } from './dxf.js';
 import { verificarDxfContraModelo } from './dxf_verificar.js';
 import { documentoCantidades } from './cantidades_contrato.js';
 import { digest } from '../cad/operations.js';
-import { commitConHistorial, verificarManifiesto } from '../project/transaccion.js';
+import { commitConHistorial, verificarManifiesto, mutarHistorial } from '../project/transaccion.js';
 import { readJson, verificarContencion } from '../project/store.js';
 import { UserError } from '../mcp/util.js';
 import { copiarDentro } from '../project/store.js';
@@ -48,7 +48,14 @@ export class DrawingService {
     if (prior?.versiones.some(v => v.id === id)) {
       const integrity = verificarManifiesto(dir, id);
       if (integrity.estado !== 'integra') throw new UserError('ENTREGA_ALTERADA', 'Una revisión existente fue modificada; se conserva para investigar.');
-      return { revision: id, reused: true, folder: '06 Informes/Planos', files: prior.versiones.find(v => v.id === id).files, ready_for_delivery: false };
+      // A→B→A: volver a un modelo ya generado lo convierte en la revisión VIGENTE (antes el puntero se quedaba en B y
+      // cantidades, partidas y entrega seguían a B). Se registra el evento sin reescribir las láminas inmutables.
+      let restaurada = false;
+      if (prior.head !== id) {
+        mutarHistorial({ dir, historial: history, raiz: root, fn: (h) => { const desde = h.head; h.head = id; h.redo = []; h.eventos = [...(Array.isArray(h.eventos) ? h.eventos : []), { tipo: 'vigente_restaurada', desde, hacia: id, t: new Date().toISOString() }].slice(-200); } });
+        restaurada = true;
+      }
+      return { revision: id, reused: true, restaurada, folder: '06 Informes/Planos', files: prior.versiones.find(v => v.id === id).files, ready_for_delivery: false };
     }
     const all = []; const add = (ext, content) => { const name = `${id}-${ext}`; all.push({ nombre: name, contenido: content }); return name; };
     const pdfQa = []; const sceneQa = composition.sheets.map(s => ({ sheet: s.id, ...validateScene(sceneForSheet(composition, s), s) }));
@@ -74,8 +81,9 @@ export class DrawingService {
     const csv = (rows) => { const cols = [...new Set(rows.flatMap((q) => Object.keys(q)))]; return `${cols.join(';')}\n${rows.map((q) => cols.map((c) => q[c] ?? '').join(';')).join('\n')}\n`; };
     if (model.quantities?.length) add('cantidades.csv', csv(model.quantities));
     if (model.quantity_totals?.length) add('cantidades-totales.csv', csv(model.quantity_totals)); // separado: no sumar con el detalle
-    // Solo los modelos con filas clasificadas (especificación genérica) emiten el contrato; las alternativas de revestimiento del túnel aún no (PENDIENTE).
+    // Especificación genérica: filas clasificadas. Túnel: adaptador con la alternativa elegida sumable y la otra como comparación no sumable.
     if (model.quantities?.length && model.quantities.every((f) => f.fila)) add('cantidades.json', JSON.stringify(documentoCantidades(model, { modelo_sha256: digest(model), revision: id }), null, 2)); // contrato tw.cantidades/1
+    else if (!especificacion) { const t = cantidadesTunelContrato(model); if (t) add('cantidades.json', JSON.stringify({ ...documentoCantidades({ quantities: t.detalle, quantity_totals: t.totales }, { modelo_sha256: digest(model), revision: id }), alternativas_no_sumables: t.alternativas_no_sumables }, null, 2)); } // PL-09: túnel en el mismo contrato
     const fort = cantidadesFortificacion(model); if (fort) add('fortificacion.csv', csv(fort));
     add('verificacion.json', JSON.stringify({ dimensions: verifyDimensions(model), composition: sceneQa, layouts_dxf: layoutQa, dxf_vs_modelo: dxfQa, pdf: pdfQa, combined: combinedQa, dwg: 'NOT_RUN', ready_for_delivery: false, warnings: model.warnings }, null, 2));
     const entry = { id, files: all.map(a => a.nombre), model_sha256: digest(model), status: 'review_candidate', origin: model.provenance };

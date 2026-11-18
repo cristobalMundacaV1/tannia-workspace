@@ -10,6 +10,7 @@ import { sha256File, FOLDERS } from '../security/sandbox.js';
 import { UserError } from '../mcp/util.js';
 import { copiarDentro, verificarContencion } from '../project/store.js';
 import { unzipSync, strFromU8 } from 'fflate';
+import { archivosPlanosEntrega, REGLA_PLANOS } from '../expediente/planos_partidas.js';
 
 // Frases EXACTAS que emiten los generadores (mayúsculas): un nombre de proyecto como «R7 borrador» no es una marca.
 const MARCAS_NO_FINALES = /BORRADOR [—\x97-]|BORRADOR DESACTUALIZADO|NO FINAL|TOTAL PARCIAL|TOTAL INCOMPLETO|DESACTUALIZADA/;
@@ -73,6 +74,11 @@ export function prepararManifiesto(pr, { presupuesto, integridad, partidas, bloq
       if (marcas.length) bloqueos.push(`${ROLES_ENTREGA[tipo]} «${a.rel}» contiene marcas de documento no final (${marcas.join(', ')}); no puede exportarse como entrega final.`);
     }
   }
+  // TW-PRO-E2E G02/G09: si el proyecto tiene planos, la entrega lleva los de la revisión VIGENTE (la misma de la que salieron las
+  // cantidades). Planos A con partidas de B (NEG-03) se bloquea: cada partida derivada debe citar la revisión vigente.
+  const pl = archivosPlanosEntrega(pr); bloqueos.push(...pl.bloqueos);
+  const deOtros = (partidas || []).filter((p) => p.regla === REGLA_PLANOS && p.fuente?.plano_revision && (!pl.vig || p.fuente.plano_revision !== pl.vig.head));
+  if (deOtros.length) bloqueos.push(`Partidas calculadas con otra revisión de planos: ${deOtros.map((p) => `${p.codigo} (${p.fuente.plano_revision})`).join(', ')}${pl.vig ? `; vigente ${pl.vig.head}` : ''}. Regenérelas desde los planos vigentes.`);
   if (!presupuesto?.estado_final_posible) bloqueos.push(...(presupuesto?.bloqueos?.length ? presupuesto.bloqueos.slice(0, 15) : ['Presupuesto no apto para estado final.']));
   if (!integridad?.ok) bloqueos.push('Integridad de originales comprometida.');
   bloqueos.push(...bloqueosExtra);
@@ -82,7 +88,8 @@ export function prepararManifiesto(pr, { presupuesto, integridad, partidas, bloq
   const manifiesto = {
     schema: 'tw.delivery_manifest/1', id: idAleatorio('ent'), proyecto: pr.name, proyecto_id: pr.meta()?.id || null,
     revision: rev.n, revision_id: rev.id, snapshot: rev.snapshot,
-    archivos: Object.entries(elegido).map(([rol, a]) => ({ rol, rel: a.rel, sha256: a.sha256, bytes: a.bytes, artefacto: a.id })),
+    archivos: [...Object.entries(elegido).map(([rol, a]) => ({ rol, rel: a.rel, sha256: a.sha256, bytes: a.bytes, artefacto: a.id })), ...pl.archivos],
+    planos: pl.vig ? { revision: pl.vig.head, model_sha256: pl.vig.model_sha256, estado: 'REVISIÓN HUMANA PENDIENTE — fidelidad DWG en AutoCAD NO VERIFICADA' } : null,
     resumen: { total: presupuesto.total, etiqueta_total: presupuesto.etiqueta_total, alcance: presupuesto.alcance, alcance_descripcion: presupuesto.alcance_descripcion, costo_directo: presupuesto.costo_directo, moneda: presupuesto.moneda, politica_economica: presupuesto.config, partidas: partidas.map((p) => ({ codigo: p.codigo, cantidad: p.cantidad, unidad: p.unidad, recibo_verificacion: p.verificacion?.recibo || null })) },
     modalidad, proteccion_originales, advertencias: aviso ? [aviso] : [],
     originales: { estado: proteccion_originales === 'no_aplica_sin_originales' ? 'no_aplica_sin_originales' : integridad.estado, verificados: integridad.verificados },

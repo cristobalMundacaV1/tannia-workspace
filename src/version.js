@@ -1,3 +1,3 @@
-// R-03: candidato nuevo e inequívoco (rc.2 ya fue instalado y probado con otros bytes; no se reutiliza su nombre).
-export const VERSION = '0.2.0-rc.3';
+// TW-PRO-E2E: candidato nuevo (rc.3 ya existe con otros bytes y otro catálogo; un nombre nunca se reutiliza).
+export const VERSION = '0.3.0-rc.1';
 export const NAME = 'tannia-workspace';
