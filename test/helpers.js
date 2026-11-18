@@ -21,3 +21,22 @@ export async function startClient(home, entry = path.join(ROOT, 'src', 'main.js'
 }
 export const call = async (c, name, args = {}) => c.callTool({ name, arguments: args });
 export const data = (r) => r.structuredContent;
+
+/**
+ * Cliente MCP con una «persona» que responde las ventanas de confirmación (elicitación) del cliente. Simula la interacción
+ * humana fuera del alcance del modelo: el modelo llama herramientas, no puede responder estas ventanas.
+ */
+export async function startClientConPersona(home, entry = path.join(ROOT, 'src', 'main.js'), respuestas = [], extraEnv = {}) {
+  const { ElicitRequestSchema } = await import('@modelcontextprotocol/sdk/types.js');
+  const vistos = [];
+  const transport = new StdioClientTransport({ command: process.execPath, args: [entry], env: { ...process.env, TANNIA_HOME: home, TANNIA_SIN_DIALOGO: '1', ...extraEnv }, stderr: 'pipe' });
+  const client = new Client({ name: 'test-persona', version: '1' }, { capabilities: { elicitation: {} } });
+  client.setRequestHandler(ElicitRequestSchema, async (req) => { vistos.push(req.params.message); return respuestas.length ? respuestas.shift() : { action: 'decline' }; });
+  await client.connect(transport);
+  return { client, vistos, respuestas, close: () => client.close() };
+}
+export const PERSONA_SI = (nombre = 'Tannia') => ({ action: 'accept', content: { aprobar: true, nombre } });
+
+/** Delta de contrato de herramientas 0.2.0-rc.1 respecto de rc.3: nuevas y esquemas cambiados A PROPÓSITO (fixtures/rc). */
+export const CONTRATO_RC02 = JSON.parse(fs.readFileSync(path.join(FIX, 'rc', 'contrato_herramientas_0.2.json'), 'utf8'));
+export const NUEVAS_RC02 = Object.keys(CONTRATO_RC02.nuevas);

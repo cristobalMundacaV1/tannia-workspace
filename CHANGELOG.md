@@ -1,5 +1,27 @@
 # Changelog
 
+
+## 0.2.0-rc.2 — 2026-11-17 (candidato; no aceptado)
+- Moneda como dimensión tipada; conversión de divisas solo con tasa, fuente y fecha (antes CLP→USD 1:1).
+- Una sola política de redondeo para el CIC, el presupuesto y el Excel (antes diferían con precios decimales).
+- Memoria PDF sin página final vacía.
+- Motor genérico de planos (planta, corte, elevación, perfil, sección y detalle) y segundo dominio de edificación.
+- Túnel: lámina de fortificación con pernos y malla dibujados y cubicados por el mismo motor.
+- Presupuesto con alcance completo o parcial y advertencia de precios no vigentes.
+- Ventanas de autorización como pregunta con seis respuestas; detalles técnicos plegados.
+- Archivos entregados como vínculos MCP, con nombres y carpeta comprensibles.
+- Procedimiento «Desarrollar un proyecto completo».
+- Limitaciones: AutoCAD real, WPF en Windows y presentación de archivos en Claude Desktop NO VERIFICADOS. Ver docs/auditoria-integral-2026-11-17.
+
+## 0.2.0-rc.1 (candidato NO validado — remodelación Astra: autoridad, entrega y paquete)
+- **A-01 cerrado (N1):** verificar cantidades y aprobar entregas exige una ventana respondida por una persona (formulario del cliente o diálogo del SO); el modelo no puede hacerlo con nombres ni booleanos. Recibos HMAC ligados a acción, objeto, versión, huella y revisión. Canal de archivo desactivado para estas acciones.
+- **A-02 cerrado (N1):** revisiones monótonas del expediente; artefactos ligados a la revisión; la aprobación cubre un manifiesto exacto y se consume al exportar; exportación transaccional a `07 Entregables/Entrega R<n> …` con manifiesto y huellas. Nunca «el último archivo».
+- **A-03 cerrado (N1):** comparador DXF→DWG por contrato (capa, orden/sentido, bulge, elevación, OCS, círculos); tipos sin comparador o lecturas incompletas ⇒ no concluyente.
+- **A-04 cerrado:** gastos generales, utilidades e IVA ya no se suponen.
+- MethodCards MC01/MC02/MC04 (`tannia_metodo`) con origen de cada dato; migración segura de proyectos (`tannia_proyecto_migracion`); `tannia_entrega_estado`; 5 procedimientos para Claude Desktop (prompts MCP) y Skills de Claude Code; referencias normativas con fuente/versión/fecha/ámbito/límites.
+- ZIP de instalación para Windows x64 con `INSTALAR.cmd`, diagnóstico, guía, recuperación, licencias y SHA-256; verificador del artefacto final en CI (Ubuntu y Windows).
+- NO probado en Claude Desktop real, AutoCAD real ni con revisión profesional. Ver `docs/release-candidate/`.
+
 ## Sin publicar — fix CAD-OPEN-01 (3.ª incidencia): DXF por `Import`, no por `Documents.Open`
 - `Documents.Open` solo recibe `.dwg` (guardia en PowerShell y `viaApertura` en Node). Un `.dxf` se importa en un documento nuevo y aislado (`Documents.Add` + `Document.Import`); `Dibujo1` y otros documentos no se tocan.
 - Puerta de verificación antes de guardar cualquier DWG: layouts, viewports, cotas, XDATA `TANNIA_TRACE`, textos del cajetín y conteos por capa se miden en AutoCAD y se comparan con el DXF; si algo falta no se guarda nada (`IMPORTACION_DXF_INCOMPLETA`).

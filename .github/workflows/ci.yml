@@ -15,6 +15,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci
+      - name: Motor de recálculo XLSX (LibreOffice) para pruebas sin caché
+        if: runner.os == 'Linux'
+        run: command -v soffice || (sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libreoffice-calc)
       - run: npm test
       - run: npm run build
       - run: npm run pack
@@ -22,3 +25,68 @@ jobs:
         with:
           name: tannia-mcpb-${{ matrix.os }}
           path: dist/*.mcpb*
+
+  # Candidato de instalación: se construye UNA vez y se prueba el MISMO ZIP (misma huella) en Ubuntu y en Windows.
+  rc-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: npm run rc:zip
+        env: { TANNIA_TARGET: win32-x64 }
+      - run: node scripts/rc-verificar-zip.mjs dist/rc/Tannia-Workspace-*-windows-x64.zip --salida dist/rc/verificacion-zip-ubuntu.json
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tannia-workspace-zip-instalacion
+          path: |
+            dist/rc/*.zip
+            dist/rc/*.zip.sha256
+            dist/rc/rc-zip.json
+            dist/rc/verificacion-zip-ubuntu.json
+  rc-zip-windows:
+    needs: rc-zip
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with: { name: tannia-workspace-zip-instalacion, path: artefacto }
+      - name: Verificar el ZIP descargado (misma huella) en Windows
+        shell: bash
+        run: |
+          cat artefacto/*.zip.sha256
+          sha256sum artefacto/*.zip
+          node scripts/rc-verificar-zip.mjs artefacto/Tannia-Workspace-*-windows-x64.zip --salida artefacto/verificacion-zip-windows.json
+          node scripts/rc-probar-instalador.mjs artefacto/Tannia-Workspace-*-windows-x64.zip --salida artefacto/prueba-instalador-windows.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tannia-workspace-zip-evidencia-windows
+          path: |
+            artefacto/verificacion-zip-windows.json
+            artefacto/prueba-instalador-windows.json
+  # Interfaz REAL: ventana WPF abierta por el servidor MCP y accionada con Windows UI Automation (pywinauto).
+  # Autorizaciones SIMULADAS por automatización; no son aceptación humana.
+  gui-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: npm ci
+      - run: python -m pip install pywinauto==0.6.9 pillow==11.0.0
+      - name: Prueba UI Automation de la ventana WPF
+        run: python tools/gui/prueba_ventana_wpf.py dist/gui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tannia-gui-ventana-wpf
+          path: dist/gui

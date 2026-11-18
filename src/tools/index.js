@@ -7,7 +7,7 @@ import { VERSION } from '../version.js';
 import { VERSION_MOTOR } from '../architect/version.js';
 import { identidadPaquete } from '../mcp/paquete.js';
 import { FOLDERS, sha256File } from '../security/sandbox.js';
-import { ok, UserError } from '../mcp/util.js';
+import { ok, UserError, conArchivos } from '../mcp/util.js';
 import { createProject, listProjects } from '../project/projects.js';
 import { Project, ESTADOS } from '../project/store.js';
 import { readDxfFile, summarize } from '../dxf/inspect.js';
@@ -19,6 +19,14 @@ import { buildBudgetWorkbook } from '../budget/xlsx.js';
 import { buildMemoriaPdf } from '../report/memoria.js';
 import { inspectPdf, openPdf, extractPaths, calibrate, polyMeasure } from '../pdf/pdf.js';
 import { consultarNormativa } from '../normativa/index.js';
+import { conVerificacion, huellaPartida, revisionVigente } from '../autoridad/revision.js';
+import { Recibos } from '../autoridad/recibos.js';
+import { TARJETAS, CALCULAR, ORIGENES } from '../metodos/tarjetas.js';
+import { explicarPartida } from '../metodos/explicar.js';
+import { asegurarMigracion, leerEsquema, revertirMigracion } from '../autoridad/migracion.js';
+import { MODALIDADES, modalidad as modalidadDe, proteccionOriginales, bloqueosModalidad, avisoModalidad } from '../autoridad/modalidad.js';
+import { pedirAutorizacionHumana, TEXTO_SIN_CANAL, resultadoNoConfirmado, contenidoVentana } from '../autoridad/autorizacion.js';
+import { registrarArtefacto, estadoArtefactos, prepararManifiesto, aprobacionVigente, exportarEntrega, errorDeArchivo, ROLES_ENTREGA } from '../autoridad/entrega.js';
 
 const RO = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const RW = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
@@ -58,8 +66,10 @@ function leerModeloAutorizado(absDxf) {
   catch (e) { return e.code === 'ENOENT' ? null : { schema: 'invalido' }; }
 }
 export function registerTools(server, { sandbox, log, g, cad, config, detectar }) {
+  void log;
   const reg = (name, def, fn) => { TOOL_NAMES.push(name); server.registerTool(name, def, g(fn)); };
-  const P = (name) => new Project(sandbox, name);
+  // Toda herramienta de proyecto pasa por la migración segura (idempotente; respalda antes de tocar nada).
+  const P = (name) => { const pr = new Project(sandbox, name); asegurarMigracion(pr); return pr; };
   const srcHash = (proj, rel) => { const { abs } = sandbox.resolve(proj.name, rel); return { abs, sha: sha256File(abs) }; };
 
   // ---------- Sistema y proyectos ----------
@@ -82,6 +92,13 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
       carpeta_escribible: escritura, proyectos: listProjects(sandbox).length,
       autocad_registro: (detectar || detectarAutoCad)(),
       privacidad: 'Los archivos se procesan localmente, pero lo que Claude lee de ellos pasa al servicio de Claude.',
+      autorizacion_humana: (() => {
+        const elic = !!server?.server?.getClientCapabilities?.()?.elicitation;
+        const sinDlg = !!process.env.CI || process.env.TANNIA_SIN_DIALOGO === '1';
+        const dlg = sinDlg ? 'desactivado en esta ejecución' : process.platform === 'win32' ? 'disponible (ventana de Windows)' : process.platform === 'darwin' ? 'disponible (macOS)' : 'solo si existe zenity';
+        return { ventana_del_cliente: elic, dialogo_del_sistema: dlg, puede_aprobar: elic || (!sinDlg && ['win32', 'darwin'].includes(process.platform)), nota: 'Verificar cantidades y aprobar entregas requiere que una persona responda una de estas ventanas; Claude no puede hacerlo.' };
+      })(),
+      esquema_de_proyectos: 2,
     };
     return ok(escritura ? 'Todo en orden.' : 'PROBLEMA: no se puede escribir en la carpeta de Tannia Workspace.', data);
   });
@@ -103,7 +120,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     title: 'Estado del proyecto', description: 'Muestra estado, pendientes, integridad de originales y el siguiente paso sugerido.',
     inputSchema: { proyecto }, annotations: RO,
   }, async ({ proyecto: n }) => {
-    const pr = P(n); const m = pr.meta(); const partidas = pr.partidas();
+    const pr = P(n); const m = pr.meta(); const partidas = vista(pr);
     const integ = pr.verifyOriginals();
     const pend = [];
     if (!Object.keys(pr.originales()).length) pend.push('No hay originales registrados (use tannia_originales_registrar).');
@@ -112,7 +129,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     const nr = partidas.filter((p) => p.estado_revision === 'needs_review').length; if (nr) pend.push(`${nr} partida(s) con needs_review.`);
     const nv = partidas.filter((p) => !p.cantidad_verificada).length; if (nv) pend.push(`${nv} partida(s) sin verificar por una persona.`);
     const sinApu = partidas.filter((p) => !p.apu).length; if (sinApu) pend.push(`${sinApu} partida(s) sin APU.`);
-    return ok(`Estado: ${m.estado}.`, { proyecto: m.nombre, estado: m.estado, estados_posibles: ESTADOS, historial: m.historial.slice(-10), integridad_originales: integ, partidas: partidas.length, pendientes: pend });
+    return ok(`Estado: ${m.estado}.${avisoModalidad(pr) ? ` ATENCIÓN: ${avisoModalidad(pr)}` : ''}`, { proyecto: m.nombre, estado: m.estado, modalidad: modalidadDe(pr), proteccion_originales: proteccionOriginales(pr, integ), advertencia_modalidad: avisoModalidad(pr), revision_datos: pr.revision().id, estados_posibles: ESTADOS, historial: m.historial.slice(-10), integridad_originales: integ, partidas: partidas.length, pendientes: pend });
   });
 
   reg('tannia_proyecto_reparar', {
@@ -122,11 +139,11 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
 
   reg('tannia_proyecto_avanzar', {
     title: 'Cambiar estado del proyecto',
-    description: 'Avanza o retrocede el estado (nuevo → analisis → borrador → revision → aprobado → entregable). "aprobado" SOLO con aprobación explícita de la usuaria: pregúntele antes y registre su nombre. No apruebe por iniciativa propia.',
+    description: 'Avanza o retrocede el estado (nuevo → analisis → borrador → revision → aprobado → entregable). Pasar a "aprobado" abre una VENTANA DE CONFIRMACIÓN para la usuaria con el resumen exacto de la entrega (revisión, archivos y huellas); solo ella puede aprobar. Usted no puede aprobar: los parámetros aprobado_por/confirmo_revision_profesional ya no tienen efecto.',
     inputSchema: {
       proyecto, a_estado: z.enum(ESTADOS),
-      aprobado_por: z.string().optional().describe('Nombre de la persona que aprueba (solo para "aprobado")'),
-      confirmo_revision_profesional: z.boolean().optional().describe('true solo si la persona confirmó expresamente haber revisado cantidades y precios'),
+      aprobado_por: z.string().optional().describe('OBSOLETO, sin efecto: la persona se identifica en la ventana de confirmación.'),
+      confirmo_revision_profesional: z.boolean().optional().describe('OBSOLETO, sin efecto: la confirmación la da la persona en la ventana.'),
     }, annotations: RW,
   }, async ({ proyecto: n, a_estado, aprobado_por, confirmo_revision_profesional }) => {
     const pr = P(n); const m = pr.meta();
@@ -134,22 +151,64 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
     if (j === i) throw new UserError('SIN_CAMBIO', `El proyecto ya está en "${a_estado}".`);
     if (j > i + 1) throw new UserError('SALTO_NO_PERMITIDO', `No se puede saltar de "${m.estado}" a "${a_estado}". Siguiente permitido: "${ESTADOS[i + 1]}".`);
     const gates = [];
-    const partidas = pr.partidas();
+    const partidas = vista(pr);
     if (j > i) {
-      if (a_estado === 'analisis' && !Object.keys(pr.originales()).length) gates.push('Registre al menos un original (tannia_originales_registrar).');
+      if (a_estado === 'analisis' && !Object.keys(pr.originales()).length && modalidadDe(pr) !== 'manual_declarado') gates.push('Registre al menos un original (tannia_originales_registrar) o, si se trabajará solo con datos declarados en la conversación, declare la modalidad «manual_declarado» con tannia_proyecto_modalidad.');
       if (a_estado === 'borrador' && !partidas.length) gates.push('Cree al menos una partida.');
-      if (a_estado === 'revision' && !fs.readdirSync(pr.p(FOLDERS.presupuestos)).some((f) => f.endsWith('.xlsx'))) gates.push('Genere el presupuesto XLSX primero (tannia_presupuesto_generar).');
-      if (a_estado === 'aprobado') {
-        if (!aprobado_por || !aprobado_por.trim() || confirmo_revision_profesional !== true) gates.push('Falta la aprobación explícita de la usuaria (aprobado_por y confirmo_revision_profesional=true).');
-        const B = computeBudget({ partidas: staleMark(pr, partidas), apus: pr.apus(), config: pr.config() });
-        if (!B.estado_final_posible) gates.push(...B.bloqueos.slice(0, 15), ...(B.bloqueos.length ? [] : ['Presupuesto no apto para estado final.']));
-        const integ = pr.verifyOriginals(); if (!integ.ok) gates.push('Integridad de originales comprometida.');
-      }
-      if (a_estado === 'entregable') gates.push('Use tannia_entregable_exportar (valida y copia los archivos finales).');
+      if (a_estado === 'revision' && !estadoArtefactos(pr).some((a) => a.tipo === 'presupuesto_xlsx' && a.estado === 'vigente')) gates.push('Genere el presupuesto XLSX con los datos actuales (tannia_presupuesto_generar).');
+      if (a_estado === 'entregable') gates.push('Use tannia_entregable_exportar (valida y copia los archivos aprobados).');
     }
     if (gates.length) throw new UserError('GATE_NO_CUMPLIDO', `No se puede pasar a "${a_estado}": ${gates.join(' | ')}`, 'Resuelva los pendientes indicados.');
-    pr.setEstado(a_estado, a_estado === 'aprobado' ? `Aprobado por ${aprobado_por}` : undefined);
-    return ok(`Proyecto en estado "${a_estado}".`, { estado: a_estado });
+    if (a_estado !== 'aprobado' || j < i) { pr.setEstado(a_estado); return ok(`Proyecto en estado "${a_estado}".`, { estado: a_estado }); }
+    // ---- Aprobación: solo una PERSONA, sobre el manifiesto exacto de la revisión vigente ----
+    const B = computeBudget({ partidas, apus: pr.apus(), config: pr.config() });
+    const integA = pr.verifyOriginals(); const aviso = avisoModalidad(pr);
+    const { manifiesto, huella: hm, revision } = prepararManifiesto(pr, { presupuesto: B, integridad: integA, partidas, bloqueosExtra: bloqueosModalidad(pr, partidas, integA), modalidad: modalidadDe(pr), proteccion_originales: proteccionOriginales(pr, integA), aviso });
+    const clp = (x) => `$${Number(x).toLocaleString('es-CL')}`;
+    const adv = [...new Set(partidas.flatMap((p) => explicarPartida(p).advertencias.map((a) => `${p.codigo}: ${a}`)))];
+    const lineas = [`Proyecto: ${pr.name}`, `Revisión de datos: ${revision.id}`, ...(aviso ? ['', `ATENCIÓN: ${aviso}`] : []), '', 'Resumen económico (CLP)', `Costo directo ${clp(B.costo_directo)} · Gastos generales ${B.config.gastos_generales_pct}% ${clp(B.gastos_generales)} · Utilidades ${B.config.utilidades_pct}% ${clp(B.utilidades)}`, `Neto ${clp(B.neto)} · IVA ${B.config.iva_pct}% ${clp(B.iva)} · TOTAL ${clp(B.total)}`, 'Precios y porcentajes: origen no acreditado (declarados en la conversación).', '', `Partidas: ${partidas.length}, todas con cantidad confirmada por una persona.`, '', 'Archivos que se entregarán (exactamente estos):', ...manifiesto.archivos.map((a) => `  • ${a.rel}  (SHA-256 ${a.sha256.slice(0, 16)}…)`), ...(adv.length ? ['', 'Advertencias que permanecen (no impiden aprobar)', ...adv] : ['', 'Sin advertencias.'])];
+    const ventana = contenidoVentana({
+      pregunta: '¿Apruebas este presupuesto y su memoria para entregarlos?',
+      porque: `Todas las cantidades ya están confirmadas y los archivos están listos. Antes de entregarlos, una persona debe aprobarlos: Claude no puede hacerlo por ti.${aviso ? ` ATENCIÓN: ${aviso}` : ''}`,
+      // Resumen económico COMPLETO y visible (no plegado): etiqueta única de alcance/cálculo, montos, revisión, origen y advertencias.
+      revisar: [`${B.etiqueta_total}: ${clp(B.total)}`, `Costo directo ${clp(B.costo_directo)} · Gastos generales ${B.config.gastos_generales_pct} % ${clp(B.gastos_generales)} · Utilidades ${B.config.utilidades_pct} % ${clp(B.utilidades)}`, `Neto ${clp(B.neto)} · IVA ${B.config.iva_pct} % ${clp(B.iva)}`, `Revisión de datos: ${revision.id} · ${partidas.length} partida(s), todas con cantidad confirmada por una persona`, 'Precios y porcentajes: origen no acreditado (los indicaste en la conversación; no provienen de una fuente verificada).', ...(B.advertencias || []).map((a) => `Advertencia del presupuesto: ${a}`), ...(adv.length ? ['Advertencias que permanecen (no impiden aprobar):', ...adv.map((a) => `   ${a}`)] : ['Sin advertencias de partidas.'])],
+      autoriza: 'Que estos archivos, tal como están ahora, se entreguen como la versión aprobada del proyecto.',
+      si_acepta: 'Podrás exportar los archivos a la carpeta «07 Entregables». Si después cambia una cantidad, un precio, un porcentaje o un plano original, esta aprobación deja de valer y habrá que aprobar de nuevo.',
+      si_rechaza: 'No se entrega nada ni se borra nada. Puedes pedir correcciones y volver a solicitar la aprobación.',
+      afecta: manifiesto.archivos.map((a) => a.rel),
+      tecnico: [`Revisión de datos: ${revision.id}`, `Manifiesto: ${manifiesto.id}`, ...manifiesto.archivos.map((a) => `${a.rel} — SHA-256 ${a.sha256}`)],
+    });
+    const d = await pedirAutorizacionHumana({ sandbox, server, proyecto: pr.name, clave: `entrega-${manifiesto.id}`, ventana, titulo: 'Aprobar la entrega del presupuesto y la memoria', resumen: lineas.join('\n'), consecuencia: 'Si autoriza, podrá exportar estos archivos a "07 Entregables". Cualquier cambio posterior de cantidades, precios, parámetros u originales anula esta aprobación.', etiquetaAprobar: '_Aprobar entrega' });
+    if (!d.por) { const r = resultadoNoConfirmado(d, 'aprobación de la entrega'); throw new UserError(d.rechazado ? 'APROBACION_RECHAZADA' : 'APROBACION_HUMANA_REQUERIDA', `${r.mensaje} No se cambió nada.`, d.rechazado ? 'Revise lo indicado y vuelva a solicitar la aprobación cuando corresponda.' : 'Abra Tannia Workspace en Claude Desktop en Windows (aparece una ventana para aprobar) y vuelva a pedir la aprobación.', { resultado_codigo: r.codigo, ...r.detalle, manifiesto: manifiesto.id, ignorado: aprobado_por || confirmo_revision_profesional !== undefined ? 'aprobado_por/confirmo_revision_profesional no tienen efecto' : undefined }); }
+    const rec = new Recibos(sandbox).emitir(pr, { accion: 'aprobar_entrega', objetivo: manifiesto.id, objetivo_hash: hm, revision: revision.n, snapshot: revision.snapshot, artefactos: manifiesto.archivos, canal: d.por, declarado_por: d.nombre, resumen: { total: B.total, moneda: B.moneda } });
+    pr.setEstado('aprobado', `Aprobado por una persona (${d.por}${d.nombre ? `: ${d.nombre}` : ''}); recibo ${rec.id}; revisión ${revision.id}`);
+    return ok(`Entrega aprobada por una persona (${d.por === 'human_dialog' ? 'ventana del sistema' : 'confirmación del cliente'}). Ya puede exportarla con tannia_entregable_exportar.${aviso ? ` ATENCIÓN: ${aviso}` : ''}`, { advertencia_modalidad: aviso, estado: 'aprobado', revision: revision.id, recibo: rec.id, manifiesto: manifiesto.id, archivos: manifiesto.archivos.map((a) => ({ archivo: a.rel, sha256: a.sha256 })) });
+  });
+
+  reg('tannia_proyecto_migracion', {
+    title: 'Actualización de un proyecto antiguo (ver o revertir)',
+    description: 'accion "estado": muestra si el proyecto se actualizó desde una versión anterior, qué cambió (aprobaciones o verificaciones antiguas que deben repetirse, parámetros que ya no se suponen) y dónde está el respaldo. accion "revertir": restaura los datos exactos previos a la actualización (solo para volver a una versión anterior del programa; pregunte antes a la usuaria).',
+    inputSchema: { proyecto, accion: z.enum(['estado', 'revertir']) }, annotations: RW,
+  }, async ({ proyecto: n, accion }) => {
+    const pr = new Project(sandbox, n);
+    if (accion === 'revertir') { const r = revertirMigracion(pr); return ok(`Datos restaurados (${r.restaurados.length} archivo(s)).`, r); }
+    const m = asegurarMigracion(pr) || leerEsquema(pr);
+    return ok(m?.desde ? `Proyecto actualizado desde el esquema ${m.desde}.` : 'El proyecto ya usa el esquema actual.', m || {});
+  });
+
+  reg('tannia_proyecto_modalidad', {
+    title: 'Modalidad de trabajo del proyecto (con planos o solo con datos declarados)',
+    description: 'accion "ver" o "definir". "documental_geometrico" (por defecto): se trabaja con planos/documentos registrados como originales. "manual_declarado": se trabaja SOLO con medidas y datos indicados en la conversación, sin originales; todos los documentos y la entrega llevarán la advertencia de que nada se midió en planos ni se comprobó en obra. Pregunte a la usuaria antes de definirla. Cambiar la modalidad crea una revisión nueva e invalida documentos y aprobaciones.',
+    inputSchema: { proyecto, accion: z.enum(['ver', 'definir']), modalidad: z.enum(MODALIDADES).optional() }, annotations: RW,
+  }, async ({ proyecto: n, accion, modalidad: nueva }) => {
+    const pr = P(n);
+    if (accion === 'definir') {
+      if (!nueva) throw new UserError('FALTA_DATO', 'Indique la modalidad.');
+      const m = pr.meta(); const antes = modalidadDe(pr);
+      if (antes !== nueva) { m.modalidad = nueva; pr.saveMeta(m); pr.cambio(`Modalidad de trabajo: ${antes} → ${nueva}.`); pr.invalidateApproval('Cambió la modalidad de trabajo.'); pr.audit('modalidad', { antes, despues: nueva }); }
+    }
+    const aviso = avisoModalidad(pr);
+    return ok(`Modalidad: ${modalidadDe(pr)}.${aviso ? ` ATENCIÓN: ${aviso}` : ''}`, { modalidad: modalidadDe(pr), proteccion_originales: proteccionOriginales(pr), advertencia_modalidad: aviso, revision: pr.revision().id });
   });
 
   // ---------- Originales ----------
@@ -237,7 +296,7 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   });
 
   reg('tannia_partidas_listar', { title: 'Listar partidas', description: 'Lista partidas, cantidades, estado y APU asignado.', inputSchema: { proyecto }, annotations: RO }, async ({ proyecto: n }) => {
-    const pr = P(n); const ps = staleMark(pr, pr.partidas());
+    const pr = P(n); const ps = vista(pr);
     return ok(`${ps.length} partida(s).`, { partidas: ps.map((p) => ({ codigo: p.codigo, descripcion: p.descripcion, unidad: p.unidad, cantidad: p.cantidad, regla: p.regla, apu: p.apu || null, estado_revision: p.estado_revision, verificada: p.cantidad_verificada, advertencias: p.advertencias })) });
   });
 
@@ -249,18 +308,55 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   });
 
   reg('tannia_partida_verificar', {
-    title: 'Marcar cantidad como verificada por una persona',
-    description: 'SOLO tras revisión explícita de la usuaria (pregúntele). Las partidas con needs_review exigen indicar cómo se resolvió.',
-    inputSchema: { proyecto, codigo: z.string(), verificada_por: z.string().min(1), resolucion_needs_review: z.string().optional() }, annotations: RW,
-  }, async ({ proyecto: n, codigo, verificada_por, resolucion_needs_review }) => {
+    title: 'Pedir a la usuaria que verifique una cantidad',
+    description: 'Abre una VENTANA DE CONFIRMACIÓN donde la usuaria revisa la cantidad, fórmula y origen de la partida y decide si la verifica. Solo ella puede hacerlo; si la partida cambia después, la verificación deja de valer. Las partidas con needs_review exigen indicar cómo se resolvió (se le muestra a ella).',
+    inputSchema: { proyecto, codigo: z.string(), verificada_por: z.string().optional().describe('OBSOLETO, sin efecto: la persona se identifica en la ventana.'), resolucion_needs_review: z.string().max(500).optional() }, annotations: RW,
+  }, async ({ proyecto: n, codigo, resolucion_needs_review }) => {
     const pr = P(n); const all = pr.partidas(); const p = all.find((x) => x.codigo === codigo);
     if (!p) throw new UserError('PARTIDA_NO_EXISTE', `No existe la partida ${codigo}.`);
     const [s] = staleMark(pr, [p]);
     if (s.desactualizada) throw new UserError('PARTIDA_DESACTUALIZADA', 'El archivo de origen cambió desde que se calculó la cantidad.', 'Recalcule la partida.');
     if (p.estado_revision === 'needs_review' && !resolucion_needs_review) throw new UserError('NEEDS_REVIEW', 'La partida tiene needs_review: indique resolucion_needs_review (qué se revisó y cómo se resolvió).');
-    p.cantidad_verificada = true; p.verificada_por = verificada_por; p.verificada_en = new Date().toISOString(); if (resolucion_needs_review) p.resolucion_needs_review = resolucion_needs_review;
-    atomicSave(pr, all); pr.audit('partida_verificada', { codigo, verificada_por });
-    return ok('Partida marcada como verificada.', { codigo, verificada_por });
+    const ex = explicarPartida(p); const cant = `${Number(p.cantidad).toLocaleString('es-CL', { maximumFractionDigits: 3 })} ${p.unidad.replace('m2', 'm²').replace('m3', 'm³')}`;
+    // Resumen compacto (prueba UIA real: a 125/150 % la versión con separadores no cabía en la primera pantalla).
+    const lineas = [`Cantidad que va a confirmar: ${cant}`, ...ex.calculo, `Origen: ${ex.origen}${ex.alcance ? ` ${ex.alcance}` : ''}`, ...ex.advertencias.map((a) => `Advertencia: ${a}`), ...(resolucion_needs_review ? [`Resolución propuesta por el asistente (revísela): ${resolucion_needs_review}`] : [])];
+    const ventana = contenidoVentana({
+      pregunta: `¿Confirmas que ${p.descripcion} (${p.codigo}) mide ${cant}?`,
+      // Igual que en la ventana de entrega, el aviso de modalidad va en «Por qué»: visible sin que «Qué debes revisar» deje de caber al 150 %.
+      porque: `Esta cantidad se usará en el presupuesto. Solo una persona puede confirmar que es correcta.${avisoModalidad(pr) ? ` ATENCIÓN: ${avisoModalidad(pr)}` : ''}`,
+      revisar: lineas, autoriza: `Solo que ${cant} es la cantidad correcta de esta partida. No apruebas el presupuesto ni su entrega: la aprobación de la entrega es un paso posterior y separado.`,
+      si_acepta: 'La partida queda confirmada y puede entrar al presupuesto. Si después cambian las medidas, los vanos, la cantidad o el método, tendrás que confirmarla de nuevo (un cambio de precio no la anula).',
+      si_rechaza: 'La partida queda sin confirmar y no se puede aprobar la entrega todavía. Si ya tenía una confirmación vigente, esa se mantiene.',
+      afecta: ['Presupuesto (Excel)', 'Memoria de cálculo (PDF)'],
+      tecnico: [`Partida: ${p.codigo} · versión ${p.version_id || 'heredada'}`, `Regla: ${p.regla || '—'}`],
+    });
+    const d = await pedirAutorizacionHumana({ sandbox, server, proyecto: pr.name, clave: `verif-${p.codigo}-${p.version_id || 'legacy'}`, ventana, titulo: `Verificar cantidad de ${p.codigo} — ${p.descripcion}`, resumen: lineas.join('\n'), consecuencia: 'Confirma las medidas, los vanos informados y el resultado de esta partida; la aprobación de la entrega es un paso posterior. Si cambian las medidas, los vanos, la cantidad o el método, deberá confirmarla de nuevo; un cambio de precio no la anula.', etiquetaAprobar: `_Confirmar ${cant}`, etiquetaRechazar: '_No confirmar', etiquetaRevision: 'Revisé el cálculo y el origen de los datos.' });
+    if (!d.por) { const r = resultadoNoConfirmado(d, `verificación de ${codigo}`); throw new UserError(d.rechazado ? 'VERIFICACION_RECHAZADA' : 'VERIFICACION_HUMANA_REQUERIDA', r.mensaje, 'No se emitió una verificación nueva. Si la partida ya tenía una verificación vigente, sigue vigente.', { resultado_codigo: r.codigo, ...r.detalle }); }
+    let actual = pr.partidas().find((x) => x.codigo === codigo);
+    if (!actual.version_id) { pr.savePartidas(pr.partidas(), { revisar: true }); actual = pr.partidas().find((x) => x.codigo === codigo); } // partidas heredadas sin versión
+    if (huellaPartida(actual) !== huellaPartida(p)) throw new UserError('PARTIDA_CAMBIO_DURANTE_REVISION', 'La partida cambió mientras se revisaba; no se registró la verificación.', 'Vuelva a pedir la verificación.');
+    const rev = revisionVigente(pr);
+    const rec = new Recibos(sandbox).emitir(pr, { accion: 'verificar_partida', objetivo: codigo, objetivo_version: actual.version_id, objetivo_hash: huellaPartida(actual), revision: rev.n, snapshot: rev.snapshot, canal: d.por, declarado_por: d.nombre, nota_asistente: resolucion_needs_review || null });
+    pr.cambio(`Partida ${codigo} verificada por una persona.`); pr.invalidateApproval(`Se verificó la partida ${codigo}.`);
+    pr.audit('partida_verificada', { codigo, recibo: rec.id, canal: d.por });
+    return ok('Partida verificada por la usuaria.', { codigo, recibo: rec.id, canal: d.por, verificada_por: d.nombre || null });
+  });
+
+  reg('tannia_metodo', {
+    title: 'Métodos de cubicación (MethodCards): muros/vanos, losas, conteo de objetos físicos',
+    description: `accion "listar": métodos disponibles con fórmula, supuestos, exclusiones y oráculos. accion "calcular": aplica un método con datos cuyo ORIGEN se declara (${ORIGENES.join(' | ')}); con guardar_como crea la partida trazable (queda sin verificar). Ejemplo MC01: {tramos:[{longitud_m:5,origen:"medido"}], altura:{valor_m:2.4,origen:"declarado_usuaria"}, vanos:[{ancho_m:1,alto_m:2,tramo:0,origen:"declarado_usuaria"}], politica_descuento:{tipo:"descontar_todos",origen:"decision_profesional"}}. Nunca invente alturas, espesores ni políticas: pregúntelas. Un dato "supuesto" deja la partida en needs_review. No son normas chilenas.`,
+    inputSchema: { proyecto: proyecto.optional(), accion: z.enum(['listar', 'calcular']), metodo: z.enum(Object.keys(TARJETAS)).optional(), datos: z.record(z.string(), z.any()).optional(), archivo_origen: z.string().optional().describe('Archivo del que salen las medidas (para detectar si cambia)'), guardar_como: z.object({ codigo: z.string().min(1), descripcion: z.string().min(1), apu: z.string().optional() }).optional() }, annotations: RW,
+  }, async (a) => {
+    if (a.accion === 'listar') return ok(`${Object.keys(TARJETAS).length} método(s) disponibles (propuestos, no normativos).`, { metodos: Object.values(TARJETAS) });
+    if (!a.metodo || !a.datos) throw new UserError('FALTA_DATO', 'Indique metodo y datos.');
+    const r = CALCULAR[a.metodo](a.datos);
+    if (a.guardar_como) {
+      if (!a.proyecto) throw new UserError('FALTA_DATO', 'Indique el proyecto para guardar la partida.');
+      const pr = P(a.proyecto); let fuente = null;
+      if (a.archivo_origen) { const { sha } = srcHash(pr, a.archivo_origen); fuente = { archivo: a.archivo_origen, sha256: sha, capas: [] }; }
+      upsert(pr, { codigo: a.guardar_como.codigo, descripcion: a.guardar_como.descripcion, apu: a.guardar_como.apu, unidad: r.unidad, cantidad: r.cantidad, regla: `metodo:${r.metodo.id}@${r.metodo.version}`, formula: r.sustitucion, metodo: r.metodo, entradas: r.entradas, datos_metodo: a.datos, desglose: r.desglose, fuente, supuestos: r.supuestos, exclusiones: r.exclusiones, advertencias: r.advertencias, estado_revision: r.estado_revision, cantidad_verificada: false, creada: new Date().toISOString() });
+    }
+    return ok(`${r.metodo.id}: ${r.cantidad} ${r.unidad}${r.estado_revision === 'needs_review' ? ' (needs_review: hay supuestos o símbolos sin identidad)' : ''}${a.guardar_como ? ` · guardada como partida ${a.guardar_como.codigo} (sin verificar)` : ''}.`, r);
   });
 
   // ---------- APU y presupuesto ----------
@@ -276,53 +372,92 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   });
 
   reg('tannia_presupuesto_config', {
-    title: 'Configurar gastos generales, utilidades e IVA', description: 'Porcentajes del presupuesto. Pregunte los valores; no se suponen salvo IVA 19 % por defecto (verifique la tasa vigente).',
-    inputSchema: { proyecto, gastos_generales_pct: z.number().min(0).max(100).optional(), utilidades_pct: z.number().min(0).max(100).optional(), iva_pct: z.number().min(0).max(100).optional() }, annotations: RW,
-  }, async ({ proyecto: n, ...c }) => { const pr = P(n); const cfg = { ...pr.config(), ...c }; pr.saveConfig(cfg); return ok('Configuración guardada.', cfg); });
+    title: 'Configurar gastos generales, utilidades e IVA', description: 'Porcentajes del presupuesto (gastos generales, utilidades, IVA). Pregunte los valores: NINGUNO se supone; 0 solo si la usuaria lo decide. Sin los tres, el presupuesto queda en borrador.',
+    inputSchema: { proyecto, gastos_generales_pct: z.number().min(0).max(100).optional(), utilidades_pct: z.number().min(0).max(100).optional(), iva_pct: z.number().min(0).max(100).optional(), alcance: z.enum(['completo', 'parcial']).optional().describe('¿El presupuesto cubre la obra completa o solo una parte? Pregúntelo; un parcial nunca se presenta como costo total.'), alcance_descripcion: z.string().max(200).optional().describe('Qué cubre, p. ej. «solo fortificación del túnel».'), fecha_referencia_precios: z.string().max(10).optional().describe('Fecha (AAAA-MM-DD) para juzgar la vigencia de los precios; por defecto, hoy.') }, annotations: RW,
+  }, async ({ proyecto: n, ...c }) => { const pr = P(n); const cfg = { ...pr.configGuardada(), ...c, registro: { fecha: new Date().toISOString(), via: 'tannia_presupuesto_config', origen: 'no acreditado (valores enviados por el asistente; Tannia no puede verificar quién los aportó)' } }; pr.saveConfig(cfg); const { registro: _r, ...ef } = pr.config(); const nd = Object.entries(ef).filter(([, v]) => v == null).map(([k]) => k); return ok(nd.length ? `Configuración guardada. Aún sin definir: ${nd.join(', ')} (el presupuesto no puede quedar final).` : 'Configuración guardada.', ef); });
 
   reg('tannia_presupuesto_generar', {
     title: 'Generar presupuesto XLSX', description: 'Genera el Excel (fórmulas editables) en "05 Presupuestos". Se genera aunque haya pendientes, pero queda marcado BORRADOR y sin total final.',
     inputSchema: { proyecto }, annotations: RW,
   }, async ({ proyecto: n }) => {
-    const pr = P(n); const partidas = staleMark(pr, pr.partidas());
+    const pr = P(n); const partidas = vista(pr); const rev = revisionVigente(pr);
     if (!partidas.length) throw new UserError('SIN_PARTIDAS', 'No hay partidas para presupuestar.');
-    const { workbook, budget } = await buildBudgetWorkbook({ proyecto: pr.name, partidas, apus: pr.apus(), config: pr.config() });
-    const rel = `${FOLDERS.presupuestos}/Presupuesto ${stamp()}.xlsx`;
-    const { abs } = sandbox.resolveWritable(pr.name, rel);
-    await workbook.xlsx.writeFile(abs);
-    pr.audit('presupuesto_generado', { archivo: rel, final_posible: budget.estado_final_posible });
-    return ok(budget.estado_final_posible ? 'Presupuesto generado.' : 'Presupuesto generado como BORRADOR: hay pendientes.', { archivo: rel, total: budget.total, parcial: budget.parcial, estado_final_posible: budget.estado_final_posible, pendientes: budget.bloqueos });
+    const { workbook, budget } = await buildBudgetWorkbook({ proyecto: `${pr.name} · revisión ${rev.id}`, partidas, apus: pr.apus(), config: pr.config(), revision: rev.id, origen_economico: origenEconomico(pr), aviso_modalidad: avisoModalidad(pr) });
+    const buf = Buffer.from(await workbook.xlsx.writeBuffer());
+    const { abs: abs0 } = sandbox.resolveWritable(pr.name, `${FOLDERS.presupuestos}/Presupuesto ${rev.id} ${stamp()}.xlsx`);
+    let abs; try { abs = escribirSinSobrescribir(abs0, buf); } catch (e) { throw errorDeArchivo(e, path.basename(abs0), 'No se pudo guardar el presupuesto'); }
+    const rel = path.relative(pr.root, abs).split(path.sep).join('/');
+    const art = registrarArtefacto(pr, { tipo: 'presupuesto_xlsx', rel, datos: { total: budget.total, estado_final_posible: budget.estado_final_posible, estado_documento: budget.estado_final_posible ? 'candidato' : 'borrador' } });
+    pr.audit('presupuesto_generado', { archivo: rel, final_posible: budget.estado_final_posible, revision: art.revision_id });
+    return ok(budget.estado_final_posible ? `Presupuesto generado (revisión ${art.revision_id}). ${budget.etiqueta_total}: $${Number(budget.total).toLocaleString('es-CL')}.` : `Presupuesto generado como BORRADOR (revisión ${art.revision_id}): hay pendientes.`, { archivo: rel, sha256: art.sha256, revision: art.revision_id, total: budget.total, etiqueta_total: budget.etiqueta_total, alcance: budget.alcance, alcance_descripcion: budget.alcance_descripcion, calculo_incompleto: budget.calculo_incompleto, advertencias_presupuesto: budget.advertencias, estado_final_posible: budget.estado_final_posible, pendientes: budget.bloqueos });
   });
 
   reg('tannia_informe_generar', {
     title: 'Generar memoria de cálculo PDF', description: 'Genera la memoria (PDF) con trazabilidad, supuestos y advertencias en "06 Informes".',
     inputSchema: { proyecto }, annotations: RW,
   }, async ({ proyecto: n }) => {
-    const pr = P(n); const m = pr.meta(); const partidas = staleMark(pr, pr.partidas());
+    const pr = P(n); const m = pr.meta(); const partidas = vista(pr); const rev = revisionVigente(pr);
     const B = partidas.length ? computeBudget({ partidas, apus: pr.apus(), config: pr.config() }) : null;
-    const archivos = [...new Set(partidas.filter((p) => p.fuente?.archivo).map((p) => p.fuente.archivo))].map((a) => ({ archivo: a, sha256: partidas.find((p) => p.fuente?.archivo === a).fuente.sha256 }));
-    const buf = await buildMemoriaPdf({ proyecto: pr.name, generado: new Date().toISOString(), estado: m.estado, partidas, presupuesto: B, archivos, advertencias: partidas.filter((p) => p.desactualizada).map((p) => `Partida ${p.codigo} desactualizada respecto del archivo de origen.`) });
-    const rel = `${FOLDERS.informes}/Memoria ${stamp()}.pdf`;
-    const { abs: abs0 } = sandbox.resolveWritable(pr.name, rel); const abs = escribirSinSobrescribir(abs0, buf); const relFinal = path.relative(pr.root, abs).split(path.sep).join('/');
-    pr.audit('informe_generado', { archivo: relFinal });
-    return ok('Memoria PDF generada.', { archivo: relFinal, bytes: buf.length, sha256: sha256File(abs) });
+    const fuentes = new Map(); for (const p of partidas.filter((x) => x.fuente?.archivo)) { const f = fuentes.get(p.fuente.archivo) || { archivo: p.fuente.archivo, sha256: p.fuente.sha256, partidas: [] }; f.partidas.push(p.codigo); fuentes.set(p.fuente.archivo, f); }
+    const originales = Object.entries(pr.originales()).map(([archivo, v]) => ({ archivo, sha256: v.sha256 }));
+    const estadoDoc = B?.estado_final_posible ? 'candidato' : 'borrador';
+    const buf = await buildMemoriaPdf({ aviso_modalidad: avisoModalidad(pr), proteccion_originales: proteccionOriginales(pr), proyecto: pr.name, revision: rev.id, estado_documento: estadoDoc, generado: new Date().toISOString(), partidas, presupuesto: B, originales, archivos: [...fuentes.values()], origen_economico: origenEconomico(pr), advertencias: partidas.filter((p) => p.desactualizada).map((p) => `Partida ${p.codigo} desactualizada respecto del archivo de origen.`) });
+    const rel = `${FOLDERS.informes}/Memoria ${rev.id} ${stamp()}.pdf`;
+    const { abs: abs0 } = sandbox.resolveWritable(pr.name, rel); let abs; try { abs = escribirSinSobrescribir(abs0, buf); } catch (e) { throw errorDeArchivo(e, path.basename(abs0), 'No se pudo guardar la memoria'); }
+    const relFinal = path.relative(pr.root, abs).split(path.sep).join('/');
+    const art = registrarArtefacto(pr, { tipo: 'memoria_pdf', rel: relFinal, datos: { total: B?.total ?? null, estado_documento: estadoDoc } });
+    pr.audit('informe_generado', { archivo: relFinal, revision: art.revision_id });
+    return ok(`Memoria PDF generada (revisión ${art.revision_id}).`, { archivo: relFinal, bytes: buf.length, sha256: art.sha256, revision: art.revision_id });
   });
 
   reg('tannia_entregable_exportar', {
-    title: 'Exportar entregables', description: 'Solo con el proyecto en estado "aprobado": copia el último XLSX y PDF a "07 Entregables" con lista de huellas SHA-256 y pasa a "entregable".',
+    title: 'Exportar la entrega aprobada',
+    description: 'Copia EXACTAMENTE los archivos que la usuaria aprobó (misma revisión de datos y mismas huellas SHA-256) a una carpeta nueva en "07 Entregables", con manifiesto y huellas. Si algo cambió después de aprobar, no exporta y explica qué regenerar. Nunca usa "el último archivo".',
     inputSchema: { proyecto }, annotations: RW,
   }, async ({ proyecto: n }) => {
     const pr = P(n); const m = pr.meta();
-    if (m.estado !== 'aprobado') throw new UserError('NO_APROBADO', `El proyecto está en "${m.estado}". Solo se exporta un proyecto aprobado por la usuaria.`);
-    const latest = (dir, ext) => fs.readdirSync(pr.p(dir)).filter((f) => f.endsWith(ext)).sort().pop();
-    const x = latest(FOLDERS.presupuestos, '.xlsx'), pdf = latest(FOLDERS.informes, '.pdf');
-    if (!x || !pdf) throw new UserError('FALTAN_ARCHIVOS', 'Genere antes el presupuesto (XLSX) y la memoria (PDF).');
-    const out = []; for (const [dir, f] of [[FOLDERS.presupuestos, x], [FOLDERS.informes, pdf]]) {
-      // Nunca se reemplaza un entregable existente: idéntico → se reutiliza; distinto → se guarda con otro nombre
-      const dest0 = sandbox.resolveWritable(pr.name, `${FOLDERS.entregables}/${f}`).abs; const dest = escribirSinSobrescribir(dest0, fs.readFileSync(pr.p(dir, f))); out.push({ archivo: path.relative(pr.root, dest).split(path.sep).join('/'), sha256: sha256File(dest) });
-    }
-    escribirSinSobrescribir(sandbox.resolveWritable(pr.name, `${FOLDERS.entregables}/HUELLAS-SHA256.txt`).abs, Buffer.from(out.map((o) => `${o.sha256}  ${path.basename(o.archivo)}`).join('\n') + '\n'));
-    pr.setEstado('entregable', 'Entregables exportados'); return ok('Entregables exportados.', { archivos: out });
+    if (m.estado !== 'aprobado') throw new UserError('NO_APROBADO', `El proyecto está en "${m.estado}". Solo se exporta una entrega aprobada por la usuaria.`, 'Pida la aprobación con tannia_proyecto_avanzar a_estado "aprobado".');
+    const ap = aprobacionVigente(pr);
+    if (!ap.ok) { pr.setEstado('borrador', `Aprobación no vigente: ${ap.motivo}`); throw new UserError('APROBACION_NO_VIGENTE', `No se exporta: ${ap.motivo}`, 'El proyecto volvió a "borrador". Regenere el presupuesto y la memoria con los datos actuales y pida una nueva aprobación.'); }
+    const integ = pr.verifyOriginals(); if (!integ.ok) throw new UserError('ORIGINALES_COMPROMETIDOS', 'Los originales cambiaron después de aprobar.', 'Revise los originales; no se exportó nada.');
+    const r = exportarEntrega(pr, ap);
+    new Recibos(sandbox).consumir(pr, ap.recibo.id, `exportado a ${r.carpeta}`);
+    pr.setEstado('entregable', `Entregables exportados (${r.carpeta}); recibo ${ap.recibo.id}`);
+    const avisoEx = avisoModalidad(pr);
+    return conArchivos(ok(`Entrega exportada en "${r.carpeta}" (revisión ${ap.revision.id}).${avisoEx ? ` ATENCIÓN: ${avisoEx}` : ''}`, { advertencia_modalidad: avisoEx, modalidad: modalidadDe(pr), proteccion_originales: proteccionOriginales(pr), carpeta: r.carpeta, revision: ap.revision.id, archivos: r.archivos.map((x) => ({ archivo: x.archivo, sha256: x.sha256 })) }), { raiz: sandbox.projectRoot(pr.name), carpeta: r.carpeta, archivos: r.archivos.map((x) => x.archivo) });
+  });
+
+  reg('tannia_recibos_verificar', {
+    title: 'Auditar recibos de autorización (solo lectura)',
+    description: 'Comprueba con el mecanismo interno (sin exponer la clave) la integridad, vigencia, alcance y consumo de cada recibo de verificación/aprobación del proyecto. Distingue: integridad del recibo, canal de consentimiento e identidad (declarada, nunca autenticada).',
+    inputSchema: { proyecto }, annotations: RO,
+  }, async ({ proyecto: n }) => {
+    const pr = P(n); const R = new Recibos(sandbox); const lect = R.leer(pr); const rev = revisionVigente(pr); const ps = pr.partidas(); const ap = aprobacionVigente(pr);
+    const filas = lect.recibos.map((r) => {
+      let vigente = false; let motivo;
+      if (r.accion === 'verificar_partida') { const p = ps.find((x) => x.codigo === r.objetivo); vigente = !!p && p.version_id === r.objetivo_version && huellaPartida(p) === r.objetivo_hash; motivo = vigente ? 'cubre la versión actual de la partida' : (p ? 'la partida cambió después (otra versión o contenido)' : 'la partida ya no existe'); }
+      else if (r.accion === 'aprobar_entrega') { const usado = lect.consumidos.has(r.id); vigente = !usado && ap.ok && ap.recibo.id === r.id; motivo = usado ? 'consumido al exportar (un solo uso)' : vigente ? 'cubre la revisión y los archivos actuales' : (r.revision !== rev.n ? `emitido para R${r.revision}; vigente ${rev.id}` : 'archivos o manifiesto ya no coinciden'); }
+      return { recibo: r.id, accion: r.accion, alcance: { objetivo: r.objetivo, version: r.objetivo_version, revision: `R${r.revision}`, archivos: r.artefactos.map((a) => a.rel) }, integridad: 'firma HMAC válida', canal_consentimiento: r.canal === 'human_dialog' ? 'diálogo del sistema operativo' : 'confirmación del cliente MCP', identidad: r.declarado_por ? `declarada en la ventana: «${r.declarado_por}» (NO autenticada; no acredita competencia profesional)` : 'no declarada', emitido: r.emitido, consumido: lect.consumidos.has(r.id), vigente, motivo };
+    });
+    return ok(`${filas.length} recibo(s) con firma válida; ${lect.invalidos} línea(s) rechazadas por firma o formato inválidos.`, { revision_vigente: rev.id, recibos: filas, lineas_invalidas: lect.invalidos, nota: 'Integridad ≠ identidad: la firma prueba que el recibo lo emitió este servidor tras una respuesta humana en el canal indicado; no prueba quién era la persona ni su habilitación profesional.' });
+  });
+
+  reg('tannia_entrega_estado', {
+    title: 'Estado de la entrega (qué falta para aprobar o exportar)', description: 'Solo lectura. Muestra la revisión vigente de los datos, qué archivos corresponden a esos datos y cuáles quedaron desactualizados, si hay una aprobación vigente y qué falta.',
+    inputSchema: { proyecto }, annotations: RO,
+  }, async ({ proyecto: n }) => {
+    const pr = P(n); const rev = revisionVigente(pr); const arts = estadoArtefactos(pr, rev); const ap = aprobacionVigente(pr); const ps = vista(pr);
+    const faltan = Object.keys(ROLES_ENTREGA).filter((t) => !arts.some((a) => a.tipo === t && a.estado === 'vigente')).map((t) => `Generar ${ROLES_ENTREGA[t]} con los datos actuales.`);
+    const sinVerif = ps.filter((p) => !p.cantidad_verificada).map((p) => p.codigo);
+    const B = ps.length ? computeBudget({ partidas: ps, apus: pr.apus(), config: pr.config() }) : null;
+    const etiqueta = { vigente: 'corresponde a los datos actuales', de_otra_revision: 'DESACTUALIZADO (datos anteriores)', modificado: 'MODIFICADO fuera de Tannia', faltante: 'FALTA el archivo' };
+    return ok(ap.ok ? 'Hay una entrega aprobada lista para exportar.' : `Revisión vigente ${rev.id}.`, {
+      revision: rev.id, estado_proyecto: pr.meta().estado,
+      archivos: arts.slice(-20).map((a) => ({ archivo: a.rel, tipo: ROLES_ENTREGA[a.tipo] || a.tipo, revision: `R${a.revision}`, estado: etiqueta[a.estado] })),
+      aprobacion: ap.ok ? { vigente: true, recibo: ap.recibo.id, manifiesto: ap.manifiesto.id } : { vigente: false, motivo: ap.motivo },
+      modalidad: modalidadDe(pr), proteccion_originales: proteccionOriginales(pr), advertencia_modalidad: avisoModalidad(pr),
+      pendientes: [...faltan, ...bloqueosModalidad(pr, ps), ...(sinVerif.length ? [`Verificar con la usuaria: ${sinVerif.join(', ')}.`] : []), ...((B?.bloqueos || []).filter((x) => !/NO verificada/.test(x)).slice(0, 10))],
+    });
   });
 
   // ---------- PDF ----------
@@ -397,11 +532,22 @@ export function registerTools(server, { sandbox, log, g, cad, config, detectar }
   registerProyectos(reg, { sandbox });
   registerArquitectura(reg, { sandbox, cad });
   if (cicActivo()) registerCic(reg, { sandbox, server, herramientas: () => [...new Set(TOOL_NAMES)] }); // TW-11: desactivado por defecto (72 herramientas)
-  if (process.env.TANNIA_ENGINEERING === 'on') registerDrawing(reg, { sandbox, cad, server });
+  // PL-01: el motor de planos es capacidad del PRODUCTO distribuido (el manifiesto declara TANNIA_ENGINEERING=on). Solo «off» lo desactiva.
+  if (motorPlanosActivo()) registerDrawing(reg, { sandbox, cad, server });
 }
 
-// La verificación es el acto de revisión: no invalida el estado (sí invalida cualquier cambio de datos).
-function atomicSave(pr, all) { pr.savePartidas(all, { revisar: true }); }
+/** Configuración soportada de producción: motor de planos activo salvo TANNIA_ENGINEERING=off explícito. */
+export function motorPlanosActivo(env = process.env) { return !/^(off|0|false|no)$/i.test(String(env.TANNIA_ENGINEERING ?? 'on').trim()); }
+
+/** Origen de precios y porcentajes: Tannia solo puede declarar lo registrado; nunca lo atribuye a la usuaria. */
+function origenEconomico(pr) {
+  const fuentes = [...new Set(pr.apus().flatMap((a) => (a.insumos || []).map((i) => i.fuente_precio).filter(Boolean)))];
+  const reg = pr.configGuardada().registro;
+  return `ORIGEN NO ACREDITADO. Precios con fuente declarada (texto no verificado): ${fuentes.length ? fuentes.map((f) => `«${f}»`).join(', ') : 'ninguna'}. Porcentajes ${reg ? `registrados por el asistente el ${reg.fecha}` : 'sin registro de origen'}; Tannia no puede comprobar quién aportó estos valores.`;
+}
+
+/** Partidas tal como valen hoy: verificación SOLO por recibo humano vigente y marca de desactualización por archivo de origen. */
+function vista(pr) { return staleMark(pr, conVerificacion(pr, pr.partidas())); }
 
 /** Marca partidas cuyo archivo de origen cambió desde el cálculo. */
 export function staleMark(pr, partidas) {

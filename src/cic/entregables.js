@@ -61,7 +61,7 @@ export function bloquesAPdf(B, { marca }) {
       else if (b.li) for (const x of b.li) d.moveDown(0.15).font('Helvetica').fontSize(10).text(`• ${latin(x)}`, { width: W, indent: 8 });
       else if (b.tabla) { d.moveDown(0.3).font('Helvetica-Bold').fontSize(8.5).text(latin(b.tabla.head.join('  |  ')), { width: W }); d.font('Helvetica').fontSize(8.5); for (const r of b.tabla.rows) d.text(latin(r.map((x) => String(x)).join('  |  ')), { width: W }); d.fontSize(10); }
     }
-    const rango = d.bufferedPageRange(); for (let i = rango.start; i < rango.start + rango.count; i++) { d.switchToPage(i); d.font('Helvetica').fontSize(7.5).fillColor('#a00').text(latin(marca), 50, d.page.height - 38, { width: W, align: 'center', lineBreak: false }); d.fillColor('#777').text(`Página ${i + 1} de ${rango.count}`, 50, d.page.height - 26, { width: W, align: 'center', lineBreak: false }); }
+    const rango = d.bufferedPageRange(); for (let i = rango.start; i < rango.start + rango.count; i++) { d.switchToPage(i); d.page.margins.bottom = 0; d.font('Helvetica').fontSize(7.5).fillColor('#a00').text(latin(marca), 50, d.page.height - 38, { width: W, align: 'center', lineBreak: false }); d.fillColor('#777').text(`Página ${i + 1} de ${rango.count}`, 50, d.page.height - 26, { width: W, align: 'center', lineBreak: false }); }
     d.end();
   });
 }

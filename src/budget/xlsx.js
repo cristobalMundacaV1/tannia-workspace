@@ -2,6 +2,7 @@
 // y se verifican de forma independiente recalculando con LibreOffice en las pruebas.
 import ExcelJS from 'exceljs';
 import { apuUnitCost, computeBudget, TIPOS_INSUMO } from './calc.js';
+import { explicarPartida } from '../metodos/explicar.js';
 
 const CLP = '#,##0';
 const bold = { bold: true };
@@ -9,7 +10,7 @@ const fillWarn = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE699
 const fillHead = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
 const fillInput = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
 
-export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, cache = true, generado = new Date().toISOString() }) {
+export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, cache = true, generado = new Date().toISOString(), revision = null, origen_economico = null, aviso_modalidad = null }) {
   const B = computeBudget({ partidas, apus, config });
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Tannia Workspace'; wb.created = new Date(generado);
@@ -19,10 +20,18 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   const wp = wb.addWorksheet('Parametros');
   wp.columns = [{ width: 34 }, { width: 14 }, { width: 60 }];
   wp.addRow(['Parámetro', 'Valor', 'Nota']).font = bold;
-  wp.addRow(['Gastos generales (%)', B.config.gastos_generales_pct, 'Editable. Sin valor por defecto inventado: 0 si no se indicó.']);
-  wp.addRow(['Utilidades (%)', B.config.utilidades_pct, 'Editable. Sin valor por defecto inventado: 0 si no se indicó.']);
-  wp.addRow(['IVA (%)', B.config.iva_pct, 'Editable. Tasa legal vigente: VERIFICAR antes de entregar.']);
+  const nd = 'NO DEFINIDO: se calcula con 0 solo como borrador; indique el valor antes de entregar.';
+  wp.addRow(['Gastos generales (%)', B.config.gastos_generales_pct ?? 0, B.config.gastos_generales_pct == null ? nd : 'Editable. Valor indicado explícitamente.']);
+  wp.addRow(['Utilidades (%)', B.config.utilidades_pct ?? 0, B.config.utilidades_pct == null ? nd : 'Editable. Valor indicado explícitamente.']);
+  wp.addRow(['IVA (%)', B.config.iva_pct ?? 0, B.config.iva_pct == null ? nd : 'Editable. Valor indicado explícitamente; tasa legal vigente: VERIFICAR antes de entregar.']);
   for (const r of [2, 3, 4]) wp.getCell(`B${r}`).fill = fillInput;
+  // Nombres estables: las fórmulas no dependen de la posición de filas informativas (incidente R5–R8: IVA leía texto en B4).
+  wb.definedNames.add('Parametros!$B$2', 'PCT_GG'); wb.definedNames.add('Parametros!$B$3', 'PCT_UTILIDAD'); wb.definedNames.add('Parametros!$B$4', 'PCT_IVA');
+  wp.addRow([]);
+  wp.addRow(['Alcance del presupuesto', B.etiqueta_total, B.alcance === 'no_declarado' ? 'Indique si cubre la obra completa o solo una parte.' : '']);
+  wp.addRow(['Política económica', 'GG y utilidades sobre costo directo; IVA sobre costo directo + GG + utilidades; cada total redondeado a peso (ROUND).', '']);
+  if (aviso_modalidad) wp.addRow(['Modalidad / originales', aviso_modalidad, 'Protección de originales: no aplica (sin originales registrados).']);
+  if (origen_economico) wp.addRow(['Origen de precios y porcentajes', origen_economico, 'Tannia no puede acreditar quién aportó estos valores.']);
 
   // --- APU
   const wa = wb.addWorksheet('APU');
@@ -67,7 +76,8 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
   const ws = wb.addWorksheet('Presupuesto', { views: [{ state: 'frozen', ySplit: 4 }] });
   ws.columns = [{ width: 10 }, { width: 50 }, { width: 8 }, { width: 14 }, { width: 16 }, { width: 18 }, { width: 44 }];
   ws.getCell('A1').value = `Presupuesto — ${proyecto}`; ws.getCell('A1').font = { bold: true, size: 14 };
-  ws.getCell('A2').value = B.estado_final_posible ? 'Estado: apto para revisión final (cantidades marcadas como verificadas y precios completos)' : 'BORRADOR — NO FINAL: hay precios o cantidades pendientes (ver hoja Alertas)';
+  ws.getCell('A2').value = B.estado_final_posible ? `CANDIDATO A ENTREGA${revision ? ` — revisión ${revision}` : ''}: válido solo si su huella coincide con el manifiesto aprobado` : 'BORRADOR — NO FINAL: hay precios o cantidades pendientes (ver hoja Alertas)';
+  if (aviso_modalidad) { ws.getCell('A3').value = `ATENCIÓN: ${aviso_modalidad}`; ws.getCell('A3').font = { bold: true, color: { argb: 'FFC00000' } }; }
   ws.getCell('A2').font = { bold: true, color: { argb: B.estado_final_posible ? 'FF2E7D32' : 'FFC00000' } };
   ws.getRow(4).values = ['Código', 'Partida', 'Unidad', 'Cantidad', 'P. unitario CLP', 'Total CLP', 'Estado de la cantidad'];
   ws.getRow(4).font = bold; ws.getRow(4).fill = fillHead;
@@ -95,20 +105,22 @@ export async function buildBudgetWorkbook({ proyecto, partidas, apus, config, ca
     pr++; return pr - 1;
   };
   const rDir = pr; sumRow('Costo directo', `SUM(F${firstP}:F${lastP})`, B.costo_directo);
-  const rGG = pr; sumRow('Gastos generales', `ROUND(F${rDir}*Parametros!B2/100,0)`, B.gastos_generales);
-  const rUt = pr; sumRow('Utilidades', `ROUND(F${rDir}*Parametros!B3/100,0)`, B.utilidades);
+  const rGG = pr; sumRow('Gastos generales', `ROUND(F${rDir}*PCT_GG/100,0)`, B.gastos_generales);
+  const rUt = pr; sumRow('Utilidades', `ROUND(F${rDir}*PCT_UTILIDAD/100,0)`, B.utilidades);
   const rNeto = pr; sumRow('Neto', `F${rDir}+F${rGG}+F${rUt}`, B.neto, true);
-  const rIva = pr; sumRow('IVA', `ROUND(F${rNeto}*Parametros!B4/100,0)`, B.iva);
-  sumRow('TOTAL', `F${rNeto}+F${rIva}`, B.total, true);
-  if (B.parcial) { ws.getRow(pr + 1).getCell(2).value = 'TOTAL PARCIAL: excluye partidas con PENDIENTE.'; ws.getRow(pr + 1).getCell(2).font = { bold: true, color: { argb: 'FFC00000' } }; }
+  const rIva = pr; sumRow('IVA', `ROUND(F${rNeto}*PCT_IVA/100,0)`, B.iva);
+  const rTot = sumRow('TOTAL', `F${rNeto}+F${rIva}`, B.total, true);
+  // Rótulo de alcance/cálculo junto al total (la fila conserva «TOTAL» como ancla estable para lectores y fórmulas).
+  ws.getRow(rTot).getCell(3).value = B.etiqueta_total; ws.getRow(rTot).getCell(3).font = { bold: true, color: { argb: B.alcance === 'completo' && !B.calculo_incompleto ? 'FF1F3864' : 'FFC00000' } }; ws.getRow(rTot).getCell(3).alignment = { wrapText: true };
+  if (B.calculo_incompleto) { ws.getRow(pr + 1).getCell(2).value = 'TOTAL INCOMPLETO: excluye partidas con PENDIENTE.'; ws.getRow(pr + 1).getCell(2).font = { bold: true, color: { argb: 'FFC00000' } }; }
 
   // --- Cubicación (trazabilidad)
   const wc = wb.addWorksheet('Cubicacion');
   wc.columns = [{ width: 10 }, { width: 36 }, { width: 8 }, { width: 14 }, { width: 50 }, { width: 40 }, { width: 50 }];
-  wc.getRow(1).values = ['Código', 'Partida', 'Unidad', 'Cantidad', 'Fórmula', 'Fuente (archivo · SHA-256 · capas)', 'Supuestos y advertencias'];
+  wc.getRow(1).values = ['Código', 'Partida', 'Unidad', 'Cantidad', 'Cálculo', 'Origen y alcance', 'Advertencias'];
   wc.getRow(1).font = bold; wc.getRow(1).fill = fillHead;
   for (const p of partidas) {
-    wc.addRow([p.codigo, p.descripcion, p.unidad, p.cantidad, p.formula || '', p.fuente ? `${p.fuente.archivo} · ${p.fuente.sha256 || 's/hash'} · ${(p.fuente.capas || []).join(',')}` : 'ingreso manual', [...(p.supuestos || []), ...(p.advertencias || [])].join(' | ')]);
+    const e = explicarPartida(p); wc.addRow([p.codigo, p.descripcion, p.unidad, p.cantidad, e.calculo.join(' '), [e.origen, e.alcance, p.fuente ? `${p.fuente.archivo} · SHA-256 ${p.fuente.sha256 || 's/hash'}` : null].filter(Boolean).join(' '), e.advertencias.join(' | ')]);
   }
   // --- Alertas
   const wl = wb.addWorksheet('Alertas');

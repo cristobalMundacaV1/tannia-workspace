@@ -4,7 +4,11 @@ import { createServer } from './server.js';
 import { describeHome } from './config.js';
 
 // stdout es el canal del protocolo: los logs van a stderr y sin datos de usuario.
-const log = (evento, datos) => process.stderr.write(`${JSON.stringify({ evento, ...datos })}\n`);
+import os from 'node:os';
+// Redacción: nunca se registran rutas personales completas (carpeta del usuario → «~»).
+const HOME = os.homedir();
+const redactar = (v) => (typeof v === 'string' && HOME && HOME.length > 3 ? v.split(HOME).join('~') : v);
+const log = (evento, datos) => process.stderr.write(`${JSON.stringify({ evento, ...Object.fromEntries(Object.entries(datos || {}).map(([k, v]) => [k, redactar(v)])) })}\n`);
 
 async function main() {
   const info = describeHome();

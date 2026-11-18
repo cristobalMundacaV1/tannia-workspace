@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { tmpHome, startClient, call, data } from './helpers.js';
+import { tmpHome, startClient, call, data, NUEVAS_RC02, CONTRATO_RC02 } from './helpers.js';
 
 const RC2 = fs.readFileSync(new URL('./fixtures_tw10/encargo_rc2_reconstruido.txt', import.meta.url), 'utf8');
 const texto = (r) => r.content.map((c) => c.text).join('\n');
@@ -30,7 +30,7 @@ test('rc2 completo por MCP: 6 objetivos pedidos (+ supervisión asumida), sin vi
     assert.equal(sha(v2), h2, 'versión anterior intacta');
     r = await call(c, 'tannia_arq_encargo', { proyecto: P, estudio: E, texto: 'Dime qué viento domina; no inventes nada.' }); assert.ok(!data(r).brief?.objectives?.some((o) => o.kind === 'wind_shelter'));
     assert.equal((await call(c, 'tannia_arq_evaluar', { proyecto: P, estudio: E, alternativa: 'alt-L_con_patio', seccion: 'nada' })).isError, true);
-    assert.equal((await cli.client.listTools()).tools.length, 72);
+    assert.equal((await cli.client.listTools()).tools.length, 72 + NUEVAS_RC02.length);
   } finally { await cli.close(); }
 });
 

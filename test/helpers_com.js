@@ -15,7 +15,7 @@ export function entidadesCom(dxfTexto, { textoComo = 'real' } = {}) {
     else if (e.type === 'ARC') {
       const a0 = e.a0 * D2R; const a1 = e.a1 * D2R; let sw = (a1 - a0) % (2 * Math.PI); if (sw <= 0) sw += 2 * Math.PI;
       out.push({ tipo: 'AcDbArc', capa: e.layer, props: { Center: [e.c.x, e.c.y, 0], Radius: e.r, StartAngle: a0, EndAngle: a1, ArcLength: e.r * sw, StartPoint: [e.c.x + e.r * Math.cos(a0), e.c.y + e.r * Math.sin(a0), 0], EndPoint: [e.c.x + e.r * Math.cos(a1), e.c.y + e.r * Math.sin(a1), 0] } }); // IAcadArc NO tiene Length
-    } else if (e.type === 'POLYLINE') out.push({ tipo: 'AcDb2dPolyline', capa: e.layer, props: { Coordinates: e.verts.flatMap((v) => [v.x, v.y, 0]), Closed: e.closed } }); // R12 → polilínea 2D: 3 valores por vértice
+    } else if (e.type === 'POLYLINE') out.push({ tipo: 'AcDb2dPolyline', capa: e.layer, props: { Coordinates: e.verts.flatMap((v) => [v.x, v.y, 0]), Closed: e.closed, Elevation: e.elevation ?? 0, Bulges: e.verts.map((v) => v.bulge || 0) } }); // R12 → polilínea 2D: 3 valores por vértice
     else if (e.type === 'TEXT') {
       const real = dxfDecode(e.text);
       const ts = textoComo === 'escape' ? e.text : textoComo === 'corrupto' ? real.replace(/[^\x00-\x7f]/g, '?') : real;
@@ -32,7 +32,7 @@ export function tipado(e, h) {
   switch (e.tipo) {
     case 'AcDbLine': Object.assign(o, { inicio: arr(p.StartPoint), fin: arr(p.EndPoint), longitud: p.Length ?? null }); break;
     case 'AcDbArc': Object.assign(o, { centro: arr(p.Center), radio: p.Radius ?? null, angulo_inicio: p.StartAngle ?? null, angulo_fin: p.EndAngle ?? null, longitud_arco: p.ArcLength ?? null, inicio: arr(p.StartPoint), fin: arr(p.EndPoint) }); break;
-    case 'AcDb2dPolyline': case 'AcDbPolyline': Object.assign(o, { coordenadas: arr(p.Coordinates), cerrada: p.Closed ?? null, longitud: p.Length ?? null, area: p.Area ?? null }); break;
+    case 'AcDb2dPolyline': case 'AcDbPolyline': Object.assign(o, { coordenadas: arr(p.Coordinates), cerrada: p.Closed ?? null, longitud: p.Length ?? null, area: p.Area ?? null, elevacion: p.Elevation ?? null, bulges: arr(p.Bulges) }); break;
     case 'AcDbText': Object.assign(o, { texto: p.TextString, posicion: arr(p.InsertionPoint), alineacion: p.Alignment ?? null, punto_alineacion: arr(p.TextAlignmentPoint), altura: p.Height ?? null, rotacion: p.Rotation ?? null }); break;
     case 'AcDb3dSolid': Object.assign(o, { volumen: p.Volume ?? null, centroide: arr(p.Centroid) }); if (p.BBoxMin) { o.bbox_min = arr(p.BBoxMin); o.bbox_max = arr(p.BBoxMax); } break;
     default: o.sin_propiedades_conocidas = true;

@@ -138,7 +138,7 @@ export function registerDiseno(reg, { sandbox, cad }) {
   }, async ({ proyecto: p, nombre: n, version, tam_lote }) => {
     const rutas = A.rutas(p, n, version);
     const r = await cad.verificarDwg(p, { dxfRel: rutas.dxf, dwgRel: rutas.dxf.replace(/\.dxf$/i, '.dwg'), tam_lote });
-    const msg = { fiel: `DWG fiel al anteproyecto ${rutas.version}: geometría, textos y capas coinciden.`, con_diferencias: 'El DWG tiene DIFERENCIAS con el anteproyecto (ver comparacion_geometrica, textos y estructura).', no_concluyente: 'Verificación NO CONCLUYENTE: hay lecturas ilegibles o incoherentes (ver inconsistencias_internas e ilegibles).' }[r.fidelidad];
+    const msg = { fiel: `DWG fiel al anteproyecto ${rutas.version}: geometría, textos y capas coinciden.`, con_diferencias: 'El DWG tiene DIFERENCIAS con el anteproyecto (ver comparacion_geometrica, textos y estructura).', no_concluyente: 'Verificación NO CONCLUYENTE: hay entidades sin comparador, propiedades que AutoCAD no informó (p. ej. arcos de polilínea) o lecturas ilegibles/incoherentes (ver comparacion_geometrica.no_verificables, sin_comparador, inconsistencias_internas e ilegibles). No se declara fiel.' }[r.fidelidad];
     return ok(msg, { version: rutas.version, ...r });
   });
 

@@ -43,7 +43,7 @@ test('APU y presupuesto: valores calculados a mano', () => {
 test('bloqueos: precio faltante, cantidad no verificada, unidad distinta, sin APU', () => {
   const sinPrecio = structuredClone(apus); sinPrecio[1].insumos[0].precio_unitario = null;
   let B = computeBudget({ partidas: partidas(), apus: sinPrecio, config });
-  assert.equal(B.estado_final_posible, false); assert.equal(B.parcial, true);
+  assert.equal(B.estado_final_posible, false); assert.equal(B.calculo_incompleto, true); assert.match(B.etiqueta_total, /TOTAL INCOMPLETO/);
   assert.ok(B.bloqueos.some((b) => /FALTA PRECIO/.test(b)));
   assert.equal(B.lineas[1].total, null);
   B = computeBudget({ partidas: partidas(false), apus, config });

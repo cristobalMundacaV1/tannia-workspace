@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { tmpHome, startClient, call, data } from './helpers.js';
+import { tmpHome, startClient, call, data, NUEVAS_RC02, CONTRATO_RC02 } from './helpers.js';
 import { epwSintetico } from './helpers_epw.js';
 
 const sha = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
@@ -14,7 +14,7 @@ test('72 herramientas (61 TW-09 + 11 TW-10) con esquemas válidos para el client
   const { client, close } = await startClient(tmpHome());
   try {
     const { tools } = await client.listTools(); const n = tools.map((t) => t.name);
-    assert.equal(tools.length, 72); assert.equal(n.filter((x) => x.startsWith('tannia_arq_')).length, 11);
+    assert.equal(tools.length, 72 + NUEVAS_RC02.length); for (const x of NUEVAS_RC02) assert.ok(n.includes(x), x); assert.equal(n.filter((x) => x.startsWith('tannia_arq_')).length, 11);
     for (const t of ['tannia_diseno_crear', 'tannia_3d_crear', 'tannia_3d_a_autocad', 'tannia_proyecto_importar', 'tannia_encargo_evaluar']) assert.ok(n.includes(t), t);
     const bad = (x, r) => { if (!x || typeof x !== 'object') return; if (Array.isArray(x.items)) assert.fail(`items arreglo en ${r}`); for (const [k, v] of Object.entries(x)) bad(v, `${r}.${k}`); };
     for (const t of tools) bad(t.inputSchema, t.name);

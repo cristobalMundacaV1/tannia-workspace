@@ -2,7 +2,7 @@
 // NO demuestran que Claude Desktop responda breve: eso se comprueba en campo con docs/tw11/entrega/PROTOCOLO_COMUNICACION_DESKTOP.md.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { tmpHome, startClient, call, data } from './helpers.js';
+import { tmpHome, startClient, call, data, NUEVAS_RC02, CONTRATO_RC02 } from './helpers.js';
 import { advertenciasCriticas, GUIA, NIVELES } from '../src/cic/comunicacion.js';
 
 const M = (value, unit = 'm') => ({ value, unit });
@@ -66,7 +66,7 @@ test('7: ninguna respuesta de herramienta narra («voy a…», «procederé…»
 test('10: compatibilidad — con CIC apagado no existe la herramienta ni cambia nada; con CIC activado las herramientas anteriores no cambian su salida (solo se agregan las nuevas)', async () => {
   const off = await startClient(tmpHome('Tannia ñ off2 '), undefined, { TANNIA_CIC: 'off' }); const on = await startClient(tmpHome('Tannia ñ on2 '), undefined, { TANNIA_CIC: 'on' });
   try {
-    assert.ok(!(await off.client.listTools()).tools.some((t) => t.name === 'tannia_comunicacion')); assert.equal((await off.client.listTools()).tools.length, 72); assert.equal((await on.client.listTools()).tools.length, 84);
+    assert.ok(!(await off.client.listTools()).tools.some((t) => t.name === 'tannia_comunicacion')); assert.equal((await off.client.listTools()).tools.length, 72 + NUEVAS_RC02.length); assert.equal((await on.client.listTools()).tools.length, 84 + NUEVAS_RC02.length);
     for (const nombre of ['tannia_diagnostico', 'tannia_politica_autonomia']) { const a = await call(off.client, nombre, {}); const b = await call(on.client, nombre, {}); assert.ok(!/Nivel de respuesta/.test(b.content[0].text), 'las herramientas anteriores no se tocan'); if (nombre === 'tannia_politica_autonomia') assert.deepEqual(data(a), data(b)); }
     await nivel(on.client, { accion: 'establecer', nivel: 'detallado' }); const e = await call(on.client, 'tannia_encargo_evaluar', { solicitud: 'casa de 90 m2 con 3 dormitorios' }); assert.ok(!/Nivel de respuesta/.test(e.content[0].text));
   } finally { await off.close(); await on.close(); }

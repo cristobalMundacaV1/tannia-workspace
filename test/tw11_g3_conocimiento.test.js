@@ -93,7 +93,7 @@ async function clienteConElicitacion(home, respuesta) {
   await client.connect(new StdioClientTransport({ command: process.execPath, args: [path.join(ROOT, 'src', 'main.js')], env: { ...process.env, TANNIA_HOME: home, TANNIA_CIC: 'on', TANNIA_SIN_DIALOGO: '1' }, stderr: 'pipe' })); return client;
 }
 test('aprobación humana por elicitación del cliente: aceptar / rechazar / cancelar', async () => {
-  for (const [resp, esperado] of [[{ action: 'accept', content: { aprobar: true } }, 'registered'], [{ action: 'accept', content: { aprobar: false } }, 'rejected'], [{ action: 'decline' }, 'rejected'], [{ action: 'cancel' }, 'rejected']]) {
+  for (const [resp, esperado] of [[{ action: 'accept', content: { aprobar: true } }, 'registered'], [{ action: 'accept', content: { aprobar: false } }, 'rejected'], [{ action: 'decline' }, 'rejected'], [{ action: 'cancel' }, 'candidate']]) { // cancelar NO es rechazar: la fuente sigue pendiente (código VENTANA_CERRADA_SIN_RESPUESTA)
     const home = tmpHome('Tannia ñ elic '); const c = await clienteConElicitacion(home, resp);
     try {
       await call(c, 'tannia_proyecto_crear', { nombre: P });

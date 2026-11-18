@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, tmpHome, startClient } from './helpers.js';
+import { ROOT, tmpHome, startClient, NUEVAS_RC02, CONTRATO_RC02 } from './helpers.js';
 import { cicActivo } from '../src/cic/flag.js';
 import * as S from '../src/cic/schemas.js';
 
@@ -17,10 +17,12 @@ test('flag TANNIA_CIC: apagado por defecto y solo "on/1/true/si" lo enciende', (
 test('línea base: con el flag apagado el servidor expone EXACTAMENTE las 72 herramientas de rc3 (nombres y esquemas idénticos)', async () => {
   const { client, close } = await startClient(tmpHome(), undefined, { TANNIA_CIC: 'off' });
   try {
-    const { tools } = await client.listTools(); assert.equal(tools.length, 72); assert.equal(base.total, 72);
+    const { tools } = await client.listTools(); assert.equal(tools.length, 72 + NUEVAS_RC02.length); assert.equal(base.total, 72);
     const crypto = await import('node:crypto'); const sha = (o) => crypto.createHash('sha256').update(JSON.stringify(o)).digest('hex');
-    const act = new Map(tools.map((t) => [t.name, sha(t.inputSchema)])); const b = new Map(base.herramientas.map((h) => [h.nombre, h.sha256_esquema]));
-    assert.deepEqual([...act.keys()].sort(), [...b.keys()].sort()); for (const [n, h] of b) assert.equal(act.get(n), h, `esquema cambió: ${n}`);
+    const act = new Map(tools.filter((t) => !NUEVAS_RC02.includes(t.name)).map((t) => [t.name, sha(t.inputSchema)])); const b = new Map(base.herramientas.map((h) => [h.nombre, h.sha256_esquema]));
+    assert.deepEqual([...act.keys()].sort(), [...b.keys()].sort());
+    // Solo cambian los esquemas declarados (con motivo) en fixtures/rc/contrato_herramientas_0.2.json; y esos SÍ deben haber cambiado.
+    for (const [n, h] of b) { if (CONTRATO_RC02.esquemas_cambiados[n]) assert.notEqual(act.get(n), h, `declarado como cambiado pero idéntico: ${n}`); else assert.equal(act.get(n), h, `esquema cambió sin declararse: ${n}`); }
     assert.ok(!tools.some((t) => t.name.startsWith('tannia_cic_')));
   } finally { await close(); }
 });
@@ -29,8 +31,8 @@ test('con el flag encendido las 72 previas permanecen idénticas y se AGREGAN so
   const { client, close } = await startClient(tmpHome(), undefined, { TANNIA_CIC: 'on' });
   try {
     const { tools } = await client.listTools(); const crypto = await import('node:crypto'); const sha = (o) => crypto.createHash('sha256').update(JSON.stringify(o)).digest('hex');
-    const nuevas = tools.filter((t) => t.name.startsWith('tannia_cic_') || t.name === 'tannia_comunicacion'); assert.ok(nuevas.length >= 4); assert.equal(tools.length, 72 + nuevas.length);
-    for (const h of base.herramientas) { const t = tools.find((x) => x.name === h.nombre); assert.ok(t, h.nombre); assert.equal(sha(t.inputSchema), h.sha256_esquema, h.nombre); }
+    const nuevas = tools.filter((t) => t.name.startsWith('tannia_cic_') || t.name === 'tannia_comunicacion'); assert.ok(nuevas.length >= 4); assert.equal(tools.length, 72 + NUEVAS_RC02.length + nuevas.length);
+    for (const h of base.herramientas) { const t = tools.find((x) => x.name === h.nombre); assert.ok(t, h.nombre); if (!CONTRATO_RC02.esquemas_cambiados[h.nombre]) assert.equal(sha(t.inputSchema), h.sha256_esquema, h.nombre); }
     for (const t of nuevas) { assert.equal(t.inputSchema.type, 'object'); const bad = (x) => { if (x && typeof x === 'object') { assert.ok(!Array.isArray(x.items), `${t.name}: items como arreglo`); Object.values(x).forEach(bad); } }; bad(t.inputSchema); }
   } finally { await close(); }
 });

@@ -1,0 +1,108 @@
+// Motor genérico de planos (TW-PRO-06) y fortificación dentro del motor geométrico (UAT-02).
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { tunnelModel, compose, cantidadesFortificacion, verifyDimensions } from '../src/drawing/model.js';
+import { modeloDesdeEspecificacion, recintoEspecificacion, cantidadesRecinto } from '../src/drawing/especificacion.js';
+import { sceneForSheet, validateScene, buildSheetsPdf, verifyPdf } from '../src/drawing/pdf.js';
+import { buildDrawingDxf } from '../src/drawing/dxf.js';
+import { verifyLayouts, viewportsFromDxf, expectedLayouts } from '../src/drawing/layouts_check.js';
+
+const F = { perno_longitud: 2.4, espaciamiento_transversal: 1.5, espaciamiento_longitudinal: 1.5, malla: true, traslapo_malla_pct: 10 };
+const code = (fn) => { try { fn(); return null; } catch (e) { return e.code; } };
+async function gates(model, opts = {}) {
+  const c = compose(model);
+  for (const s of c.sheets) assert.deepEqual(validateScene(sceneForSheet(c, s), s).issues, [], `legibilidad lámina ${s.id}`);
+  const dxf = buildDrawingDxf(c);
+  assert.ok(verifyLayouts(viewportsFromDxf(dxf), expectedLayouts(c)).ok, 'layouts/viewports');
+  assert.match(dxf, /\$ACADVER\n1\nAC1024/); assert.match(dxf, /\$INSUNITS\n70\n6/);
+  const pdf = await buildSheetsPdf(c); const q = await verifyPdf(pdf, c.sheets, opts);
+  assert.deepEqual(q.issues, []); assert.equal(q.pages, c.sheets.length);
+  return { c, dxf };
+}
+
+test('túnel UAT-02 con fortificación: 5 láminas, pernos y malla dibujados y cubicados desde la geometría', async () => {
+  const m = tunnelModel({ fortificacion: F });
+  assert.ok(verifyDimensions(m).ok);
+  const { dxf } = await gates(m);
+  const filas = cantidadesFortificacion(m);
+  const pernos = filas.find((f) => f.partida === 'Pernos de anclaje');
+  // Oráculo independiente: desarrollo P = 2·2,5 + π·2,75 = 13,6394 m; n = ceil(P/1,5) = 10; anillos = 150/1,5 + 1 = 101.
+  const P = 2 * 2.5 + Math.PI * 2.75; assert.equal(Math.ceil(P / 1.5), 10);
+  assert.equal(pernos.cantidad, 1010); assert.ok(Math.abs(pernos.longitud_total_m - 1010 * 2.4) < 1e-9);
+  const malla = filas.find((f) => f.partida === 'Malla de acero');
+  // La malla se cubica sobre la MALLA dibujada (radio r − 0,03 m): desarrollo 2·2,5 + π·2,72 (oráculo a mano).
+  const Pm = 2 * 2.5 + Math.PI * 2.72; assert.ok(Math.abs(malla.cantidad - Pm * 150 * 1.1) < 1e-6, `${malla.cantidad} vs ${Pm * 150 * 1.1}`);
+  assert.match(pernos.naturaleza, /esquemático académico.*NO es una disposición geotécnica/);
+  assert.equal((dxf.match(/\nPERNOS\n/g) || []).length >= 10, true, 'los pernos son entidades del DXF en su capa');
+  assert.match(dxf, /elemento=pernos/);
+  // Cada perno sale perpendicular al contorno y mide exactamente la longitud declarada.
+  for (const e of m.views.find((v) => v.id === 'fortificacion').entities.filter((x) => x.layer === 'PERNOS')) assert.ok(Math.abs(Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]) - 2.4) < 1e-9);
+});
+
+test('fortificación sin datos declarados se rechaza (no se suponen espaciamientos ni traslapos)', () => {
+  assert.equal(code(() => tunnelModel({ fortificacion: { ...F, espaciamiento_transversal: undefined } })), 'DATOS_INVALIDOS');
+  assert.equal(code(() => tunnelModel({ fortificacion: { ...F, traslapo_malla_pct: undefined } })), 'DATOS_INVALIDOS');
+  assert.equal(cantidadesFortificacion(tunnelModel()), null);
+  assert.equal(compose(tunnelModel()).sheets.length, 4, 'sin fortificación se conserva el juego de 4 láminas');
+});
+
+test('segundo dominio (edificación): planta, corte y elevación con el MISMO compositor, DXF y PDF', async () => {
+  const m = modeloDesdeEspecificacion(recintoEspecificacion({ largo: 8, ancho: 5, espesor_muro: 0.2, altura: 2.4, proyecto: 'Casa' }));
+  assert.deepEqual(m.views.map((v) => v.type), ['planta', 'corte', 'elevacion']);
+  const { dxf } = await gates(m, { prefijo: 'REC', marca: 'DOCUMENTO DE TRABAJO' });
+  assert.match(dxf, /\nREC-01\n/); assert.match(dxf, /\nMUROS\n/);
+  const [q] = cantidadesRecinto(m, 2.4);
+  assert.ok(Math.abs(q.area_planta_m2 - (8 * 5 - 7.6 * 4.6)) < 1e-9); assert.ok(Math.abs(q.volumen_m3 - 5.04 * 2.4) < 1e-9);
+});
+
+test('especificación genérica: validación estricta (escala normalizada, capa declarada, cotas ortogonales, vistas sin lámina)', () => {
+  const base = () => ({ codigo: 'DET', especialidad: 'obras civiles', capas: { EJE: { leyenda: 'eje' } }, vistas: [{ id: 'd', titulo: 'Detalle', tipo: 'detalle', escala: 20, elementos: [{ tipo: 'rectangulo', capa: 'EXCAVACION', origen: [0, 0], ancho: 1, alto: 0.5 }], cotas: [{ tipo: 'lineal', a: [0, 0], b: [1, 0] }] }], laminas: [{ id: '01', titulo: 'Detalle', vistas: ['d'] }] });
+  assert.ok(modeloDesdeEspecificacion(base()));
+  const mut = (f) => { const b = base(); f(b); return code(() => modeloDesdeEspecificacion(b)); };
+  assert.equal(mut((b) => { b.vistas[0].escala = 33; }), 'ESCALA_INVALIDA');
+  assert.equal(mut((b) => { b.vistas[0].elementos[0].capa = 'NOEXISTE'; }), 'CAPA_NO_DECLARADA');
+  assert.equal(mut((b) => { b.vistas[0].cotas[0].b = [1, 1]; }), 'COTA_NO_SOPORTADA');
+  assert.equal(mut((b) => { b.vistas.push({ ...b.vistas[0], id: 'x' }); }), 'VISTA_SIN_LAMINA');
+  assert.equal(mut((b) => { b.vistas[0].elementos[0].ancho = -1; }), 'GEOMETRIA_INVALIDA');
+  assert.equal(mut((b) => { b.capas.PAPEL = {}; }), 'CAPA_RESERVADA');
+  // Una vista que no cabe NO se reescala: falla.
+  const grande = base(); grande.vistas[0].elementos[0].ancho = 50; grande.vistas[0].cotas[0].b = [50, 0];
+  assert.equal(code(() => compose(modeloDesdeEspecificacion(grande))), 'VISTA_NO_CABE');
+});
+
+test('MCP: «generar» con especificación de edificación entrega PDF/DXF/CSV como vínculos y nombres comprensibles', async () => {
+  const { tmpHome, startClient } = await import('./helpers.js');
+  const home = tmpHome('Tannia planos gen '); const cli = await startClient(home, undefined, { TANNIA_ENGINEERING: 'on', TANNIA_CIC: 'on', TANNIA_SIN_DIALOGO: '1' }); const c = cli.client;
+  try {
+    await c.callTool({ name: 'tannia_proyecto_crear', arguments: { nombre: 'Casa prueba' } });
+    const r = await c.callTool({ name: 'tannia_planos', arguments: { proyecto: 'Casa prueba', accion: 'generar', especificacion: recintoEspecificacion({ largo: 8, ancho: 5, espesor_muro: 0.2, altura: 2.4 }) } });
+    assert.ok(!r.isError, JSON.stringify(r.content).slice(0, 400));
+    const links = r.content.filter((x) => x.type === 'resource_link');
+    assert.ok(links.some((l) => l.name.endsWith('conjunto.pdf') && l.mimeType === 'application/pdf' && l.uri.startsWith('file://')));
+    assert.ok(links.some((l) => l.name.endsWith('planos.dxf')));
+    assert.match(r.content[0].text, /Archivos listos[\s\S]*Para abrirlos/);
+    assert.doesNotMatch(r.content[0].text, /sha256|HMAC/i);
+    assert.equal(r.structuredContent.entrega.modo, 'archivo_guardado_localmente');
+    const fs = await import('node:fs'); for (const a of r.structuredContent.entrega.archivos) assert.ok(fs.existsSync(a.ruta), a.ruta);
+  } finally { await cli.close?.(); }
+});
+
+test('fortificación con valores NO múltiplos: anillos en ambos extremos, espaciamiento real ≤ declarado, conteo y longitudes reproducibles', async () => {
+  // L = 137,3 m, s_l = 1,4 m → anillos = ceil(98,07) + 1 = 100, paso real = 137,3/99 = 1,3869 m ≤ 1,4.
+  // Sección: ancho 5,5 (r = 2,75), hastial 2,5 → P = 5 + 2,75π = 13,6394 m; s_t = 1,7 → n = ceil(8,023) = 9, paso 1,5155 m ≤ 1,7.
+  const F2 = { perno_longitud: 2.35, espaciamiento_transversal: 1.7, espaciamiento_longitudinal: 1.4, malla: true, traslapo_malla_pct: 7.5 };
+  const m = tunnelModel({ length: 137.3, fortificacion: F2 });
+  assert.ok(verifyDimensions(m).ok); const { dxf } = await gates(m);
+  assert.match(dxf, /\nDIMENSION\n/, 'cotas nativas DIMENSION (no texto suelto)');
+  const filas = cantidadesFortificacion(m); const pernos = filas.find((f) => f.partida === 'Pernos de anclaje');
+  const P = 2 * 2.5 + Math.PI * 2.75; const n = Math.ceil(P / 1.7); const anillos = Math.ceil(137.3 / 1.4) + 1;
+  assert.equal(n, 9); assert.equal(anillos, 100);
+  assert.equal(pernos.cantidad, n * anillos); assert.ok(Math.abs(pernos.longitud_total_m - n * anillos * 2.35) < 1e-9);
+  assert.ok(pernos.distribucion.espaciamiento_longitudinal_real_m <= 1.4 + 1e-12); assert.ok(Math.abs(pernos.distribucion.espaciamiento_longitudinal_real_m - 137.3 / 99) < 1e-12);
+  const v = m.views.find((x) => x.id === 'fortificacion'); const lineas = v.entities.filter((e) => e.layer === 'PERNOS');
+  assert.equal(lineas.length, n, 'el dibujo tiene exactamente los pernos cubicados por anillo');
+  for (const e of lineas) assert.ok(Math.abs(Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]) - 2.35) < 1e-9, 'cada perno mide la longitud declarada');
+  const malla = filas.find((f) => f.partida === 'Malla de acero'); const Pm = 2 * 2.5 + Math.PI * 2.72;
+  assert.ok(Math.abs(malla.cantidad - Pm * 137.3 * 1.075) < 1e-6);
+  assert.ok(Math.abs(cantidadesFortificacion(tunnelModel({ length: 137.3, fortificacion: F2 })).find((f) => f.partida === 'Pernos de anclaje').cantidad - pernos.cantidad) === 0, 'reproducible');
+});

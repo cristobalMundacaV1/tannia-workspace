@@ -1,0 +1,105 @@
+✔ muro con vanos: área neta medida = L·H − 0,9·2,0 − 1,2·1,0 (oráculo a mano) y conteo de vanos (3.57702ms)
+✔ cambio geométrico (L 6 → 6,35 m) cambia la cantidad y la huella del modelo (1.55826ms)
+✖ cantidades inventadas, unidades incompatibles, fuentes inexistentes y duplicados se rechazan (2.961294ms)
+✔ cantidad declarada: exige origen y queda rotulada como NO medida desde el plano; no se mezcla con medidas (0.866965ms)
+✔ ítem 1: el mismo muro dibujado en planta y elevación no se mide dos veces (identidad física y rol fuente) (0.795426ms)
+✔ ítem 4: contornos autointersectantes, con retroceso, degenerados o con vértices repetidos no son superficie física (0.88919ms)
+✖ ítem 4 (huecos mal definidos): un descuento fuera del contorno o vanos superpuestos no restan superficie (0.555794ms)
+✖ ítem 4: vano en el entrante de un muro en L (dentro del rectángulo envolvente, fuera del muro) no se descuenta (0.369528ms)
+✖ ítem 5: contrato tw.cantidades/1 — se suma solo el detalle, el total es de control y una fila total o mixta se rechaza (0.993544ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 5
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 96.921492
+
+✖ failing tests:
+
+test at test/g3_cantidades_geometria.test.js:42:1
+✖ cantidades inventadas, unidades incompatibles, fuentes inexistentes y duplicados se rechazan (2.961294ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'MEDICION_INVALIDA'
+  - 'DESCUENTO_FUERA_DEL_CONTORNO'
+  
+      at TestContext.<anonymous> (file:///tmp/claude-0/wt-31bb249/test/g3_cantidades_geometria.test.js:48:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+      at Test.postRun (node:internal/test_runner/test:1173:19)
+      at Test.run (node:internal/test_runner/test:1101:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'MEDICION_INVALIDA',
+    expected: 'DESCUENTO_FUERA_DEL_CONTORNO',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/g3_cantidades_geometria.test.js:92:1
+✖ ítem 4 (huecos mal definidos): un descuento fuera del contorno o vanos superpuestos no restan superficie (0.555794ms)
+  AssertionError [ERR_ASSERTION]: vano completamente fuera del muro
+  + actual - expected
+  
+  + null
+  - 'DESCUENTO_FUERA_DEL_CONTORNO'
+  
+      at TestContext.<anonymous> (file:///tmp/claude-0/wt-31bb249/test/g3_cantidades_geometria.test.js:95:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+      at Test.postRun (node:internal/test_runner/test:1173:19)
+      at Test.run (node:internal/test_runner/test:1101:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'DESCUENTO_FUERA_DEL_CONTORNO',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/g3_cantidades_geometria.test.js:102:1
+✖ ítem 4: vano en el entrante de un muro en L (dentro del rectángulo envolvente, fuera del muro) no se descuenta (0.369528ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + null
+  - 'DESCUENTO_FUERA_DEL_CONTORNO'
+  
+      at TestContext.<anonymous> (file:///tmp/claude-0/wt-31bb249/test/g3_cantidades_geometria.test.js:105:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+      at Test.postRun (node:internal/test_runner/test:1173:19)
+      at Test.run (node:internal/test_runner/test:1101:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'DESCUENTO_FUERA_DEL_CONTORNO',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/g3_cantidades_geometria.test.js:108:1
+✖ ítem 5: contrato tw.cantidades/1 — se suma solo el detalle, el total es de control y una fila total o mixta se rechaza (0.993544ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/tmp/claude-0/wt-31bb249/src/drawing/cantidades_contrato.js' imported from /tmp/claude-0/wt-31bb249/test/g3_cantidades_geometria.test.js
+      at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+      at moduleResolve (node:internal/modules/esm/resolve:865:10)
+      at defaultResolve (node:internal/modules/esm/resolve:989:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+      at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+      at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+      at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:36)
+      at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+      at ModuleLoader.import (node:internal/modules/esm/loader:679:21)
+      at defaultImportModuleDynamicallyForModule (node:internal/modules/esm/utils:222:31) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///tmp/claude-0/wt-31bb249/src/drawing/cantidades_contrato.js'
+  }

@@ -17,10 +17,10 @@ const seguro = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace
 export function dialogoSO(mensaje, { plataforma = process.platform, ejecutar = execFile, timeoutMs = TIMEOUT_DIALOGO_MS, consentimiento = null } = {}) {
   if (process.env.CI || process.env.TANNIA_SIN_DIALOGO === '1') return Promise.resolve(null);
   return new Promise((resolve) => {
-    const fin = (err, out) => { if (err) return resolve(err.killed || err.code === 'ETIMEDOUT' ? 'no' : null); resolve(out); };
+    const fin = (err, out) => { if (err) return resolve(err.killed || err.code === 'ETIMEDOUT' ? 'timeout' : 'error'); resolve(out); };
     const data = consentimiento || { action: mensaje, project: 'Proyecto indicado en la solicitud', document: 'Ver solicitud', origin: 'Solicitud del servidor', publisher: 'No informado', date: 'No informada', license: 'No aplica', verification: 'Requiere su revisión', excerpt: mensaje, consequence: 'Autoriza únicamente la acción descrita.', distinction: 'Autorizar no verifica la veracidad del contenido.', canApprove: true, blocked: [], technical: '' };
     const opts = { timeout: timeoutMs, windowsHide: true, env: { ...process.env, TANNIA_DLG_MSG: mensaje, TANNIA_DLG_DATA: JSON.stringify(data) } };
-    if (plataforma === 'win32') ejecutar('powershell.exe', ['-NoProfile', '-STA', '-NonInteractive', '-EncodedCommand', Buffer.from(CONSENT_WPF, 'utf16le').toString('base64')], opts, (e, o) => fin(e, e ? null : (String(o).trim() === 'si' ? 'si' : 'no')));
+    if (plataforma === 'win32') ejecutar('powershell.exe', ['-NoProfile', '-STA', '-NonInteractive', '-EncodedCommand', Buffer.from(CONSENT_WPF, 'utf16le').toString('base64')], opts, (e, o) => fin(e, e ? null : (['si', 'no', 'cerrado', 'timeout'].includes(String(o).trim()) ? String(o).trim() : 'error')));
     else if (plataforma === 'darwin') ejecutar('osascript', ['-e', 'on run argv', '-e', 'set r to button returned of (display dialog (system attribute "TANNIA_DLG_MSG") with title "Tannia Workspace" buttons {"No", "Sí"} default button "No" with icon caution)', '-e', 'if r is "Sí" then return "si"', '-e', 'return "no"', '-e', 'end run'], opts, (e, o) => fin(e, e ? null : (String(o).trim() === 'si' ? 'si' : 'no')));
     else ejecutar('zenity', ['--question', '--title=Tannia Workspace', '--text', mensaje, '--ok-label=Sí', '--cancel-label=No', '--width=480'], opts, (e) => { if (!e) return resolve('si'); resolve(e.code === 1 ? 'no' : null); });
   });
@@ -49,17 +49,35 @@ export class AprobacionHumana {
     return buf.equals(linea) || buf.equals(Buffer.concat([linea, Buffer.from('\n')])) || buf.equals(Buffer.concat([linea, Buffer.from('\r\n')]));
   }
   /** @returns {por:'human_elicitation'|'human_dialog'|'human_out_of_band'|null, rechazado?} */
-  async decidir(project, id, { descripcion = '', elicitar = null, usarDialogo = true, consentimiento = null } = {}) {
+  async decidir(project, id, { descripcion = '', elicitar = null, usarDialogo = true, consentimiento = null, permitirArchivo = true } = {}) {
     const key = JSON.stringify([this.sandbox.home, project, id]);
-    if (activeDecisions.has(key)) return { por: null, en_curso: true };
+    if (activeDecisions.has(key)) return { por: null, en_curso: true, resultado: 'en_curso', mostrada: null };
     activeDecisions.add(key);
-    try { return await this.#decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento }); }
+    try { return await this.#decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento, permitirArchivo }); }
     finally { activeDecisions.delete(key); }
   }
-  async #decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento }) {
+  async #decidir(project, id, { descripcion, elicitar, usarDialogo, consentimiento, permitirArchivo }) {
     if (consentimiento?.canApprove === false) return { por: null, bloqueado: true, razones: consentimiento.blocked };
-    if (elicitar) { let r = null; try { r = await elicitar(); } catch { r = null; } if (r && r.action === 'accept' && r.content?.aprobar === true) return { por: 'human_elicitation' }; if (r && (r.action === 'decline' || r.action === 'cancel' || (r.action === 'accept' && r.content?.aprobar === false))) return { por: null, rechazado: true }; }
-    if (usarDialogo) { let r = null; try { r = await this.dialogo(`¿Autoriza esto?\n\n${descripcion}\n\nSolo usted puede aprobarlo; Claude no puede hacerlo por usted.`, { consentimiento }); } catch { r = null; } if (r === 'si') return { por: 'human_dialog' }; if (r === 'no') return { por: null, rechazado: true }; }
+    // Resultados distinguibles (código estable): confirmado | rechazado | cancelado | tiempo_agotado | error_tecnico | sin_canal.
+    // Solo «confirmado» autoriza. Cancelar, cerrar, agotar el tiempo o fallar NUNCA autorizan ni pasan a otro canal.
+    let tecnico = null;
+    if (elicitar) {
+      let r = null; try { r = await elicitar(); } catch (e) { tecnico = { canal: 'elicitacion', mostrada: null, detalle: String(e?.message || e).slice(0, 200) }; }
+      if (r && r.action === 'accept' && r.content?.aprobar === true) return { por: 'human_elicitation', resultado: 'confirmado', canal: 'elicitacion', mostrada: true };
+      if (r && (r.action === 'decline' || (r.action === 'accept' && r.content?.aprobar === false))) return { por: null, rechazado: true, resultado: 'rechazado', canal: 'elicitacion', mostrada: true };
+      if (r && r.action === 'cancel') return { por: null, cancelado: true, resultado: 'cancelado', canal: 'elicitacion', mostrada: true };
+    }
+    if (usarDialogo) {
+      let r = null; try { r = await this.dialogo(`¿Autoriza esto?\n\n${descripcion}\n\nSolo usted puede aprobarlo; Claude no puede hacerlo por usted.`, { consentimiento }); } catch (e) { tecnico = { canal: 'dialogo', mostrada: null, detalle: String(e?.message || e).slice(0, 200) }; r = null; }
+      if (r === 'si') return { por: 'human_dialog', resultado: 'confirmado', canal: 'dialogo', mostrada: true };
+      if (r === 'no') return { por: null, rechazado: true, resultado: 'rechazado', canal: 'dialogo', mostrada: true };
+      if (r === 'cerrado') return { por: null, cancelado: true, resultado: 'cancelado', canal: 'dialogo', mostrada: true };
+      if (r === 'timeout') return { por: null, cancelado: true, resultado: 'tiempo_agotado', canal: 'dialogo', mostrada: true };
+      if (r === 'error') tecnico = { canal: 'dialogo', mostrada: null, detalle: 'la ventana del sistema no pudo abrirse o falló' };
+    }
+    // Autorizaciones profesionales (verificar cantidades, aprobar una entrega): el canal de archivo queda DESACTIVADO porque otra
+    // herramienta con acceso al perfil podría crearlo (Astra A-01/E05). Solo cuentan la confirmación del cliente y el diálogo del SO.
+    if (!permitirArchivo) return tecnico ? { por: null, resultado: 'error_tecnico', ...tecnico } : { por: null, resultado: 'sin_canal', mostrada: false };
     const pf = this.#pend(project, id); const af = this.archivoAprobacion(project, id);
     if (fs.existsSync(pf)) {
       let pend = null; try { pend = JSON.parse(fs.readFileSync(pf, 'utf8')); } catch { pend = null; }

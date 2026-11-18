@@ -17,7 +17,7 @@ const CLI = path.join(raiz, 'node_modules', '@anthropic-ai', 'mcpb', 'dist', 'cl
 async function herramientasConCic(origen, engineering = false) {
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js'); const { StdioClientTransport } = await import('@modelcontextprotocol/sdk/client/stdio.js');
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'cic-tools ')); const c = new Client({ name: 'cic-tools', version: '1' });
-  await c.connect(new StdioClientTransport({ command: process.execPath, args: [path.join(origen, 'server', 'index.js')], env: { ...process.env, TANNIA_HOME: home, TANNIA_CIC: 'on', TANNIA_ENGINEERING: engineering ? 'on' : 'off' }, stderr: 'pipe' }));
+  await c.connect(new StdioClientTransport({ command: process.execPath, args: [path.join(origen, 'server', 'index.js')], env: { ...process.env, TANNIA_HOME: home, TANNIA_CIC: 'on', TANNIA_ENGINEERING: 'on' }, stderr: 'pipe' }));
   try { return (await c.listTools()).tools.map((t) => ({ name: t.name, description: t.description })); } finally { await c.close(); fs.rmSync(home, { recursive: true, force: true }); }
 }
 export async function crearPaquetePrueba({ etiqueta, revision, id = 'tannia-workspace-tw09', nombre, descripcion, salida, esperadas, fase = 'tw09', cic = false, engineering = false }) {
@@ -26,7 +26,7 @@ export async function crearPaquetePrueba({ etiqueta, revision, id = 'tannia-work
   const distDir = process.env.TANNIA_DIST_DIR ? path.resolve(process.env.TANNIA_DIST_DIR) : path.join(raiz, 'dist'); const origen = path.join(distDir, 'mcpb'); if (!fs.existsSync(path.join(origen, 'manifest.json'))) throw new Error('Falta dist/mcpb: ejecute `npm run build` primero.');
   const base = JSON.parse(fs.readFileSync(path.join(origen, 'manifest.json'), 'utf8'));
   const m = { ...base, name: id, version: `0.1.0-${fase}.${etiqueta}${revision ? `.${revision}` : ''}`, display_name: nombre ?? `Tannia Workspace - PRUEBA ${etiqueta}`, description: descripcion ?? `PAQUETE DE PRUEBA (código del commit ${etiqueta}). No sustituye a rc.3. No verificado en AutoCAD ni Claude Desktop reales.` };
-  if (cic || engineering) { m.tools = await herramientasConCic(origen, engineering); m.server = { ...m.server, mcp_config: { ...m.server.mcp_config, env: { ...(m.server.mcp_config.env || {}), TANNIA_CIC: 'on', ...(engineering ? { TANNIA_ENGINEERING: 'on' } : {}) } } }; }
+  if (cic || engineering) { m.tools = await herramientasConCic(origen, engineering); m.server = { ...m.server, mcp_config: { ...m.server.mcp_config, env: { ...(m.server.mcp_config.env || {}), TANNIA_CIC: 'on', TANNIA_ENGINEERING: 'on' } } }; } // PL-01: el motor de planos es parte del producto base; «engineering» solo gobierna la plataforma nativa
   if (engineering) {
     // La plataforma declarada es la de DESTINO (TANNIA_TARGET) y debe coincidir con el binario realmente incluido por build.mjs.
     const destino = resolverDestino(); const regDest = path.join(distDir, 'destino.json');
