@@ -1,6 +1,8 @@
 # Candidato 0.3.0-rc.5 — registro de CI y ZIP
 
-**Estado:** CANDIDATO PARA UAT CONTROLADA. **No** aceptado profesionalmente. AutoCAD 2027 real (G11) y revisión profesional (G12): **NO VERIFICADOS**.
+**Estado: RETIRADO. G11 FALLIDO en AutoCAD 2027 real** (PR #39, comentario del PO: «Error en la tabla DIMSTYLE / eHandleInUse / dibujo descartado»). Causa: handle de DIMSTYLE en código 5 en vez de 105 (`dxf_doc.js`, el 105 se pasaba a `.map()` y no a `rec()`). Corregido en 0.3.0-rc.6. No reutilizar rc.5.
+
+~~Estado anterior: CANDIDATO PARA UAT CONTROLADA.~~ **No** aceptado profesionalmente. AutoCAD 2027 real (G11) y revisión profesional (G12): **NO VERIFICADOS**.
 
 | Dato | Valor |
 |---|---|

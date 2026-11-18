@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0-rc.6 — 2026-11-18 (corrige el fallo real de AutoCAD 2027 en rc.5; candidato para UAT, NO aceptado)
+- AutoCAD 2027 descartaba el DXF de planos de rc.5 («Error en la tabla DIMSTYLE / eHandleInUse»): el handle de cada estilo de cota se escribía con el código 5 en vez de 105. Corregido.
+- Se elimina la variable de cabecera $MSLTSCALE que AutoCAD 2027 informaba como desconocida.
+- El inspector de apertura ahora rechaza ambos defectos; rc.5 no debe usarse.
+
 ## 0.3.0-rc.5 — 2026-11-18 (cierre del motor de planos, PR #38; candidato para UAT controlada, NO aceptado, sin AutoCAD 2027 real)
 - DXF: se abre encuadrado en Modelo (vista inicial y extensiones) y cada lámina tiene su presentación con viewport general; estructura AC1024 completa. Corrige el «DXF aparentemente vacío» de la UAT (pendiente de confirmar en AutoCAD 2027).
 - Planos con simbología de catálogo (propuesta, no normativa), tramas de materiales declarados, leyenda generada de lo usado, llamadas D1–D4 con detalles, y cuadros geométrico, de cantidades, de pernos y de materiales calculados de la misma fuente que la cubicación.

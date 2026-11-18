@@ -308,3 +308,17 @@ test('PL-DOMAIN-01/02: túnel (6 láminas con planta, perfil, sección, D1–D4,
   assert.ok(m.quantities.every((q) => q.vistas_medidas === 'elevacion'), 'solo la elevación se mide');
   const sinMaterial = modeloDesdeEspecificacion(muroConVanoEspecificacion({ material: null })); assert.ok(sinMaterial.views.every((v) => !v.regions.length), 'sin material declarado no se dibuja trama');
 });
+
+test('G11 UAT AutoCAD 2027 (regresión): cada registro DIMSTYLE lleva el handle en 105 (nunca en 5); el DXF de rc.5 que AutoCAD descartó falla el gate', () => {
+  // Evidencia UAT del PO (PR #39): «Error en la tabla DIMSTYLE / eHandleInUse / dibujo descartado» con el DXF de edificación de rc.5.
+  const rc5 = fs.readFileSync(path.join(import.meta.dirname, 'fixtures_drawing', 'rc5_edificacion_planos_dimstyle_5.dxf'), 'utf8');
+  assert.equal(sha(Buffer.from(rc5, 'utf8')), 'd240802bf7d141d0ad7667eb76c56f39323aa36f2aaa48bfe50d10746c7888d2', 'copia exacta del DXF del ZIP rc.5');
+  const viejo = inspeccionarDxf(rc5); assert.equal(viejo.ok, false); assert.ok(viejo.problemas.filter((p) => p.codigo === 'DIMSTYLE_HANDLE_INVALIDO').length >= 2);
+  assert.ok(viejo.problemas.some((p) => p.codigo === 'VARIABLE_CABECERA_DESCONOCIDA'), '$MSLTSCALE informada por AutoCAD 2027');
+  for (const [n, crear] of [['tunel', UAT], ['edi', EDI]]) {
+    const { dxf } = salida(n, crear); const regs = leerDxf(dxf).TABLES.filter((e) => e.tipo === 'DIMSTYLE');
+    assert.ok(regs.length >= 2, n);
+    for (const r of regs) { assert.ok(r.g.some(([k]) => k === 105), `${n}: DIMSTYLE con 105`); assert.ok(!r.g.some(([k]) => k === 5), `${n}: DIMSTYLE sin código 5`); }
+    assert.ok(!dxf.includes('$MSLTSCALE')); assert.deepEqual(inspeccionarDxf(dxf).problemas, [], n);
+  }
+});

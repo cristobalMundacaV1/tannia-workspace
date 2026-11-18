@@ -86,7 +86,7 @@ export class DxfDocumento {
     t += tabla('VIEW', this.h.VIEW, []) + tabla('UCS', this.h.UCS, []);
     t += tabla('APPID', this.h.APPID, [...this.appids].map(([n, h]) => rec('APPID', h, this.h.APPID, 'AcDbRegAppTableRecord', [[2, n], [70, 0]])));
     const std = this.styles.get('Standard').h;
-    t += tabla('DIMSTYLE', this.h.DIMSTYLE, [...this.dimstyles].map(([n, d]) => rec('DIMSTYLE', d.h, this.h.DIMSTYLE, 'AcDbDimStyleTableRecord', [[2, n], [70, 0], [3, d.v.post ?? ''], [40, d.v.dimscale ?? 1], [41, 2.5], [42, 0.625], [43, 3.75], [44, 1.25], [140, 2.5], [141, 2.5], [144, 1], [147, 0.625], [77, 1], [78, 8], [271, d.v.dec ?? 2], [278, 44], [279, 0], [340, std]]), 105), [[100, 'AcDbDimStyleTable'], [71, 0]]);
+    t += tabla('DIMSTYLE', this.h.DIMSTYLE, [...this.dimstyles].map(([n, d]) => rec('DIMSTYLE', d.h, this.h.DIMSTYLE, 'AcDbDimStyleTableRecord', [[2, n], [70, 0], [3, d.v.post ?? ''], [40, d.v.dimscale ?? 1], [41, 2.5], [42, 0.625], [43, 3.75], [44, 1.25], [140, 2.5], [141, 2.5], [144, 1], [147, 0.625], [77, 1], [78, 8], [271, d.v.dec ?? 2], [278, 44], [279, 0], [340, std]], 105)), [[100, 'AcDbDimStyleTable'], [71, 0]]); // DIMSTYLE: el handle va en el código 105 (UAT AutoCAD 2027: con 5 → eHandleInUse, dibujo descartado)
     t += tabla('BLOCK_RECORD', this.h.BLOCK_RECORD, this.blocks.map((b) => rec('BLOCK_RECORD', b.rec, this.h.BLOCK_RECORD, 'AcDbBlockTableRecord', [[2, b.name], ...(b.layout ? [[340, b.layout]] : []), [70, 0], [280, 1], [281, 0]])));
     const ent = (b) => b.entities.join('');
     const activo = this.layouts[0];
@@ -110,7 +110,7 @@ export class DxfDocumento {
     }
     const classes = [['ACDBDICTIONARYWDFLT', 'AcDbDictionaryWithDefault'], ['ACDBPLACEHOLDER', 'AcDbPlaceHolder'], ['LAYOUT', 'AcDbLayout']].map(([n, c]) => pares([[0, 'CLASS'], [1, n], [2, c], [3, 'ObjectDBX Classes'], [90, 0], [91, 0], [280, 0], [281, 0]])).join('');
     const header = pares([[9, '$ACADVER'], [1, 'AC1024'], [9, '$DWGCODEPAGE'], [3, 'ANSI_1252'], [9, '$INSBASE'], ...P(10, [0, 0, 0]), [9, '$EXTMIN'], ...P(10, extmin), [9, '$EXTMAX'], ...P(10, extmax), [9, '$LIMMIN'], [10, extmin[0]], [20, extmin[1]], [9, '$LIMMAX'], [10, extmax[0]], [20, extmax[1]],
-      [9, '$LTSCALE'], [40, 1], [9, '$PSLTSCALE'], [70, 1], [9, '$MSLTSCALE'], [70, 1], [9, '$TEXTSTYLE'], [7, 'Standard'], [9, '$CLAYER'], [8, '0'], [9, '$DIMSTYLE'], [2, 'Standard'], [9, '$LUNITS'], [70, 2], [9, '$LUPREC'], [70, 3], [9, '$INSUNITS'], [70, this.insunits], [9, '$MEASUREMENT'], [70, 1], [9, '$LWDISPLAY'], [290, 1], [9, '$DIMASSOC'], [280, 1], [9, '$TILEMODE'], [70, 1],
+      [9, '$LTSCALE'], [40, 1], [9, '$PSLTSCALE'], [70, 1], [9, '$TEXTSTYLE'], [7, 'Standard'], [9, '$CLAYER'], [8, '0'], [9, '$DIMSTYLE'], [2, 'Standard'], [9, '$LUNITS'], [70, 2], [9, '$LUPREC'], [70, 3], [9, '$INSUNITS'], [70, this.insunits], [9, '$MEASUREMENT'], [70, 1], [9, '$LWDISPLAY'], [290, 1], [9, '$DIMASSOC'], [280, 1], [9, '$TILEMODE'], [70, 1],
       [9, '$VIEWCTR'], [10, centro[0]], [20, centro[1]], [9, '$VIEWSIZE'], [40, vh], [9, '$PEXTMIN'], ...P(10, [0, 0, 0]), [9, '$PEXTMAX'], ...P(10, activo ? [activo.size[0], activo.size[1], 0] : [420, 297, 0]), [9, '$PLIMMIN'], [10, 0], [20, 0], [9, '$PLIMMAX'], [10, activo ? activo.size[0] : 420], [20, activo ? activo.size[1] : 297], [9, '$HANDSEED'], [5, (this.n + 16).toString(16).toUpperCase()]]);
     return S('HEADER', header) + S('CLASSES', classes) + S('TABLES', t) + S('BLOCKS', blocks) + S('ENTITIES', entities) + S('OBJECTS', o) + pares([[0, 'EOF']]);
   }

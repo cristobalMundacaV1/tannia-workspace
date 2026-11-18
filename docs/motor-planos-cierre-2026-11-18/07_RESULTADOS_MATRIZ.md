@@ -1,6 +1,6 @@
 # Resultados de la matriz de 40 casos (03_MATRIZ_GATES.csv) — implementación 0.3.0-rc.5
 
-**Rama:** `claude/lucid-hamilton-2onsol` (apilada sobre PR #38, base `2e5349f`). **Versión:** `0.3.0-rc.5`.
+**Rama:** `claude/lucid-hamilton-2onsol` (apilada sobre PR #38, base `2e5349f`). **Versión:** `0.3.0-rc.6` (rc.5 retirada tras G11 fallido).
 **Leyenda de estado:**
 - `AUTOMÁTICO ✔` — prueba ejecutable en `npm test` (Ubuntu y Windows en CI; ezdxf obligatorio con `TW_REQUIRE_EZDXF=1`).
 - `ZIP ✔` — paso del verificador del ZIP instalado (`scripts/rc-verificar-zip.mjs`), Ubuntu y Windows.
@@ -47,7 +47,7 @@
 | G10 | PL-RC-5D | ZIP ✔ (Ubuntu: juego de referencia) / WINDOWS CI (instalado) | 5d: inspector + paridad DXF↔IR, HATCH y cuadros |
 | G10 | PL-RC-5E | ZIP ✔ / WINDOWS CI (sin Claude) | 5e: paridad PDF, firmas, CSV, 2 dominios; en Windows `--planos-prueba` idéntico byte a byte al juego de referencia |
 | G10 | PL-RC-VERSION | AUTOMÁTICO ✔ | `0.3.0-rc.5` en `src/version.js`, `package.json`, `package-lock.json`, manifiesto y nombre del ZIP (rc.5 libre en todas las ramas remotas) |
-| G11 | PL-UAT-CAD-01 | **NO VERIFICADO** | AutoCAD 2027 real (registro en `UAT-PLANOS-AUTOCAD-2027.md`) |
+| G11 | PL-UAT-CAD-01 | **FALLIDO en rc.5** (DIMSTYLE código 5 → AutoCAD descartó el DXF); corregido en rc.6, **NO VERIFICADO** en AutoCAD hasta nueva UAT | regresión `tw33` «G11 UAT AutoCAD 2027»; AutoCAD 2027 real (registro en `UAT-PLANOS-AUTOCAD-2027.md`) |
 | G12 | PL-UAT-PRO-01 | **NO VERIFICADO** | revisión profesional externa; hasta entonces «BORRADOR PARA REVISIÓN» |
 
 **Resumen:** 36 casos con evidencia automática ejecutada (algunos con componente humano pendiente: PL-DXF-04 REGEN, PL-SHEET-02 impresión, PL-VISUAL-01 revisión); 4 casos **NO VERIFICADOS** por requerir AutoCAD 2027 real o un profesional (PL-DXF-03, PL-UAT-CAD-01, PL-UAT-PRO-01 y la parte AutoCAD de PL-DXF-04). Los resultados de CI por SHA se registran en `09_CANDIDATO_RC5.md`.

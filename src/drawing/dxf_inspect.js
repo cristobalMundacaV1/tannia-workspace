@@ -42,11 +42,13 @@ export function inspeccionarDxf(texto) {
   // Cabecera: pares 9 → variables.
   { const P = pares(texto); let dentro = false; let v = null; for (const [c, x] of P) { if (c === 2 && x === 'HEADER') { dentro = true; continue; } if (dentro && c === 0) break; if (!dentro) continue; if (c === 9) { v = x; H[v] = {}; } else if (v) H[v][c] = x; } }
   if (H.$ACADVER?.[1] !== 'AC1024') add('VERSION', H.$ACADVER?.[1]);
+  for (const v of Object.keys(H)) if (['$MSLTSCALE'].includes(v)) add('VARIABLE_CABECERA_DESCONOCIDA', `${v} (AutoCAD 2027 la informa como desconocida)`);
   if (!H.$INSUNITS) add('SIN_UNIDADES');
   const tablas = {}; let actual = null; const handles = new Map(); const dup = [];
   for (const e of S.TABLES || []) {
     if (e.tipo === 'TABLE') { actual = { nombre: get(e, 2), h: get(e, 5), registros: [] }; tablas[actual.nombre] = actual; continue; }
     if (e.tipo === 'ENDTAB') { actual = null; continue; }
+    if (actual && e.tipo === 'DIMSTYLE' && (get(e, 105) === undefined || get(e, 5) !== undefined)) add('DIMSTYLE_HANDLE_INVALIDO', `${get(e, 2)}: el handle de DIMSTYLE debe ir en el código 105 (AutoCAD descarta el dibujo con eHandleInUse)`);
     if (actual) { actual.registros.push(e); const h = get(e, 5) ?? get(e, 105); if (get(e, 330) !== actual.h) add('PROPIETARIO_REGISTRO', `${e.tipo} ${get(e, 2)}`); if (h) { if (handles.has(h)) dup.push(h); handles.set(h, e); } }
   }
   for (const t of ['VPORT', 'LTYPE', 'LAYER', 'STYLE', 'VIEW', 'UCS', 'APPID', 'DIMSTYLE', 'BLOCK_RECORD']) if (!tablas[t]) add('TABLA_FALTANTE', t);
