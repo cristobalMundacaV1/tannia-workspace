@@ -105,10 +105,19 @@ export function modeloDesdeEspecificacion(e) {
   // Trazabilidad: cada entidad lleva ref vista/id y el elemento físico que representa (o «sin_elemento»).
   const fisicos = Array.isArray(e.elementos_fisicos) ? e.elementos_fisicos : [];
   // Identidad física: «fuentes» son las entidades que se miden; «representaciones» dibujan el MISMO elemento en otra vista y no se miden.
-  const porEntidad = new Map(); const porRepr = new Map();
-  for (const f of fisicos) { for (const r of f.fuentes || []) porEntidad.set(r, f.id); for (const r of f.representaciones || []) { if (porEntidad.has(r)) throw err('IDENTIDAD_AMBIGUA', `La entidad ${r} no puede ser fuente y representación a la vez.`); porRepr.set(r, f.id); } }
-  const expandir = (m) => { const out = new Map(); for (const v of views) for (const en of v.entities) { const ref = `${v.id}/${en.id}`; for (const [k, id] of m) if (ref === k || ref.startsWith(`${k}-`)) out.set(ref, id); } return out; };
-  const fuenteDe = expandir(porEntidad); const reprDe = expandir(porRepr);
+  // R-02: identidad EXCLUSIVA e independiente del orden. Cada entidad dibujada pertenece como máximo a un elemento, con un solo rol.
+  const idsFisicos = new Set();
+  for (const f of fisicos) { const fid = idOk(f.id, 'elemento físico'); if (idsFisicos.has(fid)) throw err('ID_DUPLICADO', `Elemento físico duplicado «${fid}».`); idsFisicos.add(fid); }
+  const todasRefs = views.flatMap((v) => v.entities.map((en) => `${v.id}/${en.id}`));
+  const fuenteDe = new Map(); const reprDe = new Map();
+  for (const f of fisicos) for (const [rol, lista] of [['fuente', f.fuentes || []], ['representacion', f.representaciones || []]]) for (const k of lista) {
+    const cubre = todasRefs.filter((ref) => ref === k || ref.startsWith(`${k}-`)); if (!cubre.length) throw err('FUENTE_INEXISTENTE', `Elemento ${f.id}: «${k}» no es una entidad dibujada.`);
+    for (const ref of cubre) {
+      const previo = fuenteDe.has(ref) ? ['fuente', fuenteDe.get(ref)] : reprDe.has(ref) ? ['representacion', reprDe.get(ref)] : null;
+      if (previo) throw err('IDENTIDAD_AMBIGUA', `La entidad ${ref} ya es ${previo[0]} de «${previo[1]}»; no puede ser además ${rol} de «${f.id}».`, 'Cada entidad dibujada pertenece a un solo elemento físico y con un solo rol.');
+      (rol === 'fuente' ? fuenteDe : reprDe).set(ref, f.id);
+    }
+  }
   for (const v of views) for (const en of v.entities) { en.ref = `${v.id}/${en.id}`; en.element = fuenteDe.get(en.ref) || reprDe.get(en.ref) || en.element || 'sin_elemento'; en.role = fuenteDe.has(en.ref) ? 'fuente' : 'representacion'; }
   const warnings = [MARCA_TRABAJO, ...(e.advertencias || []).map((a, i) => txt(a, `advertencia ${i + 1}`, 140))];
   const P = (x) => (x === undefined ? 'PENDIENTE' : txt(x, 'metadato', 90));
@@ -187,12 +196,14 @@ export function cantidadesDeEspecificacion(e, views) {
     else if (m.metodo === 'area') { const r = grupos.map((g2) => areaContorno(g2, ctx)); valor = r.reduce((t, x) => t + x.valor, 0); formula = r.map((x) => x.formula).join(' + '); contornos.set(id, { signo, poligonos: r.map((x) => x.poligono), ctx }); }
     else { valor = grupos.length; formula = `conteo de ${grupos.length} elemento(s) dibujado(s)`; }
     if (!(valor > 0)) throw err('MEDICION_INVALIDA', `${ctx}: la magnitud medida es nula.`);
-    filas.push({ id, partida, descripcion: m.descripcion ? txt(m.descripcion, `${ctx}: descripción`, 80) : partida, metodo: `${METODO_MEDICION}/${m.metodo}`, unidad: UNIDAD_METODO[m.metodo], valor: signo * valor, formula: `${signo < 0 ? 'DESCUENTO: ' : ''}${formula}`, fuentes: ents.map((x) => x.ref).join(' '), naturaleza: 'MEDIDA sobre la geometría del modelo' });
+    // R-01: una medición es TRAZADA solo si TODAS sus entidades son fuentes de un elemento físico declarado; si no, NEEDS_REVIEW (lectura exploratoria, no presupuestable).
+    const trazada = ents.every((x) => x.element !== 'sin_elemento' && x.role === 'fuente');
+    filas.push({ id, partida, descripcion: m.descripcion ? txt(m.descripcion, `${ctx}: descripción`, 80) : partida, metodo: `${METODO_MEDICION}/${m.metodo}`, unidad: UNIDAD_METODO[m.metodo], valor: signo * valor, formula: `${signo < 0 ? 'DESCUENTO: ' : ''}${formula}`, fuentes: ents.map((x) => x.ref).join(' '), elementos: [...new Set(ents.map((x) => x.element))].join(' '), naturaleza: 'MEDIDA sobre la geometría del modelo', estado: trazada ? 'TRAZADA' : 'NEEDS_REVIEW', procedencia: trazada ? 'elemento_fisico_declarado' : 'geometria_sin_identidad_fisica', vistas_medidas: [...new Set(ents.map((x) => x.ref.split('/')[0]))] });
   }
   for (const [i, d] of (e.cantidades_declaradas || []).entries()) {
     const ctx = `Cantidad declarada ${i + 1}`;
     if (!num(d.cantidad) || !d.unidad || !d.origen) throw err('DATOS_INVALIDOS', `${ctx}: requiere cantidad numérica, unidad y origen (quién/qué documento la aporta).`);
-    filas.push({ id: `d${i + 1}`, partida: txt(d.partida || d.descripcion || `declarada-${i + 1}`, ctx, 60), descripcion: d.descripcion ? txt(d.descripcion, ctx, 80) : '', metodo: 'DECLARADA', unidad: txt(d.unidad, ctx, 10), valor: d.cantidad, formula: '—', fuentes: '', naturaleza: `DECLARADA (no medida desde el plano). Origen: ${txt(d.origen, ctx, 100)}` });
+    filas.push({ id: `d${i + 1}`, partida: txt(d.partida || d.descripcion || `declarada-${i + 1}`, ctx, 60), descripcion: d.descripcion ? txt(d.descripcion, ctx, 80) : '', metodo: 'DECLARADA', unidad: txt(d.unidad, ctx, 10), valor: d.cantidad, formula: '—', fuentes: '', naturaleza: `DECLARADA (no medida desde el plano). Origen: ${txt(d.origen, ctx, 100)}`, estado: 'DECLARADA', procedencia: 'declaracion_con_origen' });
   }
   // Totales por partida medida (con descuentos explícitos). Una partida mezcla de medido y declarado no se suma.
   // Los TOTALES van en una lista separada: nunca se suman junto con el detalle (PL-09).
@@ -200,11 +211,16 @@ export function cantidadesDeEspecificacion(e, views) {
   for (const p of partidas) {
     const fs2 = filas.filter((f) => f.partida === p); if (fs2.some((f) => f.metodo === 'DECLARADA')) throw err('ORIGEN_MEZCLADO', `Partida «${p}»: no se suman cantidades medidas y declaradas.`);
     validarHuecos(fs2.map((f) => contornos.get(f.id)).filter(Boolean), p);
+    // R-01: sin identidad, la misma partida y método medidos desde varias vistas pueden ser el MISMO elemento: se advierte en cada fila.
+    for (const met of new Set(fs2.map((f) => f.metodo))) {
+      const sinId = fs2.filter((f) => f.metodo === met && f.estado === 'NEEDS_REVIEW' && f.valor > 0); const vistas = new Set(sinId.flatMap((f) => f.vistas_medidas));
+      if (vistas.size > 1) for (const f of sinId) f.advertencia = `Partida «${p}» medida en varias vistas (${[...vistas].join(', ')}) sin identidad física declarada: posible doble medición del mismo elemento.`;
+    }
     const u = [...new Set(fs2.map((f) => f.unidad))]; if (u.length > 1) throw err('UNIDAD_INCOMPATIBLE', `Partida «${p}»: mezcla unidades ${u.join(', ')}.`);
     const total = fs2.reduce((t, f) => t + f.valor, 0); if (!(total > 0)) throw err('MEDICION_INVALIDA', `Partida «${p}»: los descuentos superan la cantidad medida.`);
-    if (fs2.length > 1) totales.push({ id: `total-${p}`, partida: p, descripcion: `TOTAL ${p}`, metodo: METODO_MEDICION, unidad: u[0], valor: total, formula: fs2.map((f) => f.id).join(' + '), fuentes: '', naturaleza: 'MEDIDA (suma de mediciones y descuentos)' });
+    if (fs2.length > 1) totales.push({ id: `total-${p}`, partida: p, descripcion: `TOTAL ${p}`, metodo: METODO_MEDICION, unidad: u[0], valor: total, formula: fs2.map((f) => f.id).join(' + '), fuentes: '', naturaleza: 'MEDIDA (suma de mediciones y descuentos)', estado: fs2.every((f) => f.estado === 'TRAZADA') ? 'TRAZADA' : 'NEEDS_REVIEW' });
   }
-  return { detalle: filas.map((f) => ({ ...f, fila: 'detalle' })), totales: totales.map((t) => ({ ...t, fila: 'total' })) };
+  return { detalle: filas.map(({ vistas_medidas, ...f }) => ({ ...f, vistas_medidas: vistas_medidas ? vistas_medidas.join(' ') : undefined, fila: 'detalle' })), totales: totales.map((t) => ({ ...t, fila: 'total' })) };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------

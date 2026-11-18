@@ -87,6 +87,10 @@ try {
     const prompts = (await cliente.listPrompts()).prompts.map((p) => p.name);
     const d = await T('tannia_diagnostico'); afirmar(d.version === manifest.version, `versión ${d.version} ≠ ${manifest.version}`); afirmar(d.carpeta_escribible === true, 'carpeta no escribible');
     afirmar(path.resolve(d.carpeta_tannia) === path.resolve(datos), 'carpeta de datos distinta de la configurada');
+    // R-03: el diagnóstico identifica exactamente lo instalado (versión, commit de compilación y huella del servidor).
+    const pq = d.versiones?.paquete; afirmar(pq?.version === manifest.version && pq?.compilacion?.version === manifest.version, `diagnóstico sin versión de paquete coherente: ${JSON.stringify(pq)?.slice(0, 200)}`);
+    afirmar(pq?.compilacion?.commit === manifestZip.commit, `commit del diagnóstico ${pq?.compilacion?.commit} ≠ commit del ZIP ${manifestZip.commit}`);
+    afirmar(pq?.huella_servidor_sha256 === sha(fs.readFileSync(path.join(extDir, 'server', 'index.js'))), 'huella del servidor del diagnóstico ≠ servidor instalado');
     return { servidor: cliente.getServerVersion(), herramientas: tools.length, procedimientos: prompts, ventana_del_cliente: d.autorizacion_humana.ventana_del_cliente };
   });
   // G0 / PL-01 (issue #32): el PAQUETE distribuido (no el servidor de desarrollo) expone el motor de planos con la configuración del manifiesto.

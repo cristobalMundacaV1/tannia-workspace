@@ -19,7 +19,9 @@ const base = (L = 6, H = 2.4, extra = {}) => ({
     { id: 'vano-p', partida: 'Muro M1', metodo: 'area', fuentes: ['elev/puerta'], signo: -1 },
     { id: 'vano-v', partida: 'Muro M1', metodo: 'area', fuentes: ['elev/ventana'], signo: -1 },
     { id: 'vanos', partida: 'Vanos', metodo: 'conteo', fuentes: ['elev/puerta', 'elev/ventana'] },
-  ], ...extra,
+  ],
+  // Identidad física declarada (R-01): sin ella las mediciones quedan NEEDS_REVIEW y no son presupuestables.
+  ...(extra.vistas ? {} : { elementos_fisicos: [{ id: 'M1', tipo: 'muro', fuentes: ['elev/muro'] }, { id: 'P1', tipo: 'puerta', fuentes: ['elev/puerta'] }, { id: 'V1', tipo: 'ventana', fuentes: ['elev/ventana'] }] }), ...extra,
 });
 
 test('muro con vanos: área neta medida = L·H − 0,9·2,0 − 1,2·1,0 (oráculo a mano) y conteo de vanos', () => {
@@ -27,7 +29,7 @@ test('muro con vanos: área neta medida = L·H − 0,9·2,0 − 1,2·1,0 (orácu
   assert.ok(Math.abs(t.valor - (6 * 2.4 - 0.9 * 2.0 - 1.2 * 1.0)) < 1e-9, String(t.valor)); assert.equal(t.unidad, 'm2');
   assert.match(m.quantities.find((q) => q.id === 'vano-p').formula, /^DESCUENTO/);
   assert.equal(m.quantities.find((q) => q.id === 'vanos').valor, 2);
-  assert.ok(m.quantities.every((q) => /MEDIDA/.test(q.naturaleza) && /TW-MED\/1/.test(q.metodo) && q.fila === 'detalle'));
+  assert.ok(m.quantities.every((q) => /MEDIDA/.test(q.naturaleza) && /TW-MED\/1/.test(q.metodo) && q.fila === 'detalle' && q.estado === 'TRAZADA'));
   // Ítem 5 de la revisión: el detalle y los totales están SEPARADOS; sumar el detalle de una partida reproduce su total.
   assert.ok(!m.quantities.some((q) => q.fila === 'total') && m.quantity_totals.every((q) => q.fila === 'total'));
   assert.ok(Math.abs(m.quantities.filter((q) => q.partida === 'Muro M1').reduce((a, q) => a + q.valor, 0) - t.valor) < 1e-12);
@@ -113,4 +115,42 @@ test('ítem 5: contrato tw.cantidades/1 — se suma solo el detalle, el total es
   const contaminado = { ...doc, detalle: [...doc.detalle, ...doc.totales] }; assert.throws(() => cantidadPartida(contaminado, 'Muro M1'), /Solo se suman filas de detalle/);
   assert.throws(() => documentoCantidades({ quantities: [...m.quantities, ...m.quantity_totals], quantity_totals: [] }, {}), /mal clasificadas/);
   const alterado = { ...doc, totales: doc.totales.map((t) => ({ ...t, valor: t.valor + 1 })) }; assert.throws(() => cantidadPartida(alterado, 'Muro M1'), /no coincide con su total de control/);
+});
+
+// ---- Segunda revisión independiente (SHA 2e9fd21): R-01 y R-02 ----
+const dosVistas = (extra = {}) => base(6, 2.4, {
+  vistas: [
+    { id: 'planta', titulo: 'Planta', tipo: 'planta', escala: 50, elementos: [{ id: 'muro', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 0], ancho: 6, alto: 0.2 }, { id: 'muro2', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 1], ancho: 6, alto: 0.2 }] },
+    { id: 'elev', titulo: 'Elevación', tipo: 'elevacion', escala: 50, elementos: [{ id: 'muro', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 0], ancho: 6, alto: 2.4 }] },
+  ],
+  laminas: [{ id: '01', titulo: 'Planta', vistas: ['planta'] }, { id: '02', titulo: 'Elevación', vistas: ['elev'] }], ...extra,
+});
+
+test('R-01: sin identidad física, el mismo muro medido en planta y elevación NO es apto para presupuesto (NEEDS_REVIEW + bloqueo del contrato)', async () => {
+  const { documentoCantidades, cantidadPartida } = await import('../src/drawing/cantidades_contrato.js');
+  const m = modeloDesdeEspecificacion(dosVistas({ mediciones: [{ id: 'a', partida: 'Muro', metodo: 'area', fuentes: ['elev/muro'] }, { id: 'b', partida: 'Muro', metodo: 'area', fuentes: ['planta/muro'] }] }));
+  assert.ok(m.quantities.every((q) => q.estado === 'NEEDS_REVIEW' && q.procedencia === 'geometria_sin_identidad_fisica'), JSON.stringify(m.quantities.map((q) => [q.estado, q.procedencia])));
+  assert.ok(m.quantities.every((q) => /varias vistas/.test(q.advertencia || '')), 'advierte la posible doble medición entre vistas');
+  const doc = documentoCantidades(m, { modelo_sha256: 'x', revision: 'r' });
+  assert.throws(() => cantidadPartida(doc, 'Muro'), (e) => e.code === 'PROCEDENCIA_NO_AUTORIZADA');
+  // Lectura exploratoria: el plano y la medición se generan (no se rompe), pero no son publicables como verificadas.
+  assert.equal(m.quantity_totals[0].estado, 'NEEDS_REVIEW');
+});
+
+test('R-01: con identidad física declarada, la misma partida queda TRAZADA y es consumible', async () => {
+  const { documentoCantidades, cantidadPartida } = await import('../src/drawing/cantidades_contrato.js');
+  const m = modeloDesdeEspecificacion(dosVistas({ elementos_fisicos: [{ id: 'M1', tipo: 'muro', fuentes: ['elev/muro'], representaciones: ['planta/muro'] }], mediciones: [{ id: 'a', partida: 'Muro', metodo: 'area', fuentes: ['elev/muro'] }] }));
+  assert.equal(m.quantities[0].estado, 'TRAZADA'); assert.equal(m.quantities[0].elementos, 'M1');
+  assert.ok(Math.abs(cantidadPartida(documentoCantidades(m, { modelo_sha256: 'x', revision: 'r' }), 'Muro').valor - 14.4) < 1e-12);
+});
+
+test('R-02: identidad física exclusiva — IDs duplicados, ref reclamada por dos elementos y fuente↔representación cruzadas (en ambos órdenes)', () => {
+  const med = [{ id: 'a', partida: 'Muro', metodo: 'area', fuentes: ['elev/muro'] }];
+  assert.equal(code(() => modeloDesdeEspecificacion(dosVistas({ mediciones: med, elementos_fisicos: [{ id: 'M1', fuentes: ['elev/muro'] }, { id: 'M1', fuentes: ['planta/muro2'] }] }))), 'ID_DUPLICADO');
+  assert.equal(code(() => modeloDesdeEspecificacion(dosVistas({ mediciones: med, elementos_fisicos: [{ id: 'M1', fuentes: ['elev/muro'] }, { id: 'M2', fuentes: ['elev/muro'] }] }))), 'IDENTIDAD_AMBIGUA', 'dos elementos reclaman la misma fuente');
+  assert.equal(code(() => modeloDesdeEspecificacion(dosVistas({ mediciones: med, elementos_fisicos: [{ id: 'M1', fuentes: ['elev/muro'], representaciones: ['planta/muro'] }, { id: 'M2', fuentes: ['planta/muro'] }] }))), 'IDENTIDAD_AMBIGUA', 'representación de M1 declarada después como fuente de M2');
+  assert.equal(code(() => modeloDesdeEspecificacion(dosVistas({ mediciones: med, elementos_fisicos: [{ id: 'M2', fuentes: ['planta/muro'] }, { id: 'M1', fuentes: ['elev/muro'], representaciones: ['planta/muro'] }] }))), 'IDENTIDAD_AMBIGUA', 'mismo cruce en orden inverso');
+  assert.equal(code(() => modeloDesdeEspecificacion(dosVistas({ mediciones: med, elementos_fisicos: [{ id: 'M1', fuentes: ['elev/muro'], representaciones: ['planta/muro'] }, { id: 'M2', fuentes: ['planta/muro2'], representaciones: ['planta/muro'] }] }))), 'IDENTIDAD_AMBIGUA', 'dos elementos reclaman la misma representación');
+  assert.equal(code(() => modeloDesdeEspecificacion(dosVistas({ mediciones: med, elementos_fisicos: [{ id: 'M1', fuentes: ['elev/muro'] }, { id: 'M2', fuentes: ['elev/muro-1'] }] }))), 'IDENTIDAD_AMBIGUA', 'un elemento reclama el rectángulo y otro uno de sus lados');
+  assert.equal(code(() => modeloDesdeEspecificacion(dosVistas({ mediciones: med, elementos_fisicos: [{ id: 'M1', fuentes: ['elev/fantasma'] }] }))), 'FUENTE_INEXISTENTE', 'una identidad no puede apuntar a una entidad no dibujada');
 });

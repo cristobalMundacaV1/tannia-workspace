@@ -59,6 +59,14 @@ Por eso, el CI aprobaba dos configuraciones, y ninguna era la que se distribuye.
 - `evidencia/suite-local.txt`: suite completa del árbol final (Linux x64, Node 22): 541 pruebas, 522 aprobadas, 0 fallos, 19 omitidas (Windows/AutoCAD).
 - ZIP reconstruido y verificado localmente: pasos 1–11 y 5b OK. En Windows, 5b genera las 5 láminas desde el ZIP instalado: CI `rc-zip-windows` sobre `31bb249`, run 44203299736. El SHA final se informa en el PR.
 
+## 2c. Segunda revisión independiente (SHA `2e9fd21`): R-01, R-02, R-03
+
+| Hallazgo | Corrección en el motor | Prueba (primero falla: `evidencia/reproduccion-2e9fd21-R01-R02.txt`) |
+|---|---|---|
+| R-01: identidad física optativa | Cada fila de detalle lleva `estado` y `procedencia`. Es `TRAZADA` solo si todas sus entidades son **fuentes** de un elemento físico declarado. Sin identidad queda `NEEDS_REVIEW` / `geometria_sin_identidad_fisica`, con una advertencia de posible doble medición cuando la misma partida y método se miden en varias vistas. El plano y la lectura exploratoria se generan igual, pero el contrato `tw.cantidades/1` (`cantidadPartida`) **bloquea** esas filas para partidas y presupuesto (`PROCEDENCIA_NO_AUTORIZADA`, `apto_presupuesto: false`) | `test/g3_cantidades_geometria.test.js` (R-01) |
+| R-02: exclusividad de identidad | `ID_DUPLICADO` para IDs físicos repetidos. `IDENTIDAD_AMBIGUA` cuando una entidad (también por prefijo, por ejemplo un rectángulo y uno de sus lados) es reclamada por dos elementos o con dos roles, sin importar el orden de declaración. `FUENTE_INEXISTENTE` para una identidad que apunta a una entidad no dibujada | idem (R-02) |
+| R-03: identidad del candidato | Versión **0.2.0-rc.3**: no se reutiliza el nombre rc.2, que ya se instaló con otros bytes. El paquete incluye `server/compilacion.json` (versión, commit, árbol limpio). `tannia_diagnostico` muestra `versiones.paquete.compilacion` y `huella_servidor_sha256`. El verificador del ZIP exige que coincidan con el `release-manifest.json` y con el servidor instalado | `test/tw10_f_campo2_version.test.js`; `rc-verificar-zip` paso 5 |
+
 ## 3. Arquitectura y contratos
 
 - **Modelo canónico único:** `tw.drawing/1` (`src/drawing/model.js`, `especificacion.js`). El PDF (`pdf.js`), el DXF (`dxf.js`) y las cantidades leen las mismas entidades.

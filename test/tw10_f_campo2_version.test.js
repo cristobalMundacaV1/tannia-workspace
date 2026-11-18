@@ -16,7 +16,11 @@ const mk = (manifest) => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'Paqu
 
 test('identidadPaquete: lee manifest.json junto al servidor; sin manifest o inválido ⇒ no_disponible con motivo (nunca inventa)', () => {
   const ok = identidadPaquete(mk({ name: 'tannia-workspace-tw10', version: '0.1.0-tw10.abc1234.rc3', display_name: 'Tannia Workspace - PRUEBA TW-10 (abc1234 rc3)' }));
-  assert.deepEqual(ok, { origen: 'manifest.json', id: 'tannia-workspace-tw10', version: '0.1.0-tw10.abc1234.rc3', nombre_visible: 'Tannia Workspace - PRUEBA TW-10 (abc1234 rc3)' });
+  // R-03: además de name/version, la identidad declara la compilación (no disponible en paquetes antiguos) y la huella del servidor ejecutado.
+  const huellaVacia = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'; // SHA-256 del index.js vacío del fixture
+  assert.deepEqual(ok, { origen: 'manifest.json', id: 'tannia-workspace-tw10', version: '0.1.0-tw10.abc1234.rc3', nombre_visible: 'Tannia Workspace - PRUEBA TW-10 (abc1234 rc3)', compilacion: { origen: 'no_disponible' }, huella_servidor_sha256: huellaVacia });
+  const conComp = mk({ name: 'tannia-workspace', version: '0.2.0-rc.3' }); fs.writeFileSync(path.join(path.dirname(conComp), 'compilacion.json'), JSON.stringify({ schema: 'tw.compilacion/1', version: '0.2.0-rc.3', commit: 'a'.repeat(40), arbol_limpio: true }));
+  assert.deepEqual(identidadPaquete(conComp).compilacion, { origen: 'compilacion.json', version: '0.2.0-rc.3', commit: 'a'.repeat(40), arbol_limpio: true });
   for (const m of [undefined, '{no json', { name: 5 }, { name: 'x' }, 'x'.repeat(300 * 1024)]) { const r = identidadPaquete(mk(m)); assert.equal(r.origen, 'no_disponible', JSON.stringify(m)?.slice(0, 40)); assert.ok(r.motivo); assert.equal(r.version, undefined); }
   assert.equal(identidadPaquete('').origen, 'no_disponible');
 });

@@ -7,7 +7,7 @@ export const ESQUEMA_CANTIDADES = 'tw.cantidades/1';
 export function documentoCantidades(model, { modelo_sha256, revision }) {
   const detalle = model.quantities || []; const totales = model.quantity_totals || [];
   if (detalle.some((f) => f.fila !== 'detalle') || totales.some((f) => f.fila !== 'total')) throw new Error('Contrato de cantidades: filas mal clasificadas (detalle/total).');
-  return { schema: ESQUEMA_CANTIDADES, modelo_sha256, revision, regla: 'Sume solo «detalle» por partida; «totales» es de control (= suma del detalle) y no se vuelve a sumar.', detalle, totales };
+  return { schema: ESQUEMA_CANTIDADES, modelo_sha256, revision, regla: 'Sume solo «detalle» por partida; «totales» es de control (= suma del detalle) y no se vuelve a sumar. Solo filas TRAZADA (elemento físico declarado) o DECLARADA (con origen) son presupuestables; NEEDS_REVIEW es lectura exploratoria.', apto_presupuesto: detalle.every((f) => f.estado !== 'NEEDS_REVIEW'), detalle, totales };
 }
 
 /** Cantidad de una partida para presupuestar: suma del detalle, con verificación cruzada contra el total de control. */
@@ -16,6 +16,9 @@ export function cantidadPartida(doc, partida) {
   const filas = doc.detalle.filter((f) => f.partida === partida);
   if (!filas.length) throw new Error(`Partida «${partida}» sin detalle.`);
   if (filas.some((f) => f.fila !== 'detalle')) throw new Error('Solo se suman filas de detalle.');
+  // R-01: una cantidad medida sin identidad física declarada es lectura exploratoria; no entra a partidas ni presupuesto.
+  const sinTraza = filas.filter((f) => f.estado === 'NEEDS_REVIEW');
+  if (sinTraza.length) throw Object.assign(new Error(`Partida «${partida}»: ${sinTraza.map((f) => f.id).join(', ')} sin identidad física declarada (NEEDS_REVIEW). Vincule cada medición a un elemento físico (fuentes/representaciones) antes de presupuestar.`), { code: 'PROCEDENCIA_NO_AUTORIZADA' });
   const unidades = [...new Set(filas.map((f) => f.unidad))]; if (unidades.length !== 1) throw new Error(`Partida «${partida}»: unidades mezcladas ${unidades.join(', ')}.`);
   const naturalezas = [...new Set(filas.map((f) => (f.metodo === 'DECLARADA' ? 'DECLARADA' : 'MEDIDA')))]; if (naturalezas.length !== 1) throw new Error(`Partida «${partida}»: mezcla medido y declarado.`);
   const valor = filas.reduce((t, f) => t + f.valor, 0);
