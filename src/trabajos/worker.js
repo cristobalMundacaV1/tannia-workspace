@@ -11,7 +11,7 @@ import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../server.js';
-import { atomicWriteJson, verificarContencion, readJson } from '../project/store.js';
+import { atomicWriteJson, verificarContencion, readJson, renombrarConReintento } from '../project/store.js';
 import { Sandbox } from '../security/sandbox.js';
 import { mensajeParaPersona, limitesDelEquipo, rutaBloqueo, procesoVivo } from './coordinador.js';
 import { sha256File } from '../security/sandbox.js';
@@ -156,7 +156,7 @@ async function pasoDwg(p) {
     // No se confía en lo que hay: se APARTA (se conserva para revisar, nunca se borra) y se vuelve a convertir y verificar.
     const apartado = path.join(destDir, '.descartados', `${new Date().toISOString().replace(/[:.]/g, '-')}-${id}`);
     verificarContencion(root, apartado); fs.mkdirSync(apartado, { recursive: true });
-    for (const x of [destino, registro]) if (fs.existsSync(x)) fs.renameSync(x, path.join(apartado, path.basename(x)));
+    for (const x of [destino, registro]) if (fs.existsSync(x)) renombrarConReintento(x, path.join(apartado, path.basename(x)));
     reconciliado = { motivos, apartado: path.relative(root, apartado).split(path.sep).join('/') }; evento('dwg_reconciliado', reconciliado); guardar();
   }
   const prep = path.join(destDir, `.preparando-${id}-${t.intentos}`); // carpeta propia por intento: un proceso huérfano de un intento anterior no la comparte

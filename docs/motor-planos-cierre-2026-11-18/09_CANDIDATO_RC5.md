@@ -22,7 +22,7 @@
 | rc-zip-windows (verificador del ZIP instalado + instalador) | ✔ pasos 1–11, 5b, 5c, **5d**, **5e** (incluye `--planos-prueba` sin Claude idéntico byte a byte al juego de referencia) |
 
 ## Incidencia registrada
-`BG-R01` falló una vez en `test (windows-latest)` sobre `adc2e15` (reconversión DWG en «FALLÓ»), sin causa visible en el log. El código de producto no cambió entre `211457a` (verde), `adc2e15` (rojo) y `06e9970` (verde). Se añadió diagnóstico del paso a la aserción. **Causa raíz: NO DETERMINADA** (hipótesis: bloqueo transitorio de archivo en Windows). Se mantiene como riesgo residual y no se modificó ni se omitió la prueba.
+`BG-R01` falló una vez en `test (windows-latest)` sobre `adc2e15` (reconversión DWG en «FALLÓ»), sin causa visible en el log. El código de producto no cambió entre `211457a` (verde), `adc2e15` (rojo) y `06e9970` (verde). Se añadió diagnóstico del paso a la aserción. **Causa raíz DETERMINADA** (CI 1fba032, con el diagnóstico añadido): `EPERM` en el `rename` atómico del registro del trabajo (`…json.<pid>.tmp` → `…json`) mientras otro proceso lo leía. Corregido en rc.6 con `renombrarConReintento` (EPERM/EACCES/EBUSY, máx. ~1,5 s; persistentes y otros errores se propagan) y prueba `store_renombrar`. Se mantiene como riesgo residual y no se modificó ni se omitió la prueba.
 
 ## Pendiente humano
 1. UAT AutoCAD 2027: `documentos/UAT-PLANOS-AUTOCAD-2027.md` del ZIP (registro A–H).
