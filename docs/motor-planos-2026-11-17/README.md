@@ -48,9 +48,16 @@ Por eso, el CI aprobaba dos configuraciones, y ninguna era la que se distribuye.
 | 1. Doble conteo entre vistas | `elementos_fisicos[].representaciones` declara las vistas que dibujan el mismo elemento. Una representación no se mide (`MEDICION_NO_AUTORIZADA`), y un elemento físico se mide una sola vez por partida y método (`MEDICION_DUPLICADA`), aunque tenga fuentes en varias vistas | `test/g3_cantidades_geometria.test.js` |
 | 2. Trazabilidad XDATA | La firma de cada entidad incluye `elemento/vista/rol/ref` de `TANNIA_TRACE`. Un ref o rol alterado, o una traza eliminada, con geometría idéntica, falla | `test/g1_dxf_nucleo.test.js` |
 | 3. Anclajes de cota | Los puntos 13/23 y 14/24 (lineal) y 10/20 y 15/25 (radial) se comparan con los del modelo transformados, por vista y orden. Una traslación conjunta que conserva la distancia falla | idem |
-| 4. Topología | El área exige un polígono simple: ≥ 3 vértices distintos, sin autointersección (`geo/geom.js::autoIntersecta`), sin retrocesos colineales y con superficie no nula (`CONTORNO_NO_SIMPLE`). Hay casos adversariales y un oráculo de polígono en L | `test/g3_cantidades_geometria.test.js` |
-| 5. Detalle frente a total | `model.quantities` contiene solo el detalle (`fila: detalle`). Los totales van en `model.quantity_totals` (`fila: total`) y en un CSV aparte (`cantidades-totales.csv`). Es la condición previa para conectar partidas y APU (PL-09, que sigue PENDIENTE) | idem |
+| 4. Topología | Además, **huecos**: cada descuento de área debe quedar contenido en un contorno medido de la misma partida (`DESCUENTO_FUERA_DEL_CONTORNO`, incluido el entrante de un muro en L), y dos descuentos no pueden superponerse (`DESCUENTOS_SUPERPUESTOS`). El área exige un polígono simple: ≥ 3 vértices distintos, sin autointersección (`geo/geom.js::autoIntersecta`), sin retrocesos colineales y con superficie no nula (`CONTORNO_NO_SIMPLE`). Hay casos adversariales y un oráculo de polígono en L | `test/g3_cantidades_geometria.test.js` |
+| 5. Detalle frente a total | **Contrato `tw.cantidades/1`** (`src/drawing/cantidades_contrato.js`): `detalle[]` (`fila: detalle`) es lo único sumable. `totales[]` (`fila: total`) es de control y debe ser igual a la suma del detalle. `cantidadPartida()` rechaza filas total o mixtas, unidades mezcladas, la mezcla de medido y declarado, y un total de control que no coincide. Se emite como `cantidades.json` (con `modelo_sha256` y revisión), además de `cantidades.csv` y `cantidades-totales.csv`. Condición previa para PL-09, que sigue PENDIENTE. Las alternativas de revestimiento del túnel aún no siguen este contrato (PENDIENTE) | `test/g3_cantidades_geometria.test.js` (ítem 5) |
 | 6. G2 | Sin cambios: sigue **PENDIENTE** de AutoCAD 2027 real | — |
+
+### Evidencia «primero falla, luego pasa»
+
+- `evidencia/reproduccion-20a6566.txt`: con el SHA auditado, las pruebas nuevas de los ítems 1, 2+3, 4 y 5 **fallan**.
+- `evidencia/reproduccion-31bb249.txt`: con `31bb249`, las pruebas de huecos mal definidos, del entrante en L y del contrato `tw.cantidades/1` **fallan**.
+- `evidencia/suite-local.txt`: suite completa del árbol final (Linux x64, Node 22): 541 pruebas, 522 aprobadas, 0 fallos, 19 omitidas (Windows/AutoCAD).
+- ZIP reconstruido y verificado localmente: pasos 1–11 y 5b OK. En Windows, 5b genera las 5 láminas desde el ZIP instalado: CI `rc-zip-windows` sobre `31bb249`, run 44203299736. El SHA final se informa en el PR.
 
 ## 3. Arquitectura y contratos
 

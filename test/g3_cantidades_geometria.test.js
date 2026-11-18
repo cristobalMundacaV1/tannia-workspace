@@ -44,7 +44,10 @@ test('cantidades inventadas, unidades incompatibles, fuentes inexistentes y dupl
   assert.equal(code(() => modeloDesdeEspecificacion(base(6, 2.4, { mediciones: [{ id: 'x', metodo: 'area', fuentes: ['elev/muro'], unidad: 'm3' }] }))), 'UNIDAD_INCOMPATIBLE');
   assert.equal(code(() => modeloDesdeEspecificacion(base(6, 2.4, { mediciones: [{ id: 'x', metodo: 'longitud', fuentes: ['elev/fantasma'] }] }))), 'FUENTE_INEXISTENTE');
   assert.equal(code(() => modeloDesdeEspecificacion(base(6, 2.4, { mediciones: [{ id: 'a', partida: 'P', metodo: 'area', fuentes: ['elev/muro'] }, { id: 'b', partida: 'P', metodo: 'area', fuentes: ['elev/muro'] }] }))), 'MEDICION_DUPLICADA');
-  assert.equal(code(() => modeloDesdeEspecificacion(base(6, 2.4, { mediciones: [{ id: 'a', partida: 'P', metodo: 'area', fuentes: ['elev/puerta'] }, { id: 'b', partida: 'P', metodo: 'area', fuentes: ['elev/muro'], signo: -1 }] }))), 'MEDICION_INVALIDA');
+  // Un descuento de área mayor que el contorno medido no está contenido en él (rechazo topológico) …
+  assert.equal(code(() => modeloDesdeEspecificacion(base(6, 2.4, { mediciones: [{ id: 'a', partida: 'P', metodo: 'area', fuentes: ['elev/puerta'] }, { id: 'b', partida: 'P', metodo: 'area', fuentes: ['elev/muro'], signo: -1 }] }))), 'DESCUENTO_FUERA_DEL_CONTORNO');
+  // … y en longitudes, descuentos que superan lo medido siguen dando MEDICION_INVALIDA.
+  assert.equal(code(() => modeloDesdeEspecificacion(base(6, 2.4, { mediciones: [{ id: 'a', partida: 'P', metodo: 'longitud', fuentes: ['elev/puerta'] }, { id: 'b', partida: 'P', metodo: 'longitud', fuentes: ['elev/muro'], signo: -1 }] }))), 'MEDICION_INVALIDA');
 });
 
 test('cantidad declarada: exige origen y queda rotulada como NO medida desde el plano; no se mezcla con medidas', () => {
@@ -84,4 +87,30 @@ test('ítem 4: contornos autointersectantes, con retroceso, degenerados o con v�
   assert.equal(code(() => modeloDesdeEspecificacion(poli([[0, 0], [4, 0], [4, 3], [4, 0], [0, 3]]))), 'CONTORNO_NO_SIMPLE', 'vértice repetido');
   assert.equal(code(() => modeloDesdeEspecificacion(poli([[0, 0], [2, 0], [4, 0]]))), 'CONTORNO_NO_SIMPLE', 'sin superficie');
   const L = modeloDesdeEspecificacion(poli([[0, 0], [4, 0], [4, 1], [1, 1], [1, 3], [0, 3]])); assert.ok(Math.abs(L.quantities[0].valor - (4 * 1 + 1 * 2)) < 1e-12, 'polígono en L (no convexo, simple): área a mano');
+});
+
+test('ítem 4 (huecos mal definidos): un descuento fuera del contorno o vanos superpuestos no restan superficie', () => {
+  const muro = (vanos) => base(6, 2.4, { vistas: [{ id: 'elev', titulo: 'Elevación', tipo: 'elevacion', escala: 50, elementos: [{ id: 'muro', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 0], ancho: 6, alto: 2.4 }, ...vanos.map((v, i) => ({ id: `v${i}`, tipo: 'rectangulo', capa: 'VANOS', ...v }))] }],
+    mediciones: [{ id: 'bruto', partida: 'Muro', metodo: 'area', fuentes: ['elev/muro'] }, ...vanos.map((_, i) => ({ id: `d${i}`, partida: 'Muro', metodo: 'area', fuentes: [`elev/v${i}`], signo: -1 }))] });
+  assert.equal(code(() => modeloDesdeEspecificacion(muro([{ origen: [7, 0], ancho: 1, alto: 2 }]))), 'DESCUENTO_FUERA_DEL_CONTORNO', 'vano completamente fuera del muro');
+  assert.equal(code(() => modeloDesdeEspecificacion(muro([{ origen: [5.5, 0], ancho: 1, alto: 2 }]))), 'DESCUENTO_FUERA_DEL_CONTORNO', 'vano que sobresale del muro');
+  assert.equal(code(() => modeloDesdeEspecificacion(muro([{ origen: [1, 0], ancho: 1, alto: 2 }, { origen: [1.5, 0.5], ancho: 1, alto: 1 }]))), 'DESCUENTOS_SUPERPUESTOS', 'dos vanos superpuestos restarían dos veces');
+  const ok = modeloDesdeEspecificacion(muro([{ origen: [1, 0], ancho: 0.9, alto: 2 }, { origen: [3.5, 1], ancho: 1.2, alto: 1 }]));
+  assert.ok(Math.abs(ok.quantity_totals[0].valor - (6 * 2.4 - 1.8 - 1.2)) < 1e-12, 'vanos válidos (uno apoyado en el borde inferior) se descuentan');
+});
+
+test('ítem 4: vano en el entrante de un muro en L (dentro del rectángulo envolvente, fuera del muro) no se descuenta', () => {
+  const s = base(6, 2.4, { vistas: [{ id: 'v', titulo: 'V', tipo: 'elevacion', escala: 50, elementos: [{ id: 'L', tipo: 'polilinea', capa: 'MUROS', puntos: [[0, 0], [6, 0], [6, 1], [2, 1], [2, 3], [0, 3]], cerrada: true }, { id: 'h', tipo: 'rectangulo', capa: 'VANOS', origen: [3, 1.5], ancho: 1, alto: 1 }] }],
+    laminas: [{ id: '01', titulo: 'V', vistas: ['v'] }], mediciones: [{ id: 'a', partida: 'Muro', metodo: 'area', fuentes: ['v/L'] }, { id: 'b', partida: 'Muro', metodo: 'area', fuentes: ['v/h'], signo: -1 }] });
+  assert.equal(code(() => modeloDesdeEspecificacion(s)), 'DESCUENTO_FUERA_DEL_CONTORNO');
+});
+
+test('ítem 5: contrato tw.cantidades/1 — se suma solo el detalle, el total es de control y una fila total o mixta se rechaza', async () => {
+  const { documentoCantidades, cantidadPartida, ESQUEMA_CANTIDADES } = await import('../src/drawing/cantidades_contrato.js');
+  const m = modeloDesdeEspecificacion(base()); const doc = documentoCantidades(m, { modelo_sha256: digest(m), revision: 'r-x' });
+  assert.equal(doc.schema, ESQUEMA_CANTIDADES);
+  const q = cantidadPartida(doc, 'Muro M1'); assert.ok(Math.abs(q.valor - (6 * 2.4 - 1.8 - 1.2)) < 1e-12); assert.deepEqual(q.filas, ['bruto', 'vano-p', 'vano-v']); assert.equal(q.modelo_sha256, digest(m));
+  const contaminado = { ...doc, detalle: [...doc.detalle, ...doc.totales] }; assert.throws(() => cantidadPartida(contaminado, 'Muro M1'), /Solo se suman filas de detalle/);
+  assert.throws(() => documentoCantidades({ quantities: [...m.quantities, ...m.quantity_totals], quantity_totals: [] }, {}), /mal clasificadas/);
+  const alterado = { ...doc, totales: doc.totales.map((t) => ({ ...t, valor: t.valor + 1 })) }; assert.throws(() => cantidadPartida(alterado, 'Muro M1'), /no coincide con su total de control/);
 });
