@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0-rc.2 — 2026-11-18 (candidato CAD-BG; NO aceptado, sin AutoCAD ni Windows real con la persona)
+- Trabajos en segundo plano: planos, cubicaciones, presupuesto, memoria y DWG se preparan en un proceso oculto de prioridad baja; la persona puede seguir usando su computador. Cola, cancelación y reanudación tras interrupciones.
+- DWG sin interfaz con AutoCAD Core Console (pendiente de comprobar en AutoCAD 2027): solo se publica si la relectura coincide con el modelo.
+- Sin AutoCAD sin interfaz, el DWG ya no abre AutoCAD por sí solo: se explica y se pide autorización.
+- Herramienta nueva: tannia_trabajos.
+
 ## 0.3.0-rc.1 — 2026-11-18 (candidato TW-PRO-E2E; NO aceptado, sin AutoCAD ni Claude Desktop reales)
 - Recepción del expediente completo desde UNA ruta (ZIP, RAR con el lector del sistema, carpeta o archivo): extracción segura, originales protegidos, inventario y lectura inicial; instrucciones incrustadas marcadas como dato (issue #31).
 - Encargo profesional: datos con procedencia comprobada (cita literal verificada en el documento), una sola ronda de preguntas, plan por resultados ligado al estado real.

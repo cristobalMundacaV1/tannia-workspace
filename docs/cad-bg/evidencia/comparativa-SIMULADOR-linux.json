@@ -1,0 +1,105 @@
+{
+  "prueba": "G-BG0 comparativa motor interno / Core Console / COM",
+  "equipo": {
+    "so": "linux 6.18.44-fc-v595",
+    "cpus": 4,
+    "memoria_gb": 15.7
+  },
+  "inicio": "2026-11-18T12:12:19.138Z",
+  "core_console": {
+    "verificado_en_autocad_real": false,
+    "nota": "Detectar el ejecutable no prueba que Core Console procese DWG en este equipo (licencia, versión, rutas).",
+    "disponible": true,
+    "ruta": "<simulador>",
+    "origen": "variable_de_soporte",
+    "version": "desconocida"
+  },
+  "es_simulador": true,
+  "casos": [
+    {
+      "id": "tunel-150m-fortificacion",
+      "entidades": 5,
+      "modo_A": {
+        "ms": 80,
+        "dxf_bytes": 74498,
+        "requiere_autocad": false
+      },
+      "modo_B": {
+        "ms": 107,
+        "estado": "PUBLICADO_VERIFICADO",
+        "codigo": null,
+        "comparacion": {
+          "ok": true,
+          "problemas": [],
+          "resumen": {
+            "entidades_modelo": 37,
+            "cotas": 10,
+            "tipos_de_linea": 4
+          }
+        },
+        "auditoria": {
+          "errores_encontrados": 0,
+          "corregidos": 0
+        },
+        "ejecucion": [
+          {
+            "ok": true,
+            "clase": null,
+            "codigo": 0,
+            "ms": 48
+          },
+          {
+            "ok": true,
+            "clase": null,
+            "codigo": 0,
+            "ms": 44
+          }
+        ],
+        "cpu_nodo_ms": 47
+      }
+    },
+    {
+      "id": "edificacion-muro-vanos",
+      "entidades": 1,
+      "modo_A": {
+        "ms": 8,
+        "dxf_bytes": 14345,
+        "requiere_autocad": false
+      },
+      "modo_B": {
+        "ms": 61,
+        "estado": "PUBLICADO_VERIFICADO",
+        "codigo": null,
+        "comparacion": {
+          "ok": true,
+          "problemas": [],
+          "resumen": {
+            "entidades_modelo": 12,
+            "cotas": 0,
+            "tipos_de_linea": 4
+          }
+        },
+        "auditoria": {
+          "errores_encontrados": 0,
+          "corregidos": 0
+        },
+        "ejecucion": [
+          {
+            "ok": true,
+            "clase": null,
+            "codigo": 0,
+            "ms": 30
+          },
+          {
+            "ok": true,
+            "clase": null,
+            "codigo": 0,
+            "ms": 30
+          }
+        ],
+        "cpu_nodo_ms": 9
+      }
+    }
+  ],
+  "fin": "2026-11-18T12:12:19.399Z"
+}

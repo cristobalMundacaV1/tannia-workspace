@@ -222,3 +222,15 @@ test('paquete (bundle CommonJS): el trabajo de fondo corre desde server/index.js
     assert.equal(leerTrabajo(home, id).recursos.prioridad, BAJA);
   } finally { await c.close(); }
 });
+
+test('CAD-BG-08 edificación (N1): especificación con muro y vanos → planos + cubicaciones en segundo plano, cantidades con oráculo a mano', { timeout: 120000 }, async () => {
+  const home = hogar(); const s = await sesion(home, { TANNIA_MODO_B: 'off' }); const P = 'Edificio BG';
+  const especificacion = { codigo: 'ED-01', especialidad: 'edificación', proyecto: P, capas: { MUROS: { color: 7, grosor: 0.5, leyenda: 'Muros' }, VANOS: { color: 3, grosor: 0.25, leyenda: 'Vanos' } }, vistas: [{ id: 'elev', titulo: 'Elevación eje A', tipo: 'elevacion', escala: 50, elementos: [{ id: 'muro', tipo: 'rectangulo', capa: 'MUROS', origen: [0, 0], ancho: 6, alto: 2.4 }, { id: 'puerta', tipo: 'rectangulo', capa: 'VANOS', origen: [1, 0], ancho: 0.9, alto: 2.0 }, { id: 'ventana', tipo: 'rectangulo', capa: 'VANOS', origen: [3.5, 1.0], ancho: 1.2, alto: 1.0 }] }], laminas: [{ id: '01', titulo: 'Elevación eje A', vistas: ['elev'] }], mediciones: [{ id: 'bruto', partida: 'Muro M1', metodo: 'area', fuentes: ['elev/muro'] }, { id: 'vano-p', partida: 'Muro M1', metodo: 'area', fuentes: ['elev/puerta'], signo: -1 }, { id: 'vano-v', partida: 'Muro M1', metodo: 'area', fuentes: ['elev/ventana'], signo: -1 }, { id: 'vanos', partida: 'Vanos', metodo: 'conteo', fuentes: ['elev/puerta', 'elev/ventana'] }], elementos_fisicos: [{ id: 'M1', tipo: 'muro', fuentes: ['elev/muro'] }, { id: 'P1', tipo: 'puerta', fuentes: ['elev/puerta'] }, { id: 'V1', tipo: 'ventana', fuentes: ['elev/ventana'] }] };
+  try {
+    await s.T('tannia_proyecto_crear', { nombre: P });
+    const e = await s.hasta(data(await s.T('tannia_trabajos', { accion: 'crear', proyecto: P, tipo: 'cubicaciones', especificacion, asignaciones: [{ partida: 'Muro M1', codigo: 'M-01' }, { partida: 'Vanos', codigo: 'V-01' }] })).trabajo);
+    assert.equal(e.estado_interno, 'TERMINADO', JSON.stringify(e).slice(0, 600)); assert.match(e.mensaje_para_la_persona, /^Los planos y las cubicaciones de «Edificio BG» están listos para revisión\. Falta comprobar el archivo DWG en AutoCAD\.$/);
+    const ps = Object.fromEntries(data(await s.T('tannia_partidas_listar', { proyecto: P })).partidas.map((p) => [p.codigo, p.cantidad]));
+    assert.ok(Math.abs(ps['M-01'] - (6 * 2.4 - 0.9 * 2.0 - 1.2 * 1.0)) < 1e-9); assert.equal(ps['V-01'], 2);
+  } finally { await s.close(); }
+});
