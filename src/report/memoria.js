@@ -40,6 +40,12 @@ export function buildMemoriaPdf(data) {
     if (!data.archivos?.length) doc.text('Ninguna partida tiene fuente geométrica (cantidades manuales o por método sin archivo).');
     for (const a of data.archivos || []) doc.text(`• ${a.archivo}  —  SHA-256 usado en el cálculo: ${a.sha256 || 'no registrado'}  —  partidas: ${(a.partidas || []).join(', ')}`, { width: 495 });
 
+    if (data.planos) {
+      doc.font('Helvetica-Bold').text('1.3 Planos de los que salen las cantidades').font('Helvetica');
+      doc.text(`Revisión de planos ${data.planos.revision} (huella del modelo ${String(data.planos.model_sha256 || '').slice(0, 16)}…). Archivos: ${data.planos.archivos.join(', ')}.`, { width: 495 });
+      doc.text('Estado: borrador para revisión humana. El DXF y el PDF salen del mismo modelo que las cantidades; la apertura y guardado en AutoCAD (DWG) NO está verificada.', { width: 495 });
+    }
+
     H('2. Partidas y cantidades');
     for (const p of data.partidas || []) {
       doc.font('Helvetica-Bold').text(`${p.codigo}  ${p.descripcion}`).font('Helvetica');

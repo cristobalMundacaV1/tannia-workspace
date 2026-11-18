@@ -99,22 +99,28 @@ export function computeBudget({ partidas, apus, config }) {
   // Dos ejes DISTINTOS (revisión PR #30): `alcance` = qué parte de la obra cubre; `calculo_incompleto` = faltan precios/datos.
   // Una sola etiqueta para ventana, XLSX, PDF, manifiesto y respuesta, derivada de ambos.
   const calculoIncompleto = incompleto || noDefinidos.length > 0;
-  const etiqueta_total = [alcance === 'parcial' ? `PRESUPUESTO PARCIAL${alcanceTxt ? ` (${alcanceTxt})` : ''}: no es el costo total de la obra` : alcance === 'completo' ? 'TOTAL DE LA OBRA' : 'TOTAL (alcance no declarado)', ...(calculoIncompleto ? ['TOTAL INCOMPLETO: excluye partidas pendientes'] : [])].join(' — ');
   const advertencias = [];
   if (alcance === 'no_declarado') advertencias.push('Alcance del presupuesto no declarado: indique si cubre la obra completa o solo una parte.');
   const ref = Date.parse(config?.fecha_referencia_precios || '') || Date.now(); const MESES = 12;
+  // NEG-10 (TW-PRO-E2E G07): un precio con más de 12 meses USADO por una partida es referencial: el cálculo se muestra igual,
+  // pero el presupuesto no puede quedar final ni presentarse como costo vigente (antes solo se advertía).
+  const apusUsados = new Set(partidas.map((p) => p.apu).filter(Boolean)); const historicos = [];
   for (const a of apus) for (const i of a.insumos || []) {
     const t = Date.parse(i.fecha_precio || ''); if (!Number.isFinite(t)) { if (i.precio_unitario != null && i.fecha_precio) advertencias.push(`APU ${a.codigo}/${i.descripcion}: fecha de precio no reconocible («${i.fecha_precio}»); no se puede juzgar su vigencia.`); continue; }
     const meses = (ref - t) / (30.44 * 86400000);
-    if (meses > MESES) advertencias.push(`APU ${a.codigo}/${i.descripcion}: precio de ${i.fecha_precio} (${Math.floor(meses / 12)} año(s) y ${Math.floor(meses % 12)} mes(es) de antigüedad). No es un precio vigente: actualícelo o declare un reajuste con su índice y fuente.`);
+    if (meses > MESES) {
+      advertencias.push(`APU ${a.codigo}/${i.descripcion}: precio de ${i.fecha_precio} (${Math.floor(meses / 12)} año(s) y ${Math.floor(meses % 12)} mes(es) de antigüedad). No es un precio vigente: actualícelo o declare un reajuste con su índice y fuente.`);
+      if (apusUsados.has(a.codigo) && i.precio_unitario != null) { historicos.push(`${a.codigo}/${i.descripcion} (${i.fecha_precio})`); bloqueos.push(`Precio histórico en APU ${a.codigo}/${i.descripcion} (${i.fecha_precio}): es referencial, no vigente. El presupuesto no puede quedar final hasta actualizarlo con fuente y fecha.`); }
+    }
   }
+  const etiqueta_total = [alcance === 'parcial' ? `PRESUPUESTO PARCIAL${alcanceTxt ? ` (${alcanceTxt})` : ''}: no es el costo total de la obra` : alcance === 'completo' ? 'TOTAL DE LA OBRA' : 'TOTAL (alcance no declarado)', ...(calculoIncompleto ? ['TOTAL INCOMPLETO: excluye partidas pendientes'] : []), ...(historicos.length ? ['PRECIOS HISTÓRICOS: valor referencial, no es costo vigente'] : [])].join(' — ');
   for (const k of noDefinidos) bloqueos.push(`Parámetro económico no definido: ${PARAM[k]} (%). Indíquelo explícitamente (0 es válido si así se decide); no se supone.`);
   for (const l of lineas) bloqueos.push(...l.problemas);
   return {
     config: cfg, lineas, costo_directo: directo, gastos_generales: gg, utilidades: ut, neto, iva, total,
     moneda: 'CLP', redondeo: POLITICA_REDONDEO,
     alcance, alcance_descripcion: alcanceTxt, etiqueta_total, advertencias: [...new Set(advertencias)],
-    parametros_no_definidos: noDefinidos, calculo_incompleto: calculoIncompleto,
+    parametros_no_definidos: noDefinidos, calculo_incompleto: calculoIncompleto, precios_historicos: historicos,
     /** @deprecated usar `calculo_incompleto` (cálculo) o `alcance` (cobertura); se mantiene solo por compatibilidad de lectura. */
     parcial: calculoIncompleto, bloqueos: [...new Set(bloqueos)],
     estado_final_posible: bloqueos.length === 0 && partidas.length > 0,
