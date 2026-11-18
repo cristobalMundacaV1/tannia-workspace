@@ -86,7 +86,7 @@ export class DxfDocumento {
     t += tabla('VIEW', this.h.VIEW, []) + tabla('UCS', this.h.UCS, []);
     t += tabla('APPID', this.h.APPID, [...this.appids].map(([n, h]) => rec('APPID', h, this.h.APPID, 'AcDbRegAppTableRecord', [[2, n], [70, 0]])));
     const std = this.styles.get('Standard').h;
-    t += tabla('DIMSTYLE', this.h.DIMSTYLE, [...this.dimstyles].map(([n, d]) => rec('DIMSTYLE', d.h, this.h.DIMSTYLE, 'AcDbDimStyleTableRecord', [[2, n], [70, 0], [3, d.v.post ?? ''], [40, d.v.dimscale ?? 1], [41, 2.5], [42, 0.625], [43, 3.75], [44, 1.25], [140, 2.5], [141, 2.5], [144, 1], [147, 0.625], [77, 1], [78, 8], [271, d.v.dec ?? 2], [278, 44], [279, 0], [340, std]], 105)), [[100, 'AcDbDimStyleTable'], [71, 0]]); // DIMSTYLE: el handle va en el código 105 (UAT AutoCAD 2027: con 5 → eHandleInUse, dibujo descartado)
+    t += tabla('DIMSTYLE', this.h.DIMSTYLE, [...this.dimstyles].map(([n, d]) => rec('DIMSTYLE', d.h, this.h.DIMSTYLE, 'AcDbDimStyleTableRecord', [[2, n], [70, 0], [3, d.v.post ?? ''], [40, d.v.dimscale ?? 1], [41, 2.5], [42, 0.625], [43, 3.75], [44, 1.25], [140, 2.5 * 1467 / 2048], [141, 2.5], [144, 1], [147, 0.625], [77, 1], [78, 8], [271, d.v.dec ?? 2], [278, 44], [279, 0], [340, std]], 105)), [[100, 'AcDbDimStyleTable'], [71, 0]]); // DIMSTYLE: el handle va en el código 105 (UAT AutoCAD 2027: con 5 → eHandleInUse, dibujo descartado)
     t += tabla('BLOCK_RECORD', this.h.BLOCK_RECORD, this.blocks.map((b) => rec('BLOCK_RECORD', b.rec, this.h.BLOCK_RECORD, 'AcDbBlockTableRecord', [[2, b.name], ...(b.layout ? [[340, b.layout]] : []), [70, 0], [280, 1], [281, 0]])));
     const ent = (b) => b.entities.join('');
     const activo = this.layouts[0];

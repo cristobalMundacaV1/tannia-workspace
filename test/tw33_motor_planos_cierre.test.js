@@ -322,3 +322,19 @@ test('G11 UAT AutoCAD 2027 (regresión): cada registro DIMSTYLE lleva el handle 
     assert.ok(!dxf.includes('$MSLTSCALE')); assert.deepEqual(inspeccionarDxf(dxf).problemas, [], n);
   }
 });
+
+test('UAT AutoCAD 2027 (cuadros desbordados): cada TEXT de papel del DXF ocupa EXACTAMENTE su caja de la IR con la métrica de AutoCAD; la altura en cuerpo (rc.5) falla', async () => {
+  const { paridadEspacialDxf } = await import('../src/drawing/paridad.js');
+  for (const [n, crear] of [['tunel', UAT], ['edi', EDI]]) for (const paper of ['A3', 'A1']) {
+    const { ir, dxf } = salida(n, crear, { paper }); const r = paridadEspacialDxf(ir, dxf); assert.deepEqual(r.problemas.slice(0, 3), [], `${n} ${paper}`); assert.ok(r.textos_verificados > 100);
+  }
+  // Mutación = defecto de rc.5: altura del TEXT igual al cuerpo del PDF (AutoCAD la toma como mayúscula ⇒ ~1,4× más ancho).
+  const { ir, dxf } = salida('edi', EDI); const k = 2048 / 1467;
+  const L = dxf.split('\n'); let tipo = null; let papel = false;
+  for (let q = 0; q + 1 < L.length; q += 2) { const c = L[q].trim(); if (c === '0') { tipo = L[q + 1]; papel = false; } else if (c === '67' && L[q + 1] === '1') papel = true; else if (c === '40' && tipo === 'TEXT' && papel) L[q + 1] = String(Number(L[q + 1]) * k); }
+  const rc5 = L.join('\n');
+  const m = paridadEspacialDxf(ir, rc5); assert.equal(m.ok, false); assert.ok(m.problemas.some((p) => /Cantidad|Superficie|Especificaci/.test(p)), m.problemas.slice(0, 3).join(' | '));
+  // La escala gráfica rotula sus dos extremos (no «0 / x m» en un solo texto)
+  const barras = ir.sheets.flatMap((s) => s.primitives.filter((p) => p.role === 'scale_bar' && p.kind === 'text').map((p) => p.value));
+  assert.ok(barras.includes('0') && barras.some((t) => /^\d+,\d{2} m$/.test(t)) && !barras.some((t) => t.includes('/')));
+});

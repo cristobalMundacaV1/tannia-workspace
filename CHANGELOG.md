@@ -4,6 +4,8 @@
 - AutoCAD 2027 descartaba el DXF de planos de rc.5 («Error en la tabla DIMSTYLE / eHandleInUse»): el handle de cada estilo de cota se escribía con el código 5 en vez de 105. Corregido.
 - Se elimina la variable de cabecera $MSLTSCALE que AutoCAD 2027 informaba como desconocida.
 - El inspector de apertura ahora rechaza ambos defectos; rc.5 no debe usarse.
+- Cuadros, leyendas y notas ya no se desbordan en AutoCAD: la altura de TEXT era el cuerpo del PDF y AutoCAD la toma como altura de mayúsculas (~1,4× más ancho). Ahora altura = 0,716 × cuerpo y misma línea base; nuevo gate de paridad espacial DXF↔IR.
+- Escala gráfica con sus dos extremos rotulados («0» y «0,50 m»), en vez de «0 / 0,50 m».
 
 ## 0.3.0-rc.5 — 2026-11-18 (cierre del motor de planos, PR #38; candidato para UAT controlada, NO aceptado, sin AutoCAD 2027 real)
 - DXF: se abre encuadrado en Modelo (vista inicial y extensiones) y cada lámina tiene su presentación con viewport general; estructura AC1024 completa. Corrige el «DXF aparentemente vacío» de la UAT (pendiente de confirmar en AutoCAD 2027).

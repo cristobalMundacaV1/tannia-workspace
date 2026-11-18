@@ -86,7 +86,8 @@ export function verificarDxfContraModelo(dxf, composition) {
     } else if (Math.abs(n(e, 42) - d.value) > 1e-6) problemas.push(`cota radial ${v.id}#${k}: ${n(e, 42)} ≠ ${d.value}`);
   }));
   // 3) Sin duplicados en papel: ningún texto de papel repite el rótulo de una cota (las cotas las muestra el viewport).
-  const enPapel = bloques.filter((e) => g(e, 67) === '1' && e.tipo === 'TEXT').map((e) => g(e, 1));
+  // Los rótulos de la escala gráfica (ids «:barra:») miden la barra, no son cotas.
+  const enPapel = bloques.filter((e) => g(e, 67) === '1' && e.tipo === 'TEXT' && !e.codigos.some(([c, v]) => c === 1000 && /^ir=.*:barra:/.test(v))).map((e) => g(e, 1));
   const rotulos = new Set(model.views.flatMap((v) => v.dimensions.map((d) => d.kind === 'radial' ? `R ${d.value}` : `${d.value}`)));
   const dup = enPapel.filter((t) => /^R? ?[\d.,]+ m$/.test(t || '') || (/ m$/.test(t || '') && rotulos.has(String(t).replace(/ m$/, '').replace(',', '.'))));
   if (dup.length) problemas.push(`cotas duplicadas como texto en el papel: ${dup.slice(0, 5).join(' | ')}`);

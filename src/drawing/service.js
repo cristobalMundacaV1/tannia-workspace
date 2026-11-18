@@ -5,7 +5,7 @@ import { modeloDesdeEspecificacion } from './especificacion.js';
 import { buildSheetsPdf, verifyPdf, validateScene } from './pdf.js';
 import { buildIR } from './ir.js';
 import { inspeccionarDxf } from './dxf_inspect.js';
-import { paridadDxf, paridadPdf, tintaEnTramas } from './paridad.js';
+import { paridadDxf, paridadPdf, tintaEnTramas, paridadEspacialDxf } from './paridad.js';
 import { buildDrawingDxf } from './dxf.js';
 import { verificarDxfContraModelo } from './dxf_verificar.js';
 import { documentoCantidades } from './cantidades_contrato.js';
@@ -70,7 +70,9 @@ export class DrawingService {
     // P0 / gate 5d: el DXF debe ser estructuralmente utilizable al abrir (vista inicial, extensiones, layouts, viewports con geometría).
     const dxfInspeccion = inspeccionarDxf(dxfText);
     if (!dxfInspeccion.ok) throw new UserError('DXF_NO_UTILIZABLE', 'El DXF generado no supera la inspección de apertura (vista inicial, extensiones, presentaciones); no se entrega.', '', dxfInspeccion);
-    const paridadCad = paridadDxf(ir, dxfText);
+    const paridadCad = paridadDxf(ir, dxfText); const espacial = paridadEspacialDxf(ir, dxfText);
+    if (!espacial.ok) throw new UserError('COMPOSICION_CAD_DESBORDADA', 'En el DXF algún texto no cabe en su celda, panel o lámina; no se entrega.', '', espacial);
+    paridadCad.espacial = { ok: true, textos_verificados: espacial.textos_verificados };
     if (!paridadCad.ok) throw new UserError('PARIDAD_DXF_FALLIDA', 'El DXF no contiene exactamente los elementos de la representación común; no se entrega.', '', paridadCad);
     const layoutQa = verifyLayouts(viewportsFromDxf(dxfText), expectedLayouts(composition));
     if (!layoutQa.ok) throw new UserError('LAYOUTS_INVALIDOS', 'El DXF generado no cumple la verificación estructural de layouts y viewports.', '', layoutQa);

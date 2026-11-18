@@ -4,6 +4,8 @@
 import { leerDxf } from './dxf_inspect.js';
 import { dxfDecode } from '../design/salidas.js';
 import { openPdf } from '../pdf/pdf.js';
+import { ancho, CAP_EM, ASC_EM } from './text_metrics.js';
+import { textBox } from './ir.js';
 
 const get = (e, c) => e.g.find(([k]) => k === c)?.[1];
 const xd = (e, k) => { const v = e.g.find(([c, x]) => c === 1000 && String(x).startsWith(`${k}=`)); return v ? String(v[1]).slice(k.length + 1) : null; };
@@ -71,4 +73,26 @@ export function tintaEnTramas(irSheet, png, { dpi }) {
     if (!total || tinta / total < 0.9) problemas.push(`${p.id}: trama sin tinta suficiente (${tinta}/${total})`);
   }
   return { ok: !problemas.length, problemas };
+}
+
+/**
+ * Gate 5e espacial (UAT AutoCAD 2027: cuadros desbordados en CAD con PDF verde). Reconstruye la caja de cada TEXT de papel como
+ * la dibuja AutoCAD (altura = MAYÚSCULAS ⇒ cuerpo = altura / 0,716; línea base; alineación) y exige que coincida con la caja de la
+ * IR (± 0,3 mm) y que quede dentro del marco de la hoja. Detecta textos más anchos que su celda/panel en el DXF.
+ */
+export function paridadEspacialDxf(ir, dxf) {
+  const S = leerDxf(dxf); const problemas = []; let n = 0; const papel = [...(S.ENTITIES || []), ...(S.BLOCKS || [])].filter((e) => get(e, 67) === '1' && e.tipo === 'TEXT');
+  const porId = new Map(ir.sheets.flatMap((s) => s.primitives.filter((p) => p.kind === 'text' && p.space !== 'model').map((p) => [p.id, { p, s }])));
+  for (const e of papel) {
+    const id = xd(e, 'ir'); const ref = porId.get(id); if (!ref) continue; const { p, s } = ref; n++;
+    const h = Number(get(e, 40)); const size = h / CAP_EM; const val = dxfDecode(get(e, 1)); const al = Number(get(e, 72) || 0);
+    const [x, yb] = al ? [Number(get(e, 11)), Number(get(e, 21))] : [Number(get(e, 10)), Number(get(e, 20))];
+    const w = ancho(val, size); const caja = { x: x - (al === 1 ? w / 2 : al === 2 ? w : 0), y: s.size[1] - yb - size * ASC_EM, w, h: size * 1.2 };
+    const esp = textBox(p); const d = Math.max(Math.abs(caja.x - esp.x), Math.abs(caja.y - esp.y), Math.abs(caja.w - esp.w), Math.abs(caja.h - esp.h));
+    if (d > 0.3) problemas.push(`${s.name} ${id} «${val.slice(0, 30)}»: caja CAD difiere ${d.toFixed(2)} mm de la IR`);
+    if (caja.w > p.maxWidth + 0.3) problemas.push(`${s.name} ${id} «${val.slice(0, 30)}»: ${caja.w.toFixed(1)} mm > ancho disponible ${p.maxWidth.toFixed(1)} mm`);
+    if (caja.x < s.margin - 0.3 || caja.x + caja.w > s.size[0] - s.margin + 0.3 || caja.y < s.margin - 0.3 || caja.y + caja.h > s.size[1] - s.margin + 0.3) problemas.push(`${s.name} ${id}: texto fuera del marco`);
+  }
+  if (!n) problemas.push('sin textos de papel verificables');
+  return { ok: !problemas.length, problemas, textos_verificados: n };
 }

@@ -107,7 +107,8 @@ export function sceneForSheet(composition, sheet, modelo = null) {
     if (!v.schematic) {
       const barM = v.scale >= 100 ? 25 : v.scale >= 50 ? 2 : v.scale >= 20 ? 0.5 : 0.2; const barW = barM * t.sx; const bx = v.viewport.paperCenter[0] - barW / 2; const by = pnl.y + pnl.h - 5.5;
       line('barra', [bx, by], [bx + barW, by], { role: 'scale_bar' }); line('barra', [bx, by - 1], [bx, by + 1], { role: 'scale_bar' }); line('barra', [bx + barW, by - 1], [bx + barW, by + 1], { role: 'scale_bar' });
-      text('barra', `0 / ${number(barM)} m`, bx + barW + 2, by - 1.6, TIPO.cuerpo, 40, 'left', { role: 'scale_bar' });
+      // Escala gráfica con sus DOS extremos rotulados (UAT AutoCAD 2027: «0 / 0,50 m» parecía una cota sin referentes).
+      text('barra', '0', bx, by + 1.6, TIPO.cuerpo, 10, 'center', { role: 'scale_bar' }); text('barra', `${number(barM)} m`, bx + barW, by + 1.6, TIPO.cuerpo, 20, 'center', { role: 'scale_bar' });
     }
   }
   // Paneles: cuadros, leyenda (muestras REALES desde el catálogo) y notas.

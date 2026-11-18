@@ -8,6 +8,7 @@ import { DxfDocumento } from './dxf_doc.js';
 import { densificar } from './regions.js';
 import { TRAMAS, SIMBOLOS } from './catalog.js';
 import { buildIR } from './ir.js';
+import { alturaCad, ASC_EM } from './text_metrics.js';
 
 const LW = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
 const lw = (mm) => LW.reduce((b, x) => (Math.abs(x - mm * 100) < Math.abs(b - mm * 100) ? x : b), 25);
@@ -52,7 +53,7 @@ export function buildDrawingDxf(composition, { ir = null } = {}) {
       doc.insert(doc.model, 'TW_SIMBOLOS', `TW_${p.symbol_ref}`, c, p.scale_m_per_mm, p.rot, xd);
     }
     else if (p.kind === 'dimension') {
-      const d = p.dim; const scale = v.scale / 1000; const h = 2.5 * scale; const style = doc.dimstyle(`TW_1-${v.scale}`, { dimscale: scale, post: '<> m' });
+      const d = p.dim; const scale = v.scale / 1000; const h = alturaCad(2.5) * scale; const style = doc.dimstyle(`TW_1-${v.scale}`, { dimscale: scale, post: '<> m' });
       const blk = doc.block(`*D${++nDim}`, { anonymous: true }); let data;
       if (d.kind === 'linear') {
         const a = P(d.a); const b = P(d.b); const horizontal = Math.abs(a[1] - b[1]) < 1e-9;
@@ -87,7 +88,7 @@ export function buildDrawingDxf(composition, { ir = null } = {}) {
       else if (p.kind === 'rect') doc.lwpolyline(lay, capa, [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.h], [p.x, p.y + p.h]].map(fy), true, xd(p));
       else if (p.kind === 'path') { if (p.circle) doc.circle(lay, capa, fy(p.circle.center), p.circle.radius, xd(p)); else doc.lwpolyline(lay, capa, p.points.map(fy), !!p.closed, xd(p)); }
       else if (p.kind === 'hatch') doc.hatch(lay, capa, { loops: p.loops.map((l) => l.map(fy)), nombre: '_USER', familias: TRAMAS[p.hatch_ref].familias, opt: xd(p) });
-      else if (p.kind === 'text') doc.text(lay, capa, p.value, fy([p.x, p.y + p.size]), p.size, { align: p.align, ...xd(p) });
+      else if (p.kind === 'text') doc.text(lay, capa, p.value, fy([p.x, p.y + p.size * ASC_EM]), alturaCad(p.size), { align: p.align, ...xd(p) }); // altura de mayúsculas y línea base iguales a las del PDF
     }
     for (const vp of s.viewports) {
       const o = off[vp.view_id]; const v = views.get(vp.view_id); const ex = v.verticalScale ? v.scale / v.verticalScale : 1;

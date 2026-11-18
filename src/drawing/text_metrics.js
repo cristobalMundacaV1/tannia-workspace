@@ -24,3 +24,8 @@ export function envolver(texto, size, max) {
   if (linea) out.push(linea);
   return out.length ? out : [''];
 }
+
+/** Correspondencia PDF ↔ AutoCAD (UAT AutoCAD 2027): en TEXT la «altura» es la de MAYÚSCULAS; en el PDF es el cuerpo (em).
+ *  Arial / Liberation Sans (métricamente compatibles en ancho): mayúscula = 0,716 em; ascendente = 0,905 em. */
+export const CAP_EM = 1467 / 2048; export const ASC_EM = 0.905;
+export const alturaCad = (size) => size * CAP_EM;
