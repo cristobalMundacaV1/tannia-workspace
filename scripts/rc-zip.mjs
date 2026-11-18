@@ -84,12 +84,25 @@ const docs = {
   'documentos/GUIA_RAPIDA.md': plantilla(leer('packaging/zip/GUIA_RAPIDA.md')),
   'documentos/RECUPERACION_Y_DESINSTALACION.md': plantilla(leer('packaging/zip/RECUPERACION_Y_DESINSTALACION.md')),
   'documentos/LIMITACIONES_Y_ESTADO.md': plantilla(leer('packaging/zip/LIMITACIONES_Y_ESTADO.md')),
+  'PROBAR_PLANOS.cmd': crlf(plantilla(leer('packaging/zip/PROBAR_PLANOS.cmd'))),
+  'documentos/UAT-PLANOS-AUTOCAD-2027.md': plantilla(leer('packaging/zip/UAT-PLANOS-AUTOCAD-2027.md')),
   'VERSION_Y_COMPATIBILIDAD.json': `${JSON.stringify(compat, null, 2)}\n`,
   'AVISOS_DE_TERCEROS.md': avisos,
 };
 
+// 4b) PR #38: juego de planos de REFERENCIA generado desde el código de este mismo commit (prueba sin Claude; UAT en AutoCAD 2027).
+// Mismos gates que el servidor (inspección DXF 5d, paridad 5e). Sin fechas: reproducible. El verificador lo compara con la
+// regeneración que hace el servidor INSTALADO en Windows (--planos-prueba).
+const { pruebaAutonomaPlanos } = await import(new URL('../src/drawing/prueba_autonoma.js', import.meta.url));
+const tmpPlanos = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-rc-planos-')); const infPlanos = await pruebaAutonomaPlanos(path.join(tmpPlanos, 'prueba'));
+if (!infPlanos.ok) throw new Error(`La prueba de planos de referencia no supera sus gates: ${JSON.stringify(infPlanos.proyectos.map((p) => p.gates))}`);
+const planos = {};
+for (const p of infPlanos.proyectos) for (const f of Object.keys(p.archivos)) planos[`PLANOS-PRUEBA/${p.nombre}/${f}`] = fs.readFileSync(path.join(tmpPlanos, 'prueba', p.carpeta, f));
+planos['PLANOS-PRUEBA/REFERENCIA.json'] = Buffer.from(`${JSON.stringify({ schema: 'tw.planos_referencia/1', version: VERSION, commit, generado_con: 'src/drawing/prueba_autonoma.js (mismo commit)', gates: Object.fromEntries(infPlanos.proyectos.map((p) => [p.nombre, p.gates])), revisiones: Object.fromEntries(infPlanos.proyectos.map((p) => [p.nombre, p.revision])), archivos: Object.fromEntries(infPlanos.proyectos.map((p) => [p.nombre, p.archivos])), autocad_2027: 'NO VERIFICADO (documentos/UAT-PLANOS-AUTOCAD-2027.md)' }, null, 2)}\n`);
+fs.rmSync(tmpPlanos, { recursive: true, force: true });
+
 // 5) ensamblado: archivos, SHA256SUMS y manifiesto de la entrega
-const archivos = { [nombreMcpb]: fs.readFileSync(mcpbTmp), ...Object.fromEntries(Object.entries(docs).map(([k, t]) => [k, Buffer.from(t, 'utf8')])), ...licencias };
+const archivos = { [nombreMcpb]: fs.readFileSync(mcpbTmp), ...Object.fromEntries(Object.entries(docs).map(([k, t]) => [k, Buffer.from(t, 'utf8')])), ...licencias, ...planos };
 const sums = Object.keys(archivos).sort().map((k) => `${sha(archivos[k])}  ${k}`).join('\n') + '\n';
 archivos['SHA256SUMS.txt'] = Buffer.from(sums);
 const manifiesto = { schema: 'tw.release_manifest/1', producto: 'Tannia Workspace', version: VERSION, estado: compat.estado, commit, arbol_limpio: limpio, construido_en: `${os.platform()}-${os.arch()} node ${process.version}`, destino: target, extension: { archivo: nombreMcpb, sha256: shaMcpb, archivos_omitidos_por_el_empaquetador: omitidos, contenido_sha256: contenidoExtension, nota: 'El contenido interno es reproducible; el .mcpb lleva fechas fijas.' }, archivos: Object.keys(archivos).sort().length, entrada_de_instalacion: 'INSTALAR.cmd' };

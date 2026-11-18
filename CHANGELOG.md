@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0-rc.5 — 2026-11-18 (cierre del motor de planos, PR #38; candidato para UAT controlada, NO aceptado, sin AutoCAD 2027 real)
+- DXF: se abre encuadrado en Modelo (vista inicial y extensiones) y cada lámina tiene su presentación con viewport general; estructura AC1024 completa. Corrige el «DXF aparentemente vacío» de la UAT (pendiente de confirmar en AutoCAD 2027).
+- Planos con simbología de catálogo (propuesta, no normativa), tramas de materiales declarados, leyenda generada de lo usado, llamadas D1–D4 con detalles, y cuadros geométrico, de cantidades, de pernos y de materiales calculados de la misma fuente que la cubicación.
+- PDF y DXF salen de una misma representación (Drawing IR v2) y se contrastan entre sí antes de entregar.
+- Láminas A3/A2/A1 por paneles: si no cabe, se crean láminas de continuación; nunca se reduce la escala ni el texto.
+- Segundo caso de prueba: muro con vano (edificación).
+- Datos no declarados (placa, tuerca, solera, drenaje, ancho de paño, especificaciones) quedan PENDIENTES y visibles.
+- Prueba de planos sin Claude: `PROBAR_PLANOS.cmd` y juego de referencia `PLANOS-PRUEBA` en el ZIP; procedimiento `UAT-PLANOS-AUTOCAD-2027.md`.
+- Cubicación desde DXF: el espacio papel ya no se mide. CSV de fortificación con columnas planas.
+
 ## 0.3.0-rc.3 — 2026-11-18 (revisión independiente PR #36; NO aceptado, sin AutoCAD real)
 - Toda operación de AutoCAD que pueda interrumpir el escritorio (abrir copia, agregar líneas, DWG, 3D, vista, verificación) pide autorización humana específica del documento; sin ella no se ejecuta.
 - Un DWG ya generado solo se reutiliza si sigue íntegro; si cambió, se aparta y se vuelve a generar.

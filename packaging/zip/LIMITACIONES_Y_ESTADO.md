@@ -10,6 +10,7 @@
 - Verificación de cantidades y aprobación de entregas **solo por una persona**; entrega exacta de lo aprobado.
 
 ## Bloqueado o no validado
+- **Planos (rc.5)**: el DXF de planos se corrigió para abrir encuadrado y con presentaciones visibles, pero **no se ha abierto en AutoCAD 2027 real**: siga `documentos/UAT-PLANOS-AUTOCAD-2027.md`. La simbología es una propuesta (no normativa); los detalles D1–D4 solo dibujan datos declarados; los planos son BORRADOR PARA REVISIÓN.
 - **AutoCAD real**: ninguna versión probada con este candidato; la importación DXF→DWG tiene un fallo real previo sin causa confirmada (CAD-OPEN-02). Use las funciones de AutoCAD solo en copias.
 - **Claude Desktop real**: instalación, ventanas de confirmación y procedimientos no probados en su equipo.
 - **Uso profesional**: requiere piloto con expedientes reales anonimizados y revisión de un profesional competente (gates G2b, G3, G7, G8 del roadmap).
