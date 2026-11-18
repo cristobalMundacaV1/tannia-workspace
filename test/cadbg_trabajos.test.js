@@ -27,7 +27,7 @@ function hogar(config = {}) { const home = tmpHome(); fs.mkdirSync(path.join(hom
 function simulador(dir, modo = 'normal') {
   const exe = path.join(dir, 'accoreconsole-simulado'); const ctl = path.join(dir, 'modo.txt'); const log = path.join(dir, 'invocaciones.jsonl');
   fs.writeFileSync(exe, `#!/bin/sh\nexec "${process.execPath}" "${path.join(ROOT, 'test', 'proc', 'accoreconsole_simulado.mjs')}" "$@"\n`, { mode: 0o755 }); fs.writeFileSync(ctl, modo);
-  return { exe, ctl, log, modo: (m) => fs.writeFileSync(ctl, m), invocaciones: () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []), env: { TANNIA_ACCORECONSOLE: exe, TANNIA_SIM_ACC_CTL: ctl, TANNIA_SIM_ACC_LOG: log, TANNIA_ACCORECONSOLE_VERSION: 'SIMULADOR' } };
+  return { exe, ctl, log, modo: (m) => fs.writeFileSync(ctl, m), invocaciones: () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((x) => !x.fin) : []), env: { TANNIA_ACCORECONSOLE: exe, TANNIA_SIM_ACC_CTL: ctl, TANNIA_SIM_ACC_LOG: log, TANNIA_ACCORECONSOLE_VERSION: 'SIMULADOR' } };
 }
 async function sesion(home, env = {}) {
   const c = await startClient(home, undefined, { TANNIA_AVISOS: 'off', ...env });
@@ -106,7 +106,7 @@ test('CAD-BG-05: cancelar en pleno proceso CAD y caída del proceso de fondo —
     await s.hasta(id, () => { const t = leerTrabajo(home, id); return t.pasos[4].estado === 'en_curso' && t.pasos[4].pid_cad; });
     const pidCad = leerTrabajo(home, id).pasos[4].pid_cad;
     await s.T('tannia_trabajos', { accion: 'cancelar', trabajo: id });
-    const c = await s.hasta(id); assert.equal(c.estado_interno, 'CANCELADO'); assert.match(c.mensaje_para_la_persona, /^Detuve el trabajo de «Túnel cancelación»\. No quedó nada a medias/);
+    const c = await s.hasta(id); assert.equal(c.estado_interno, 'CANCELADO'); assert.match(c.mensaje_para_la_persona, /^Detuve el trabajo de «Túnel cancelación»\. Lo que no alcanzó a terminar no se publicó/);
     await esperar(300); assert.equal(procesoVivo(pidCad), false); assert.deepEqual(preparaciones(home, P), []);
     const rev = c.pasos[0].resultado.revision_planos; assert.ok(!fs.existsSync(path.join(home, 'Proyectos', P, '03 Trabajo', 'CAD', 'modelos', rev, 'planos.dwg')));
     // 2) Caída abrupta del proceso de fondo durante el DWG: la reanudación detiene la consola huérfana y NO repite planos/partidas/documentos
@@ -143,7 +143,7 @@ test('G-BG2 sin sustitución silenciosa: sin modo B, exportar_dwg NO toca AutoCA
     assert.match(d.mensaje, /necesito usar AutoCAD con su ventana.*No abrí nada/); assert.ok(d.detalle.que_se_hara && d.detalle.que_queda_intacto && d.detalle.si_pospone);
     assert.equal(llamadas.length, 0, 'ninguna llamada a AutoCAD');
     const r2 = await cli.callTool({ name: 'tannia_planos', arguments: { proyecto: 'Obra C', accion: 'exportar_dwg_interactivo' } });
-    assert.equal(r2.structuredContent.error, 'AUTORIZACION_REQUERIDA'); assert.equal(llamadas.length, 0); await cli.close();
+    assert.equal(r2.structuredContent.error, 'AUTORIZACION_INTERACTIVA_REQUERIDA'); assert.equal(llamadas.length, 0); await cli.close();
     cli = await conectar({ action: 'decline' });
     const r3 = await cli.callTool({ name: 'tannia_planos', arguments: { proyecto: 'Obra C', accion: 'exportar_dwg_interactivo' } });
     assert.equal(r3.structuredContent.error, 'INTERVENCION_POSPUESTA'); assert.match(r3.structuredContent.que_hacer, /DXF y PDF siguen disponibles/); assert.equal(llamadas.length, 0); await cli.close();

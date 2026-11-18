@@ -15,7 +15,8 @@ Claude Desktop ──MCP──► servidor Tannia ──► tannia_trabajos «cr
                                mismo ejecutable con --trabajo <id>  (oculto, prioridad «por debajo de lo normal»)
                                ├─ Modo A: herramientas reales por MCP en memoria; plataforma «sin CAD» (COM imposible), sin ventanas
                                └─ Modo B: accoreconsole.exe oculto: /i + _.SAVEAS → relectura → comparación → publicación atómica
-Modo C (COM en la sesión de la persona): SOLO tannia_planos «exportar_dwg_interactivo», tras su autorización explícita.
+Modo C (COM en la sesión de la persona): TODA operación que interrumpe pasa por la política única src/cad/politica_interactiva.js
+(ventana humana específica de operación + documentos, 10 min); el adaptador COM la exige en su único punto de paso.
 ```
 
 | Módulo | Función |
@@ -26,7 +27,8 @@ Modo C (COM en la sesión de la persona): SOLO tannia_planos «exportar_dwg_inte
 | `src/trabajos/modalidades.js` | Inventario A/B/C de operaciones con su justificación en el código; C nunca se selecciona automáticamente |
 | `src/trabajos/avisos.js` | Notificación de Windows al terminar (no toma el foco) — NO VERIFICADA en Windows real |
 | `src/tools/trabajos.js` | `tannia_trabajos` (crear / estado / cancelar / capacidades) |
-| `src/tools/drawing.js` | `exportar_dwg` ya **no** usa COM en silencio: modo B en segundo plano o «requiere intervención» con qué/por qué/qué queda intacto/qué pasa si se pospone; `exportar_dwg_interactivo` exige autorización humana |
+| `src/tools/drawing.js` | `exportar_dwg` ya **no** usa COM en silencio: modo B en segundo plano o «requiere intervención» con qué/por qué/qué queda intacto/qué pasa si se pospone; `exportar_dwg_interactivo` usa la política única |
+| `src/cad/politica_interactiva.js` (revisión BG-R03) | Clasifica TODOS los scripts COM: 9 interrumpen (abrir/crear/activar pestañas, escribir, guardar, cerrar, cambiar vista, enviar comandos) y 11 solo leen. Los que interrumpen exigen un permiso humano **específico** (operación + documentos, vigente 10 min, en memoria del servidor); `AutoCadCom#exec` lo verifica en cada llamada (`AsyncLocalStorage`) y rechaza rutas fuera del permiso. Sin política, el adaptador **deniega** |
 
 ## 2. Estado de los gates
 
@@ -69,7 +71,8 @@ Modo C (COM en la sesión de la persona): SOLO tannia_planos «exportar_dwg_inte
 
 - **Core Console no se ha ejecutado nunca en esta implementación.** La secuencia `/i` + `_.SAVEAS` sigue el uso publicado de acadbp; que AutoCAD 2027 la acepte (incluido abrir un DXF con `/i`), su licencia y su comportamiento con rutas Unicode están por verificar.
 - `-PLOT` sin interfaz: investigado, **no implementado**.
-- Las herramientas COM directas existentes (`tannia_cad_*`, `tannia_diseno_a_autocad`, `tannia_3d_a_autocad`) siguen siendo modo C sin la ventana de autorización del coordinador; solo se usan cuando la persona lo pide en la conversación. Migrarlas al flujo autorizado es el siguiente paso recomendado.
+- La ventana de autorización de AutoCAD interactivo es la misma infraestructura humana ya existente (WPF/elicitación); su presentación con la persona en Windows real está **NO EJECUTADA**. La relectura del modo B compara el subconjunto que el modelo de Tannia representa, no todo el comportamiento de AutoCAD.
+- Toma de un bloqueo CAD abandonado: se aparta con nombre único; queda una ventana teórica de microsegundos si dos procesos lo apartan a la vez tras una caída (documentado; no observado en pruebas).
 - El aviso de escritorio (notificación de Windows) no está verificado en Windows real.
 - La cancelación es cooperativa: un paso del modo A en curso termina antes de detenerse; si no responde en 15 s, se termina el proceso (las escrituras de planos son transaccionales).
 - El coordinador vive dentro del servidor MCP: si Claude Desktop está cerrado, un trabajo ya iniciado termina, pero los pendientes esperan a la próxima apertura.
@@ -78,4 +81,18 @@ Modo C (COM en la sesión de la persona): SOLO tannia_planos «exportar_dwg_inte
 
 1. Autorizar el [protocolo real](PROTOCOLO_AUTOCAD_2027.md) en el PC de Tannia (AutoCAD 2027 completo), empezando por CAD-BG-06 (¿acepta Core Console la secuencia?) y CAD-BG-02/04.
 2. Confirmar que, sin Core Console, el DWG queda como operación **autorizada por la persona** (modo C) y no se automatiza.
-3. Priorizar la migración de las herramientas COM directas al flujo autorizado.
+3. Decidir la UAT real de `0.3.0-rc.2` con una sola pantalla (después de la nueva revisión independiente).
+
+## 7. Revisión independiente del PR #36 (SHA `b1b3f914`) — cierre
+
+| Hallazgo | Causa raíz | Corrección | Prueba (falla en `b1b3f91`, pasa ahora) |
+|---|---|---|---|
+| **BG-R01** reutilización de DWG por mera existencia | `pasoDwg` devolvía el registro anterior si existían DWG y registro | Registro `tw.dwg_verificacion/1` con **huella propia**; reutilizar exige huella válida, revisión vigente, DXF = manifiesto de planos, SHA del DWG en disco y `autocad_real_verificado: false`. Si algo no coincide, lo existente se **aparta** en `.descartados/` (no se borra) y se vuelve a convertir y releer | `cadbg_revision` BG-R01: byte del DWG, revisión, registro editado, DXF citado |
+| **BG-R02** `cad_simultaneos: 1` declarado y no exigido | El coordinador solo limitaba trabajos y proyectos | Semáforo **global** `cad.lock` (trabajo + pid + pid del proceso CAD), espera cancelable con mensaje para la persona, liberación de dueños muertos | BG-R02: dos proyectos con 2 trabajos simultáneos → intervalos de Core Console sin solape; bloqueo de proceso muerto se recupera |
+| **BG-R03** COM antiguo fuera de la política | Cada herramienta llamaba al adaptador directamente | Política única `PoliticaInteractiva` + verificación en `AutoCadCom#exec` (9 métodos envueltos: abrir copia, agregar líneas, líneas recuperables, exportar DWG, DXF→DWG, persistencia, 3D, vista, transformar) | BG-R03: adaptador sin política → 0 operaciones; herramientas antiguas sin canal o rechazadas → 0; aceptada → solo ese documento, una ventana por operación y documento; permiso ligado al documento |
+| Obs. AUDIT | AUDIT era solo informativo | Errores informados ⇒ **no se publica** (`AUDIT_CON_ERRORES`); informe no interpretable ⇒ `RELECTURA_COINCIDE_AUDIT_NO_INTERPRETABLE` | Observación AUDIT |
+| Obs. mensajes | «No quedó nada a medias» | «Lo que no alcanzó a terminar no se publicó» | Observación cancelación |
+| Defecto propio hallado al corregir | En `pasoDwg`, `verificarContencion(prep)` y la limpieza previa habían quedado dentro de un comentario | Restituidas como código | cubierto por CAD-BG-05 y BG-R01 |
+
+Evidencia: [primero-falla en b1b3f91](evidencia/revision-primero-falla-b1b3f91.txt) (7/7 fallan) · [Windows CI conservada de b1b3f91 (5b, 5c, no interferencia)](evidencia/windows-ci-b1b3f91.md) · suite y ZIP del SHA final en el comentario de cierre del PR.
+Pruebas existentes adaptadas (sin relajar aserciones): las que usan el adaptador COM con un runner simulado declaran `politicaDePrueba()` (simula «una persona autorizó» y registra cada pedido); `tw12_cad_open02` agrega la persona que acepta la ventana; `cadbg_trabajos` espera `AUTORIZACION_INTERACTIVA_REQUERIDA` (política única) y el mensaje de cancelación nuevo.

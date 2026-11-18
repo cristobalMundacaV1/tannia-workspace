@@ -1,0 +1,44 @@
+# Pruebas de la revisión BG-R01..R03 + observaciones, ejecutadas contra el código de b1b3f91 (solo pruebas y simulador nuevos): 7/7 FALLAN
+✖ BG-R01: un DWG ya publicado solo se reutiliza si su huella, la del DXF, la revisión y el registro siguen íntegros; si no, se aparta y se vuelve a convertir (6483.574085ms)
+✖ BG-R02: aunque el equipo admita 2 trabajos, nunca hay dos AutoCAD sin interfaz a la vez (proyectos distintos); un bloqueo de un proceso muerto no deja la cola detenida (10356.74868ms)
+✖ BG-R03: el adaptador COM, usado directamente y sin política, NO ejecuta ninguna operación que interrumpa el escritorio (falla cerrado) (3.076195ms)
+✖ BG-R03: herramientas COM antiguas (abrir copia, agregar línea/s) piden autorización humana específica del documento; sin ella o rechazada, 0 operaciones; con ella, solo sobre ese documento (23.767261ms)
+✖ BG-R03: el permiso queda ligado al documento — un script interactivo sobre otro documento se rechaza aunque haya permiso (0.57006ms)
+✖ Observación AUDIT: con errores detectados no se publica; con informe no interpretable no se declara relectura completa (4240.035676ms)
+✖ Observación: la cancelación no afirma absolutos («no quedó nada a medias») (1.472303ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 0
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 22136.580724
+✖ failing tests:
+✖ BG-R01: un DWG ya publicado solo se reutiliza si su huella, la del DXF, la revisión y el registro siguen íntegros; si no, se aparta y se vuelve a convertir (6483.574085ms)
+  AssertionError [ERR_ASSERTION]: un byte del DWG cambió: NO debe reutilizarse
+    actual: true,
+    expected: true,
+✖ BG-R02: aunque el equipo admita 2 trabajos, nunca hay dos AutoCAD sin interfaz a la vez (proyectos distintos); un bloqueo de un proceso muerto no deja la cola detenida (10356.74868ms)
+  AssertionError [ERR_ASSERTION]: dos Core Console a la vez: [{"pid":415,"ini":1795005003388,"fin":1795005005905},{"pid":422,"ini":1795005003547,"fin":1795005006062}]
+    actual: false,
+    expected: true,
+✖ BG-R03: el adaptador COM, usado directamente y sin política, NO ejecuta ninguna operación que interrumpa el escritorio (falla cerrado) (3.076195ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+    actual: undefined,
+✖ BG-R03: herramientas COM antiguas (abrir copia, agregar línea/s) piden autorización humana específica del documento; sin ella o rechazada, 0 operaciones; con ella, solo sobre ese documento (23.767261ms)
+  AssertionError [ERR_ASSERTION]: tannia_cad_agregar_linea
+  + actual - expected
+    actual: undefined,
+    expected: true,
+✖ BG-R03: el permiso queda ligado al documento — un script interactivo sobre otro documento se rechaza aunque haya permiso (0.57006ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/user/tannia-workspace/src/cad/politica_interactiva.js' imported from /home/user/tannia-workspace/test/cadbg_revision.test.js
+✖ Observación AUDIT: con errores detectados no se publica; con informe no interpretable no se declara relectura completa (4240.035676ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+    actual: 'TERMINADO',
+    expected: 'FALLÓ',
+✖ Observación: la cancelación no afirma absolutos («no quedó nada a medias») (1.472303ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /nada a medias/. Input:
+    actual: 'Detuve el trabajo de «X». No quedó nada a medias y la versión anterior sigue vigente.',
+    expected: /nada a medias/,

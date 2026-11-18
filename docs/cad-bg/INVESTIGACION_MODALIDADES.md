@@ -42,7 +42,7 @@ Conclusión: **toda** la vía COM actúa dentro de la sesión de la persona. Es 
 2. **Modo B para DWG** cuando exista Core Console: entrada `/i`, `_.SAVEAS`, relectura `_.SAVEAS DXF` y comparación con el modelo; **publicación solo si coincide**. Implementado y probado con un simulador; **la compatibilidad con AutoCAD 2027 está sin verificar**.
 3. **Modo C solo con autorización explícita** (`exportar_dwg_interactivo`): ventana con qué se hará, por qué, qué dibujo, qué queda intacto y qué pasa si se pospone. **Nunca** como sustituto silencioso de B (probado con espía COM: cero llamadas sin autorización).
 4. **.NET no se adopta** sin la prueba real: exige compilar/firmar por versión e instalar un componente más en el PC de Tannia, y no aporta aislamiento adicional sobre B. Se reevalúa si B falla en el protocolo real.
-5. Las herramientas COM directas existentes (`tannia_cad_*`, `*_a_autocad`) quedan clasificadas como C. Siguen disponibles solo por pedido explícito de la persona en la conversación; **su migración al flujo de autorización del coordinador queda pendiente** (ver limitaciones en README).
+5. Todas las operaciones COM que interrumpen (incluidas las herramientas antiguas `tannia_cad_*`, `*_a_autocad`) pasan por la **política única** de modo C (`src/cad/politica_interactiva.js`), verificada en el punto de paso del adaptador (revisión BG-R03).
 
 ## 4. Fuentes de terceros consultadas (no son evidencia de AutoCAD 2027)
 

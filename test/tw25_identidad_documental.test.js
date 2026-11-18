@@ -1,5 +1,6 @@
 // Auditoría PR #11 — P1: identidad documental COM. Con `ruta_esperada` se localiza exactamente ese documento o se FALLA; nunca se
 // recurre a ActiveDocument. Defensa en profundidad: Node exige que la respuesta confirme la ruta del documento leído.
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -19,7 +20,7 @@ function entorno() {
 // Dos dibujos con LOS MISMOS handles y el MISMO conteo (coincidencia accidental) pero contenido distinto (volúmenes)
 const dibujo = (vol) => [...Array.from({ length: 12 }, (_, i) => ({ tipo: 'AcDb3dSolid', capa: i % 2 ? 'TW3D_MURO_INT' : 'TW3D_MURO_EXT', props: { Volume: vol + i, Centroid: [i * 100, 0, 1000], BBoxMin: [i * 100 - 50, -50, 0], BBoxMax: [i * 100 + 50, 50, 2000] } })), { tipo: 'AcDbText', capa: 'TW3D_NOTAS', props: { TextString: 'n', InsertionPoint: [0, 0, 0], Height: 200, Alignment: 0 } }];
 const prims = (vol) => dibujo(vol).slice(0, 12).map((e, i) => ({ id: `S${i + 1}`, capa: e.capa, esperado: { volumen: e.props.Volume, centroide: e.props.Centroid, bbox_min: e.props.BBoxMin, bbox_max: e.props.BBoxMax } }));
-const com = (e, runner) => new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner });
+const com = (e, runner) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner });
 
 test('contrato del script: con ruta_esperada se localiza el documento o se falla; la rama con ruta NO contiene ActiveDocument', () => {
   const [conRuta, sinRuta] = PS_DOC.split('} else {');

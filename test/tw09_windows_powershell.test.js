@@ -3,6 +3,7 @@
 // (objetos con la misma superficie COM: Layers, ModelSpace, ActiveLayer, Save, …) y conexión real sin AutoCAD.
 // Lo simulado es SOLO el servidor COM; los scripts, la codificación, el transporte y las guardas son los de producción.
 // Se omiten donde no hay powershell.exe (Linux/macOS). NO sustituyen la prueba con AutoCAD real.
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import { generarModelo } from '../src/design/generador.js';
 import { derivar } from '../src/design/derivar.js';
@@ -154,7 +155,7 @@ function entorno(prefix = "'Tannia Workspace ó ñ ") {
   return { home, sb, P, root, orig, work, log };
 }
 const leer = (log) => fs.readFileSync(log, 'utf8').replace(/^﻿/, '').split(/\r?\n/).filter(Boolean);
-const adaptador = (env, active, extraEnv = {}, runnerEnvOverride) => new AutoCadCom({
+const adaptador = (env, active, extraEnv = {}, runnerEnvOverride) => new AutoCadCom({ politica: politicaDePrueba(), 
   sandbox: env.sb, platform: 'win32', connect: MOCK_CONNECT,
   runner: (script, input) => runPowerShell(script, input, { env: { TANNIA_TEST_DOC: active, TANNIA_TEST_LOG: env.log, ...extraEnv, ...(runnerEnvOverride ? runnerEnvOverride(input) : {}) } }),
 });
@@ -259,7 +260,7 @@ test('PowerShell real: original activo => ORIGINAL_PROTEGIDO sin escribir; el do
 
 test('PowerShell real: sin AutoCAD, el script de conexión REAL informa AUTOCAD_NO_ABIERTO con los intentos (sin rutas)', opts, async () => {
   const sb = new Sandbox(tmpHome());
-  const com = new AutoCadCom({ sandbox: sb, platform: 'win32' }); // runner y conexión reales
+  const com = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32' }); // runner y conexión reales
   await assert.rejects(() => com.estado(), (x) => ['AUTOCAD_NO_ABIERTO', 'AUTOCAD_ACCESO_DENEGADO'].includes(x.code) && Array.isArray(x.detalle.intentos) && x.detalle.intentos.length >= 1 && /^AutoCAD\.Application/.test(x.detalle.intentos[0]) && !/[A-Za-z]:\\/.test(JSON.stringify(x.detalle)));
 });
 
@@ -337,7 +338,7 @@ test('PowerShell real: construir_3d con convenciones de AutoCAD distintas a las 
     for (const conv of [{}, { TANNIA_TEST_BOXCONV: 'base' }, { TANNIA_TEST_WEDGEY: '1' }, { TANNIA_TEST_BOXCONV: 'base', TANNIA_TEST_WEDGEY: '1' }]) {
       fs.writeFileSync(e.log, '');
       const dwgRel = `03 Trabajo/Modelos3D/Prueba ñ'/v${Object.keys(conv).length}${conv.TANNIA_TEST_BOXCONV || 'c'}${conv.TANNIA_TEST_WEDGEY || '0'}_3D.dwg`;
-      const com = new AutoCadCom({ sandbox: e.sb, platform: 'win32', connect: MOCK_3D, runner: (script, input) => runPowerShell(script, input, { env: { TANNIA_TEST_DOC: e.work, TANNIA_TEST_LOG: e.log, ...conv } }) });
+      const com = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', connect: MOCK_3D, runner: (script, input) => runPowerShell(script, input, { env: { TANNIA_TEST_DOC: e.work, TANNIA_TEST_LOG: e.log, ...conv } }) });
       const out = await com.construir3d(e.P, { dwgRel, primitivas: r.primitivas, capas: r.capas, nota: r.nota, nota_pos: [env.min[0], env.min[1] - 1500, 0], vista: 'iso_se', estilo: 'conceptual' });
       assert.equal(out.verificacion_solidos.estado, 'fiel', `${JSON.stringify(conv)} ${JSON.stringify(out.verificacion_solidos)}`);
       assert.equal(out.verificacion_solidos.coinciden, r.primitivas.length); assert.equal(out.archivo_dwg.cabecera_dwg_valida, true); assert.equal(out.verificacion_estructura.ok, true);
@@ -352,7 +353,7 @@ test('PowerShell real: con ruta esperada se localiza EXACTAMENTE ese documento (
   const e = entorno();
   try {
     const A = 'C:\\Dibujos\\Casa A.dwg'; const B = 'C:\\Dibujos\\Casa B.dwg';
-    const com = new AutoCadCom({ sandbox: e.sb, platform: 'win32', connect: MOCK_MULTI, runner: (script, input) => runPowerShell(script, input, { env: {} }) });
+    const com = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', connect: MOCK_MULTI, runner: (script, input) => runPowerShell(script, input, { env: {} }) });
     // sin ruta: el activo (B)
     const sinRuta = await com.leerLote(['101']); assert.equal(sinRuta.entidades[0].capa, 'CAPA_B');
     // con ruta A: A, aunque B sea el activo y tenga los mismos handles y conteo
@@ -374,7 +375,7 @@ test('PowerShell real: DXF→DWG en ruta con ó ñ y apóstrofo — el DXF se im
     const dxf = path.join(dir, 'v001.dxf'); const texto = escribirDxf(generarModelo({}), derivar(generarModelo({})), { titulo: 'Casa', version: 'v001', fecha: '2026-11-16' }); fs.writeFileSync(dxf, texto);
     // Documents.Add + Import: simulado a nivel de runner (sin PowerShell) con la medición perfecta del propio DXF; el guardado SÍ corre en PowerShell real
     // contra un AutoCAD simulado cuyo único documento es el aislado «Drawing2.dwg» (sin ruta en disco). Sesión estricta: un proceso acad simulado.
-    const adaptadorAislado = () => new AutoCadCom({
+    const adaptadorAislado = () => new AutoCadCom({ politica: politicaDePrueba(), 
       sandbox: e.sb, platform: 'win32', connect: MOCK_CONNECT,
       runner: (script, input) => (/Documents\.Add\(/.test(script)
         ? Promise.resolve(JSON.stringify({ ok: true, data: dataImportado(texto) }))

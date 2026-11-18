@@ -102,3 +102,8 @@ export function servidorMultiDoc({ abiertos, activo, ignorarRuta = false, alLlam
     return internos[objetivo](script, input);
   };
 }
+
+// BG-R03: el adaptador COM deniega por defecto toda operación que interrumpa el escritorio. Las pruebas que ejercitan esas operaciones
+// con un COM simulado declaran EXPLÍCITAMENTE esta política, que simula «una persona autorizó» y registra cada pedido (operación + documentos).
+import { crearPermiso } from '../src/cad/politica_interactiva.js';
+export const politicaDePrueba = (registro = []) => ({ permiso: async (ctx) => { registro.push(ctx); return crearPermiso({ ...ctx, canal: 'prueba_automatizada' }); } });

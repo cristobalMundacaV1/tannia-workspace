@@ -1,5 +1,6 @@
 // Confianza en el DWG: comparación tipada (LINE/ARC/polilíneas/TEXT), verificación por lotes, capas, arcos y textos con ñ/tildes.
 // Servidor COM simulado en Node a partir de un DXF REAL del anteproyecto; los defectos se reproducen con interruptores.
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -119,7 +120,7 @@ test('dxfADwg: reporta capas reales y conteos por capa; valida cabecera; detecta
   try {
     const rel = '03 Trabajo/Anteproyectos/Casa 80/v001.dxf'; fs.unlinkSync(e.dwg);
     const escribe = (f) => fs.writeFileSync(f, Buffer.concat([Buffer.from('AC1032'), Buffer.alloc(4000)]));
-    const mk = (o) => new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(COM, { activePath: e.dwg, escribeDwg: escribe, ...o }) });
+    const mk = (o) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(COM, { activePath: e.dwg, escribeDwg: escribe, ...o }) });
     const ok = await mk({}).dxfADwg('Casa', rel);
     assert.ok(ok.capas.length >= 8 && ok.capas.includes('TW_RECINTO')); assert.equal(ok.entidades, 232); assert.equal(ok.verificacion_estructura.ok, true); assert.equal(ok.archivo_dwg.cabecera_dwg_valida, true); assert.match(ok.verificacion, /coinciden con el DXF/);
     fs.unlinkSync(e.dwg);
@@ -131,7 +132,7 @@ test('persistencia por LOTES: 2000 entidades sin superar el límite por llamada;
   const e = proyecto();
   try {
     const grande = []; for (let i = 0; i < 2000; i++) grande.push({ tipo: 'AcDbLine', capa: 'TW_MURO_EXT', props: { StartPoint: [i, 0, 0], EndPoint: [i, 10, 0], Length: 10 } });
-    const calls = []; const com = new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(grande, { activePath: e.dwg, maxHandles: 160, calls }) });
+    const calls = []; const com = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(grande, { activePath: e.dwg, maxHandles: 160, calls }) });
     const r = await com.verificarPersistencia('Casa', { archivo: '03 Trabajo/Anteproyectos/Casa 80/v001.dwg' });
     assert.equal(r.persistencia, 'verificada'); assert.equal(r.entidades_leidas, 2000); assert.deepEqual(r.lotes, { antes: 14, despues: 14, tam_lote: 150 });
     assert.ok(calls.filter((c) => c.name === 'leer_lote').every((c) => c.input.handles.length <= 150), 'ninguna llamada supera el tamaño de lote');
@@ -150,7 +151,7 @@ test('persistencia por LOTES: 2000 entidades sin superar el límite por llamada;
 test('persistencia del anteproyecto completo (LINE, ARC, POLYLINE, TEXT): verificada; pérdida, texto corrupto y arco defectuoso se detectan', async () => {
   const e = proyecto(); const archivo = '03 Trabajo/Anteproyectos/Casa 80/v001.dwg';
   try {
-    const run = (o) => new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(COM, { activePath: e.dwg, ...o }) }).verificarPersistencia('Casa', { archivo });
+    const run = (o) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(COM, { activePath: e.dwg, ...o }) }).verificarPersistencia('Casa', { archivo });
     const ok = await run({}); assert.equal(ok.persistencia, 'verificada'); assert.equal(ok.entidades_leidas, 232); assert.deepEqual(Object.keys(ok.cobertura).sort(), ['AcDb2dPolyline', 'AcDbArc', 'AcDbLine', 'AcDbText']);
     assert.ok(Object.values(ok.cobertura).every((c) => c.verificadas === c.entidades && c.propiedades_comparadas > 0), 'todas las entidades comparadas con propiedades reales');
     assert.equal(ok.no_verificables_total, 0); assert.equal(ok.inconsistencias_total, 0); assert.equal(ok.archivo_en_disco.sin_cambios_por_el_cierre_y_reapertura, true);
@@ -163,7 +164,7 @@ test('persistencia del anteproyecto completo (LINE, ARC, POLYLINE, TEXT): verifi
 test('verificar DWG contra el DXF: fiel; y cada defecto (faltantes, textos sin decodificar/corruptos, capas vacías, arcos en 0) se reporta', async () => {
   const e = proyecto(); const args = { dxfRel: '03 Trabajo/Anteproyectos/Casa 80/v001.dxf', dwgRel: '03 Trabajo/Anteproyectos/Casa 80/v001.dwg' };
   try {
-    const v = (ents, o = {}) => new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(ents, { activePath: e.dwg, ...o }) }).verificarDwg('Casa', args);
+    const v = (ents, o = {}) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(ents, { activePath: e.dwg, ...o }) }).verificarDwg('Casa', args);
     const ok = await v(COM); assert.equal(ok.fidelidad, 'fiel'); assert.equal(ok.entidades.en_dxf, 232); assert.equal(ok.entidades.leidas_en_dwg, 232); assert.equal(ok.textos.ok, true); assert.ok(ok.textos.con_acentos_correctos >= 2); assert.equal(ok.estructura.ok, true); assert.deepEqual(ok.lotes, 2);
     const esc = await v(entidadesCom(DXF, { textoComo: 'escape' })); assert.equal(esc.fidelidad, 'con_diferencias'); assert.ok(esc.textos.escape_sin_decodificar.some((t) => /\\U\+00D1/.test(t)));
     const cor = await v(entidadesCom(DXF, { textoComo: 'corrupto' })); assert.equal(cor.fidelidad, 'con_diferencias'); assert.ok(cor.textos.corruptos.length >= 1 && cor.textos.corruptos[0].codepoints_informados.includes('U+003F'));
@@ -171,7 +172,7 @@ test('verificar DWG contra el DXF: fiel; y cada defecto (faltantes, textos sin d
     const vac = await v(COM, { capasVacias: true }); assert.equal(vac.fidelidad, 'con_diferencias'); assert.equal(vac.estructura.capas_no_informadas, true);
     const arc = await v(COM, { arcoLongitud0: true }); assert.equal(arc.fidelidad, 'no_concluyente'); assert.equal(arc.inconsistencias_total, 6);
     // seguridad: solo lectura y solo con la copia activa en 03 Trabajo; el original jamás
-    await assert.rejects(() => new AutoCadCom({ sandbox: e.sb, platform: 'win32', runner: servidorSimulado(COM, { activePath: path.join(e.root, '02 Originales', 'o.dwg') }) }).verificarDwg('Casa', args), (x) => x.code === 'ORIGINAL_PROTEGIDO');
+    await assert.rejects(() => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: e.sb, platform: 'win32', runner: servidorSimulado(COM, { activePath: path.join(e.root, '02 Originales', 'o.dwg') }) }).verificarDwg('Casa', args), (x) => x.code === 'ORIGINAL_PROTEGIDO');
     assert.equal(fs.readFileSync(path.join(e.root, '02 Originales', 'o.dwg'), 'utf8'), 'ORIGINAL');
   } finally { e.done(); }
 });

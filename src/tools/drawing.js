@@ -9,7 +9,6 @@ import { Project } from '../project/store.js';
 import { partidasDesdePlanos, planosVigentes } from '../expediente/planos_partidas.js';
 import { detectarCoreConsole } from '../trabajos/coreconsole.js';
 import { seleccionarModalidad } from '../trabajos/modalidades.js';
-import { pedirAutorizacionHumana, contenidoVentana, resultadoNoConfirmado } from '../autoridad/autorizacion.js';
 
 export function registerDrawing(reg, { sandbox, cad, server = null, aprobacion = null, guardarPartida = null, coordinador = null }) {
   const service = new DrawingService(sandbox); const AH = aprobacion || new AprobacionHumana(sandbox);
@@ -38,21 +37,9 @@ export function registerDrawing(reg, { sandbox, cad, server = null, aprobacion =
       throw new UserError('REQUIERE_INTERVENCION', 'Para guardar los planos en DWG necesito usar AutoCAD con su ventana, porque en este equipo no está disponible AutoCAD sin interfaz. No abrí nada.', 'Pregunte a la persona si autoriza hacerlo ahora (exportar_dwg_interactivo muestra la ventana de autorización) o si prefiere después. Los DXF y PDF siguen siendo válidos.', { modalidad_requerida: 'C', motivo_tecnico: sel.motivo, revision_planos: v?.head ?? null, que_se_hara: 'Crear en AutoCAD un dibujo nuevo, importar el DXF de los planos vigentes y guardarlo como DWG en 03 Trabajo.', que_queda_intacto: 'Los dibujos que la persona tiene abiertos (aunque no estén guardados): no se guardan, no se cierran y no reciben entidades.', si_pospone: 'Los planos DXF y PDF siguen disponibles; el DWG queda pendiente.' });
     }
     if (accion === 'exportar_dwg_interactivo') {
-      const pr = new Project(sandbox, proyecto); const v = planosVigentes(pr);
-      if (!v) throw new UserError('SIN_PLANOS', 'Aún no hay planos generados.');
-      const ventana = contenidoVentana({
-        pregunta: '¿Autorizas usar AutoCAD ahora para guardar los planos en DWG?',
-        porque: 'Un archivo DWG solo lo puede escribir AutoCAD, y en este equipo no está disponible AutoCAD sin interfaz.',
-        revisar: [`Se hará: crear en AutoCAD un dibujo NUEVO, importar los planos (revisión ${v.head}) y guardarlo como DWG en «03 Trabajo».`, 'Mientras dura (normalmente menos de un minuto) AutoCAD mostrará una pestaña nueva; conviene no escribir en AutoCAD en ese momento.', 'Queda intacto: los dibujos que tienes abiertos, aunque tengan cambios sin guardar. No se guardan, no se cierran y no reciben nada.'],
-        autoriza: 'Solo esta operación de guardado del DWG de los planos vigentes.',
-        si_acepta: 'Se guarda el DWG y se revisa; si algo no coincide, no se presenta como fiel.',
-        si_rechaza: 'No se abre AutoCAD. Los DXF y PDF siguen disponibles y el DWG queda pendiente para cuando quieras.',
-        afecta: [`03 Trabajo/CAD/modelos/${v.head}/planos.dwg (archivo nuevo)`],
-        tecnico: [`Revisión de planos: ${v.head}`, 'Modalidad C (AutoCAD interactivo autorizado)'],
-      });
-      const d = await pedirAutorizacionHumana({ sandbox, server, proyecto, clave: `dwg-interactivo-${v.head}`, ventana, titulo: 'Usar AutoCAD para guardar el DWG', resumen: ventana.texto_plano || 'Guardar los planos en DWG con AutoCAD', consecuencia: 'Se crea un dibujo nuevo en AutoCAD; tus dibujos abiertos no se tocan.', etiquetaAprobar: '_Usar AutoCAD ahora', etiquetaRechazar: '_Después' });
-      if (!d.por) { const r = resultadoNoConfirmado(d, 'uso de AutoCAD'); throw new UserError(d.rechazado ? 'INTERVENCION_POSPUESTA' : 'AUTORIZACION_REQUERIDA', `${r.mensaje} No se abrió AutoCAD.`, 'Los DXF y PDF siguen disponibles.', { resultado_codigo: r.codigo }); }
-      return ok('Resultado de guardado DWG (modalidad interactiva autorizada). Se verificaron conteos, capas, cotas, XDATA y layouts; la fidelidad geométrica entidad por entidad queda PENDIENTE de verificación en AutoCAD real.', { autorizacion: { canal: d.por }, ...(await service.exportDwg(proyecto, cad)) });
+      // Modo C: la autorización la pide la política ÚNICA del adaptador COM (misma ventana para toda operación interactiva).
+      const v = planosVigentes(new Project(sandbox, proyecto)); if (!v) throw new UserError('SIN_PLANOS', 'Aún no hay planos generados.');
+      return ok('Resultado de guardado DWG (modalidad interactiva autorizada por la persona). Se verificaron conteos, capas, cotas, XDATA y layouts; la fidelidad geométrica entidad por entidad queda PENDIENTE de verificación en AutoCAD real.', await service.exportDwg(proyecto, cad));
     }
     if (accion === 'operacion') { if (!operacion) throw new UserError('FALTA_OPERACION', 'Falta identificar la operación.'); return ok('Registro de ejecución CAD.', new CadOperations(sandbox.projectRoot(proyecto)).status(operacion)); }
     if (accion === 'sesion') { if (!archivo) throw new UserError('FALTA_ARCHIVO', 'Indique la copia de trabajo.'); return ok('Sesión CAD identificada.', await cad.sesion(proyecto, archivo)); }

@@ -70,14 +70,14 @@ export function mensajeParaPersona(t) {
   const listos = (xs) => `${capital(listaY(xs.map((p) => PLURAL[p.tipo])))} de ${obra} ${xs.length === 1 && xs[0].tipo !== 'planos' && xs[0].tipo !== 'a_partidas' ? 'está listo' : 'están listos'}`;
   switch (t.estado) {
     case 'PENDIENTE': return t.espera === 'memoria' ? `El computador tiene poca memoria libre en este momento; empiezo con ${primero} de ${obra} apenas se libere. Puedes seguir trabajando.` : t.espera === 'cola' ? `Hay otro trabajo en curso; empiezo con ${primero} de ${obra} apenas termine. Puedes seguir trabajando.` : `Estoy preparando ${primero} de ${obra}. Puedes seguir utilizando tu computador; te aviso cuando esté listo.`;
-    case 'PREPARANDO': case 'PROCESANDO': case 'VERIFICANDO': return `Sigo trabajando en ${obra}${actual ? `: ${PLURAL[actual.tipo]} (paso ${hechos.length + 1} de ${total})` : ''}. Puedes seguir utilizando tu computador.`;
+    case 'PREPARANDO': case 'PROCESANDO': case 'VERIFICANDO': if (actual?.etapa === 'esperando_cad') return `Los planos de ${obra} esperan su turno para el archivo DWG: otro trabajo está usando AutoCAD sin interfaz y no los ejecuto a la vez para no recargar el computador. Puedes seguir trabajando.`; return `Sigo trabajando en ${obra}${actual ? `: ${PLURAL[actual.tipo]} (paso ${hechos.length + 1} de ${total})` : ''}. Puedes seguir utilizando tu computador.`;
     case 'TERMINADO': {
       const dwgPendiente = t.pasos.some((p) => p.tipo === 'planos') && !t.pasos.some((p) => p.tipo === 'dwg' && p.estado === 'hecho');
       return `${listos(hechos)} para revisión.${dwgPendiente ? ' Falta comprobar el archivo DWG en AutoCAD.' : ''}`;
     }
     case 'REQUIERE_INTERVENCIÓN': { const p = t.pasos.find((x) => x.estado === 'requiere_intervencion'); return `${hechos.length ? `${listos(hechos)}. ` : ''}${p?.pregunta || 'Necesito tu intervención para continuar.'}`; }
     case 'FALLÓ': return `No pude terminar el trabajo de ${obra}: ${String(t.motivo || 'ocurrió un error').replace(/[.\s]+$/, '')}. Lo que ya estaba listo sigue intacto y la versión anterior se conserva.`;
-    case 'CANCELADO': return `Detuve el trabajo de ${obra}. No quedó nada a medias y la versión anterior sigue vigente.`;
+    case 'CANCELADO': return `Detuve el trabajo de ${obra}. Lo que no alcanzó a terminar no se publicó y la versión anterior sigue vigente.`;
     default: return '';
   }
 }

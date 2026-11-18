@@ -4,6 +4,7 @@ import { Sandbox } from './security/sandbox.js';
 import { guard } from './mcp/util.js';
 import { registerTools } from './tools/index.js';
 import { AutoCadCom } from './cad/autocad_com.js';
+import { PoliticaInteractiva } from './cad/politica_interactiva.js';
 import { cicActivo } from './cic/flag.js';
 import { Comunicacion } from './cic/comunicacion.js';
 import { registrarProcedimientos } from './procedimientos/index.js';
@@ -37,7 +38,8 @@ const INICIO = new Date().toISOString();
 export function createServer({ home, homeInfo, log = () => {}, cadRunner, platform, cadConnect, detectar }) {
   const sandbox = new Sandbox(home);
   const server = new McpServer({ name: NAME, version: VERSION }, { instructions: instrucciones(cicActivo(), cicActivo() ? new Comunicacion(sandbox).leerGlobal() : null) });
-  const cad = new AutoCadCom({ sandbox, ...(cadRunner ? { runner: cadRunner } : {}), ...(cadConnect ? { connect: cadConnect } : {}), ...(platform ? { platform } : {}) });
+  // BG-R03: TODA operación de AutoCAD que pueda interrumpir el escritorio pasa por la autorización humana de la persona (política única).
+  const cad = new AutoCadCom({ sandbox, politica: new PoliticaInteractiva({ sandbox, server }), ...(cadRunner ? { runner: cadRunner } : {}), ...(cadConnect ? { connect: cadConnect } : {}), ...(platform ? { platform } : {}) });
   registerTools(server, { sandbox, log, config: { ...(homeInfo || { home, origen: 'indicada_por_el_llamador', advertencias: [] }), servidor_iniciado: INICIO, pid: process.pid }, g: (fn) => guard(fn, log), cad, detectar });
   registrarProcedimientos(server);
   return { server, sandbox };

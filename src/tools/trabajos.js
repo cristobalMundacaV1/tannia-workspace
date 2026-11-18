@@ -19,7 +19,7 @@ export function registerTrabajos(reg, { sandbox, coordinador = null, enFondo = !
       'Use «crear» cuando la persona pida planos u otros archivos que tardan: el trabajo corre aparte, oculto y con prioridad baja, y ella puede seguir usando su computador (Word, Excel, AutoCAD). Responda con mensaje_para_la_persona y siga conversando.',
       'tipo: planos | cubicaciones (planos + partidas) | documentos (presupuesto + memoria) | expediente (todo, incluido DWG) | dwg. Para planos: «datos» (túnel) o «especificacion»; si no los da, se usan los datos del encargo (nunca valores por defecto).',
       'Sin AutoCAD: planos, cubicaciones y documentos. DWG: solo con AutoCAD sin interfaz (Core Console); si no existe, el trabajo termina «requiere intervención» con una pregunta para la persona — NUNCA abre AutoCAD por su cuenta. Un trabajo nunca verifica cantidades ni aprueba entregas.',
-      '«estado» (de un trabajo o de los del proyecto), «cancelar» (sin dejar nada a medias), «capacidades» (qué modalidades hay en este equipo). Consulte «estado» cuando la persona vuelva o pregunte.',
+      '«estado» (de un trabajo o de los del proyecto), «cancelar» (lo que no terminó no se publica), «capacidades» (qué modalidades hay en este equipo). Consulte «estado» cuando la persona vuelva o pregunte.',
     ].join(' '),
     inputSchema: {
       accion: z.enum(['crear', 'estado', 'cancelar', 'capacidades']), proyecto: z.string().optional(), trabajo: z.string().max(20).optional(),
@@ -42,7 +42,7 @@ export function registerTrabajos(reg, { sandbox, coordinador = null, enFondo = !
       const x = C.leer(t.id); const m = mensajeParaPersona({ ...x, estado: ACTIVOS.has(x.estado) ? 'PENDIENTE' : x.estado });
       return ok(m, { ...publico(x), mensaje_para_la_persona: m });
     }
-    if (accion === 'cancelar') { if (!trabajo) throw new UserError('FALTA_DATO', 'Indique el trabajo.'); const t = C.cancelar(trabajo); return ok(t.estado === 'CANCELADO' ? t.mensaje : 'Pedí detener el trabajo: se detiene al terminar el paso en curso, sin dejar nada a medias.', publico(t)); }
+    if (accion === 'cancelar') { if (!trabajo) throw new UserError('FALTA_DATO', 'Indique el trabajo.'); const t = C.cancelar(trabajo); return ok(t.estado === 'CANCELADO' ? t.mensaje : 'Pedí detener el trabajo: se detiene al terminar el paso en curso; lo que no alcance a terminar no se publica.', publico(t)); }
     // estado
     C.reanudar(); C.programar();
     if (trabajo) { const t = C.leer(trabajo); if (!t) throw new UserError('TRABAJO_NO_EXISTE', 'No existe ese trabajo.'); return ok(t.mensaje, publico(t)); }

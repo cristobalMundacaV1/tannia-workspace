@@ -1,3 +1,4 @@
+import { politicaDePrueba } from './helpers_com.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -146,7 +147,7 @@ test('autorización: copia en 03 Trabajo con ó, ñ, espacios y apóstrofo SÍ; 
   const orig = path.join(root, '02 Originales', 'Dibujo2 - integración.dwg'); const work = path.join(root, '03 Trabajo', "Dibujo2 - copia de trabajo ñ'.dwg");
   fs.writeFileSync(orig, 'x'); fs.writeFileSync(work, 'AC1032 synthetic work copy header'); fs.writeFileSync(path.join(root, '04 Cubicaciones', 'o.dwg'), 'x'); fs.writeFileSync(path.join(home, 'otro.dwg'), 'x');
   const calls = [];
-  const com = (active, extra = {}) => new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: active, calls, ...extra }) });
+  const com = (active, extra = {}) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: active, calls, ...extra }) });
   const L = { lineas: [{ x1: 0, y1: 0, x2: 6000, y2: 0 }], capa: 'TW_PRUEBA' };
 
   const ok = await com(work).agregarLineas(P, L);
@@ -172,7 +173,7 @@ test('autorización: copia en 03 Trabajo con ó, ñ, espacios y apóstrofo SÍ; 
 test('validación de entradas (capa, handle, coordenadas, tamaño del lote) antes de tocar AutoCAD', async () => {
   const home = tmpHome(); const sb = new Sandbox(home); createProject(sb, 'P');
   const calls = []; const work = path.join(home, 'Proyectos', 'P', '03 Trabajo', 'c.dwg'); fs.writeFileSync(work, 'x');
-  const com = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: work, calls }) });
+  const com = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: work, calls }) });
   const one = { lineas: [{ x1: 0, y1: 0, x2: 1, y2: 1 }] };
   for (const capa of ["TW'; Quit", 'a/b', 'a;b', 'a<b', '', 'x'.repeat(256)]) await assert.rejects(() => com.agregarLineas('P', { ...one, capa }), (e) => e.code === 'DATO_INVALIDO', capa);
   for (const bad of [{ lineas: [] }, { lineas: Array(101).fill(one.lineas[0]) }, { lineas: [{ x1: NaN, y1: 0, x2: 1, y2: 1 }] }, { lineas: [{ x1: 0, y1: 0, x2: 1 }] }]) await assert.rejects(() => com.agregarLineas('P', bad), (e) => e.code === 'DATO_INVALIDO');
@@ -187,8 +188,8 @@ test('validación de entradas (capa, handle, coordenadas, tamaño del lote) ante
 
 test('contrato COM: errores por etapa, causas separadas, reintento si AutoCAD está ocupado, sin datos sensibles', async () => {
   const sb = new Sandbox(tmpHome());
-  const mk = (runner, extra = {}) => new AutoCadCom({ sandbox: sb, runner, platform: 'win32', sleep: async () => {}, ...extra });
-  await assert.rejects(() => new AutoCadCom({ sandbox: sb, runner: async () => '', platform: 'linux' }).estado(), (e) => e.code === 'AUTOCAD_NO_DISPONIBLE');
+  const mk = (runner, extra = {}) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, runner, platform: 'win32', sleep: async () => {}, ...extra });
+  await assert.rejects(() => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, runner: async () => '', platform: 'linux' }).estado(), (e) => e.code === 'AUTOCAD_NO_DISPONIBLE');
   // proceso: clases seguras y stderr saneado otra vez
   await assert.rejects(() => mk(async () => { throw Object.assign(new Error('x'), { clase: 'tiempo_agotado', codigo_salida: null, stderr: 'fallo en C:\\Users\\Bob\\x' }); }).estado(),
     (e) => e.code === 'AUTOCAD_ERROR' && e.detalle.clase === 'tiempo_agotado' && !JSON.stringify(e.detalle).includes('Bob') && /no respondió/.test(e.hint));
@@ -212,7 +213,7 @@ test('escritura todo-o-nada: capa no creada, dibujo revertido, documento cambiad
   const home = tmpHome(); const sb = new Sandbox(home); createProject(sb, 'P');
   const work = path.join(home, 'Proyectos', 'P', '03 Trabajo', 'c.dwg'); fs.writeFileSync(work, 'x');
   const L = { lineas: [{ x1: 0, y1: 0, x2: 6000, y2: 0 }], capa: 'TW_PRUEBA' };
-  const com = (resp) => new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: work, calls: [], onScript: (n) => (n === 'agregar_lineas' ? JSON.stringify(resp) : undefined) }) });
+  const com = (resp) => new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: work, calls: [], onScript: (n) => (n === 'agregar_lineas' ? JSON.stringify(resp) : undefined) }) });
   await assert.rejects(() => com({ ok: false, etapa: 'preparar_capa', hresult: '0x80020009', msg: 'x' }).agregarLineas('P', L), (e) => e.code === 'CAPA_NO_DISPONIBLE');
   await assert.rejects(() => com({ ok: false, etapa: 'dibujar', hresult: '0x80020009', msg: 'x', revertido: true, capa_revertida: true }).agregarLineas('P', L), (e) => e.code === 'DIBUJO_REVERTIDO' && e.detalle.revertido === true && e.detalle.capa_revertida === true);
   await assert.rejects(() => com({ ok: false, etapa: 'verificar_documento', codigo: 'DOCUMENTO_CAMBIO' }).agregarLineas('P', L), (e) => e.code === 'DOCUMENTO_CAMBIO');
@@ -269,7 +270,7 @@ const RECT = (h = ['39A', '39B', '39C', '39D']) => [
 test('verificar contorno: lee extremos por COM y concluye cierre del rectángulo 6000×4000 (cálculo independiente)', async () => {
   const sb = new Sandbox(tmpHome());
   const calls = [];
-  const com = new AutoCadCom({ sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: '/x/a.dwg', calls, onScript: (n, i) => (n === 'leer_lote' ? JSON.stringify({ ok: true, data: { ruta: '/x/a.dwg', unidades_insunits: 4, documento: 'a.dwg', entidades: RECT().filter((e) => i.handles.includes(e.handle)) } }) : undefined) }) });
+  const com = new AutoCadCom({ politica: politicaDePrueba(),  sandbox: sb, platform: 'win32', runner: fakeRunner({ activePath: '/x/a.dwg', calls, onScript: (n, i) => (n === 'leer_lote' ? JSON.stringify({ ok: true, data: { ruta: '/x/a.dwg', unidades_insunits: 4, documento: 'a.dwg', entidades: RECT().filter((e) => i.handles.includes(e.handle)) } }) : undefined) }) });
   const r = await com.verificarContorno(['39A', '39B', '39C', '39D'], { ancho: 6000, alto: 4000 });
   assert.equal(r.analisis.cerrado, true); assert.equal(r.analisis.es_rectangulo, true); assert.equal(r.analisis.estado, 'ok');
   assert.equal(r.analisis.area, 24000000); assert.equal(r.analisis.perimetro, 20000); assert.equal(r.analisis.dimensiones_coinciden_con_lo_esperado, true);

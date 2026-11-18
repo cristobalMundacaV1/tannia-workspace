@@ -142,6 +142,8 @@ export async function convertirDxfADwgSinInterfaz({ motor, dxf, destino, composi
   const r2 = await ejecutarCoreConsole(motor, { dwgEntrada: dwgPrep, guion: guionReleer({ dxfSalida: 'relectura.dxf' }), carpeta: preparacion, timeoutMs, cancelado, alIniciar });
   if (r2.clase === 'cancelado') return { estado: 'NO_PUBLICADO', codigo: 'CANCELADO', ejecucion: [r1, r2] };
   if (!r2.ok || !fs.existsSync(relectura)) return { estado: 'NO_PUBLICADO', codigo: 'RELECTURA_FALLIDA', motivo: 'El DWG se generó pero no se pudo volver a leer: no se publica (fidelidad NO VERIFICADA).', ejecucion: [r1, r2] };
+  // Observación de la revisión: un AUDIT que informa errores nunca permite publicar el DWG como verificado.
+  if (r2.auditoria?.errores_encontrados > 0) return { estado: 'NO_PUBLICADO', codigo: 'AUDIT_CON_ERRORES', motivo: `Al auditar el DWG, AutoCAD informó ${r2.auditoria.errores_encontrados} error(es); no se publica`, auditoria: r2.auditoria, ejecucion: [r1, r2] };
   paso('comparar');
   let comparacion; try { comparacion = verificarDxfContraModelo(fs.readFileSync(relectura, 'utf8'), composicion); } catch (e) { comparacion = { ok: false, problemas: [`relectura ilegible: ${String(e.message).slice(0, 120)}`] }; }
   if (!comparacion.ok) return { estado: 'NO_PUBLICADO', codigo: 'FIDELIDAD_NO_DEMOSTRADA', motivo: 'El DWG releído no coincide con el modelo (o no se pudo comparar): no se publica como fiel.', comparacion, ejecucion: [r1, r2] };
