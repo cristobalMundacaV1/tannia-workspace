@@ -1,0 +1,180 @@
+{
+  "archivo": "PLANOS-COMPLETOS.dxf",
+  "bytes": 74505,
+  "sha256": "dd971a870fe2065757a2d5f251f2d139f913afdaef2dedb70112755747d41005",
+  "dxf_version": "AC1024",
+  "model_entities": 47,
+  "entity_types": {
+    "LINE": 33,
+    "DIMENSION": 10,
+    "ARC": 4
+  },
+  "header": {
+    "$TILEMODE": "1",
+    "$EXTMIN": "None",
+    "$EXTMAX": "None",
+    "$VIEWCTR": "None",
+    "$VIEWSIZE": "None",
+    "$INSUNITS": "6",
+    "$DIMASSOC": "1"
+  },
+  "audit_errors": 0,
+  "audit_fixes": 0,
+  "layouts": [
+    {
+      "name": "Model",
+      "entity_count": 47,
+      "types": {
+        "LINE": 33,
+        "DIMENSION": 10,
+        "ARC": 4
+      },
+      "viewports": []
+    },
+    {
+      "name": "TW12-01",
+      "entity_count": 62,
+      "types": {
+        "LINE": 19,
+        "TEXT": 42,
+        "VIEWPORT": 1
+      },
+      "viewports": [
+        {
+          "center": [
+            210,
+            189,
+            0
+          ],
+          "view_center_point": [
+            75,
+            0,
+            0
+          ],
+          "view_height": 36.5,
+          "status": 1
+        }
+      ]
+    },
+    {
+      "name": "TW12-02",
+      "entity_count": 61,
+      "types": {
+        "LINE": 19,
+        "TEXT": 41,
+        "VIEWPORT": 1
+      },
+      "viewports": [
+        {
+          "center": [
+            210,
+            189,
+            0
+          ],
+          "view_center_point": [
+            75,
+            1013.125,
+            0
+          ],
+          "view_height": 46.25,
+          "status": 1
+        }
+      ]
+    },
+    {
+      "name": "TW12-03",
+      "entity_count": 54,
+      "types": {
+        "LINE": 19,
+        "TEXT": 34,
+        "VIEWPORT": 1
+      },
+      "viewports": [
+        {
+          "center": [
+            210,
+            189,
+            0
+          ],
+          "view_center_point": [
+            0,
+            2002.625,
+            0
+          ],
+          "view_height": 7.25,
+          "status": 1
+        }
+      ]
+    },
+    {
+      "name": "TW12-04",
+      "entity_count": 59,
+      "types": {
+        "LINE": 22,
+        "TEXT": 35,
+        "VIEWPORT": 2
+      },
+      "viewports": [
+        {
+          "center": [
+            106.5,
+            189,
+            0
+          ],
+          "view_center_point": [
+            0.03,
+            3000.5,
+            0
+          ],
+          "view_height": 1.4,
+          "status": 1
+        },
+        {
+          "center": [
+            313.5,
+            189,
+            0
+          ],
+          "view_center_point": [
+            0.04,
+            4000.5,
+            0
+          ],
+          "view_height": 1.4,
+          "status": 1
+        }
+      ]
+    },
+    {
+      "name": "TW12-05",
+      "entity_count": 65,
+      "types": {
+        "LINE": 19,
+        "TEXT": 45,
+        "VIEWPORT": 1
+      },
+      "viewports": [
+        {
+          "center": [
+            210,
+            189,
+            0
+          ],
+          "view_center_point": [
+            0,
+            5003.746225753,
+            0
+          ],
+          "view_height": 10.492451506,
+          "status": 1
+        }
+      ]
+    }
+  ],
+  "vport_diagnostic": {
+    "source_writer_has_explicit_VPORT_table": false,
+    "parser_active_view": "*Active",
+    "parser_active_view_has_center_height": false,
+    "note": "El lector puede crear o normalizar *Active al cargar; no confundir esto con prueba de una vista guardada apta para AutoCAD."
+  }
+}

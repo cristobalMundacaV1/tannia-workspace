@@ -1,0 +1,225 @@
+{
+  "schema": "tw.symbol-catalog/1",
+  "version": "proposal-2026-11-18",
+  "status": "DESIGN_ONLY_NOT_IMPLEMENTED_OR_PROFESSIONALLY_APPROVED",
+  "units": {
+    "model": "m",
+    "paper": "mm"
+  },
+  "scope": "Perfil de dibujo del piloto de tunel y reutilizacion por especialidad; no es norma geotecnica",
+  "format_profiles": {
+    "master_tunnel": {
+      "paper": "A1",
+      "orientation": "landscape",
+      "sections": [
+        "geometry",
+        "fortification",
+        "callouts",
+        "details_D1_D4",
+        "tables",
+        "legend",
+        "notes",
+        "titleblock"
+      ],
+      "note": "Si los datos no caben legiblemente, dividir la lamina sin alterar escalas"
+    },
+    "standard_review": {
+      "paper": "A3",
+      "orientation": "landscape",
+      "sections": [
+        "geometry",
+        "details",
+        "tables",
+        "legend",
+        "titleblock"
+      ],
+      "note": "Varios A3 con referencias entre laminas, no reducir todo a una sola hoja"
+    }
+  },
+  "line_styles": [
+    {
+      "id": "EXCAVATION_CONTOUR",
+      "meaning": "Contorno de excavacion",
+      "aci_proposed": 7,
+      "rgb_pdf_proposed": "#1A1A1A",
+      "weight_mm_proposed": 0.5,
+      "linetype": "continuous",
+      "monochrome": "continuous-heavy"
+    },
+    {
+      "id": "INNER_LINING_FACE",
+      "meaning": "Cara interior del revestimiento",
+      "aci_proposed": 3,
+      "rgb_pdf_proposed": "#245D4B",
+      "weight_mm_proposed": 0.25,
+      "linetype": "continuous",
+      "monochrome": "continuous-medium"
+    },
+    {
+      "id": "ROCK_BOLT",
+      "meaning": "Eje de perno de anclaje declarado",
+      "aci_proposed": 1,
+      "rgb_pdf_proposed": "#A3363C",
+      "weight_mm_proposed": 0.25,
+      "linetype": "continuous",
+      "monochrome": "continuous-medium-plus-head"
+    },
+    {
+      "id": "WIRE_MESH",
+      "meaning": "Malla de acero declarada",
+      "aci_proposed": 4,
+      "rgb_pdf_proposed": "#307E83",
+      "weight_mm_proposed": 0.18,
+      "linetype": "continuous",
+      "monochrome": "mesh-cross"
+    },
+    {
+      "id": "CENTERLINE",
+      "meaning": "Eje de geometria",
+      "aci_proposed": 6,
+      "rgb_pdf_proposed": "#83527E",
+      "weight_mm_proposed": 0.18,
+      "linetype": "dash-dot",
+      "dash_mm": [
+        6,
+        1.2,
+        1,
+        1.2
+      ],
+      "monochrome": "dash-dot"
+    },
+    {
+      "id": "DIMENSION",
+      "meaning": "Cota geometrica fisica",
+      "aci_proposed": 8,
+      "rgb_pdf_proposed": "#4B4B4B",
+      "weight_mm_proposed": 0.18,
+      "linetype": "continuous",
+      "monochrome": "continuous-thin"
+    },
+    {
+      "id": "SECTION_CUT",
+      "meaning": "Traza de seccion A-A con flechas",
+      "aci_proposed": 1,
+      "rgb_pdf_proposed": "#A3363C",
+      "weight_mm_proposed": 0.35,
+      "linetype": "dash",
+      "dash_mm": [
+        8,
+        2
+      ],
+      "monochrome": "heavy-dashed"
+    }
+  ],
+  "area_patterns": [
+    {
+      "id": "SHOTCRETE_REGION",
+      "meaning": "Area cerrada de revestimiento proyectado (solo si esta declarado)",
+      "type": "hatch-parallel",
+      "angles_deg": [
+        45
+      ],
+      "pitch_paper_mm_proposed": 2.5,
+      "stroke_width_mm": 0.13,
+      "clipping_required": true,
+      "dedup_measurements": true,
+      "material_ref_required": true
+    },
+    {
+      "id": "WIRE_MESH_REGION",
+      "meaning": "Area / plano de malla declarada",
+      "type": "hatch-cross",
+      "angles_deg": [
+        45,
+        135
+      ],
+      "pitch_paper_mm_proposed": 3,
+      "stroke_width_mm": 0.13,
+      "clipping_required": true,
+      "dedup_measurements": true,
+      "material_ref_required": true
+    },
+    {
+      "id": "MESH_OVERLAP_ZONE",
+      "meaning": "Zona de traslapo, no inferir ancho desde el porcentaje",
+      "type": "hatch-cross-double",
+      "angles_deg": [
+        45,
+        135
+      ],
+      "pitch_paper_mm_proposed": 1.5,
+      "stroke_width_mm": 0.13,
+      "clipping_required": true,
+      "dedup_measurements": true,
+      "source_dimension_required": true
+    }
+  ],
+  "vector_symbols": [
+    {
+      "id": "ANCHOR_HEAD",
+      "kind": "cad-block",
+      "meaning": "Cabeza de perno, dimensiones especificas solo si declaradas",
+      "geometry_role": "schematic-unless-specified",
+      "source_ref_required": true,
+      "measurable": false
+    },
+    {
+      "id": "DETAIL_CALLOUT",
+      "kind": "bubble-leader",
+      "meaning": "Referencia D1-D4 al detalle existente",
+      "fields": [
+        "detail_ref",
+        "source_view",
+        "anchor_entity",
+        "target_sheet"
+      ],
+      "measurable": false
+    },
+    {
+      "id": "SECTION_MARKER",
+      "kind": "paired-arrow-cut",
+      "meaning": "Seccion A-A y direccion de mirada",
+      "fields": [
+        "section_id",
+        "source_view",
+        "target_view"
+      ],
+      "measurable": false
+    },
+    {
+      "id": "BOLT_ID",
+      "kind": "label",
+      "meaning": "Identificador P1..Pn",
+      "fields": [
+        "physical_element_ref",
+        "source_ref",
+        "sequence"
+      ],
+      "measurable": false
+    }
+  ],
+  "legend_contract": {
+    "generated_from": "symbols_used_on_sheet",
+    "requires": [
+      "symbol_id",
+      "vector_sample",
+      "description",
+      "source_ref_or_status"
+    ],
+    "sort": [
+      "boundaries",
+      "materials",
+      "reinforcement",
+      "annotations",
+      "pending"
+    ],
+    "never_use_text_only": true
+  },
+  "data_safety": {
+    "hatch_not_measurement_source": true,
+    "symbol_not_measurement_source": true,
+    "missing_specification": "PENDIENTE",
+    "material_role_requires_provenance": true,
+    "never_assume_safety_compliance": true
+  }
+}
