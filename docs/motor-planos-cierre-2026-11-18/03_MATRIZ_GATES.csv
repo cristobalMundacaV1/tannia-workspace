@@ -1,0 +1,41 @@
+﻿Gate;Caso;Prioridad;Componente;Prueba;Entorno;Criterio de aceptacion
+G0;PL-G00;P0;Baseline;Fijar SHA y corpus DXF original, hash y fixtures;CI;sha y manifest coinciden, golden referencia inmutable
+G1;PL-DXF-01;P0;DXF apertura;DXF declara vistas iniciales, extents y viewport model validos;Windows+Linux;"Model visible por perspectiva inicial; extents acotados; parse independiente"
+G1;PL-DXF-02;P0;DXF layouts;TW12-01..05 tienen owner, plot y viewport con centro/escala adecuados;Windows+Linux;5 layouts y paneles contienen geometria tras reabrir DXF
+G1;PL-DXF-03;P0;DXF inspeccion real;AutoCAD 2027 abrir, REGENALL, AUDIT y SAVEAS copia;AutoCAD2027 manual;"Vistas visibles sin zoom de rescate; DWG reabierto coherente"
+G1;PL-DXF-04;P1;Cotas verticales;Probar DIMENSION en perfil exagerado y 2 cotas verticales;Windows+Linux+AutoCAD;Dimension fisica, valor textual, anclajes y REGEN coinciden
+G2;PL-IR-01;P1;IR versionado;Migrar tw.drawing/1 a IR v2 sin perder archivos ni hashes;Windows+Linux;IGUALDAD de inventario y valores calculados previos
+G2;PL-IR-02;P1;Ref fisica;Misma pieza en planta/detalle no duplica cubicaciones;Windows+Linux;Cantidad unica derivada de fuente primaria
+G2;PL-SYM-01;P1;Catalogo;Validar simbolos por ID, version, estilo, fuente, estado;Windows+Linux;Sin ref inexistente, duplicada, ambigua ni simbolo sin muestra
+G2;PL-SYM-02;P1;Color/negro;Roles lineweight, dash y color por estilo;Windows+Linux;PDF y DXF muestran misma semantica en color y monocromo
+G3;PL-HATCH-01;P1;Topologia;Region cerrada y agujeros dentro del contorno, sin self-intersections;Windows+Linux;Casos invalidos rechazan antes de escribir
+G3;PL-HATCH-02;P1;Paridad hatch;Malla/shotcrete renderizable en PDF y DXF HATCH;Windows+Linux;Mismo pattern/area/material/ref, 0 desborde
+G3;PL-HATCH-03;P1;No cubicacion doble;HATCH/representacion no se suma en mediciones;Windows+Linux;Conteo inmutable antes y despues de trama
+G4;PL-LEG-01;P1;Leyenda automatica;Generar muestras de simbolos realmente usados;Windows+Linux;"Cada simbolo usado tiene muestra y texto; sin filas fantasmas"
+G4;PL-CALLOUT-01;P1;Referencias;Globo D1-D4 conecta con detalle existente;Windows+Linux;0 referencias huerfanas, id ambiguo o duplicado
+G4;PL-CALLOUT-02;P1;Lideres;Lideres y burbujas no colisionan con cotas;Windows+Linux;0 colisiones con peso/tolerancia declarados
+G4;PL-DETAIL-01;P1;D1 corona;Geometria derivada de contorno/elementos reales;Windows+Linux;Sin material sin fuente, refs/escala correctas
+G4;PL-DETAIL-02;P1;D2 hastial-pie;Encuentro constructivo con pendientes honestos;Windows+Linux;"No inventar solera/drenajes; estructura referenciada"
+G4;PL-DETAIL-03;P1;D3 perno-malla;Referencias geometria y partes segun parametros;Windows+Linux;"Sin placa/lecha ficticia; simbolos correlacionados"
+G4;PL-DETAIL-04;P1;D4 traslape;Representacion porcentual o ancho segun fuente;Windows+Linux;Porcentaje no infiere arbitrariamente longitud
+G5;PL-TABLE-01;P1;Cuadro pernos;Total tabla = dibujo = cubicacion;Windows+Linux;1010 pernos para fixture, con oraculo independiente
+G5;PL-TABLE-02;P1;Cuadro geom;Dimensiones y magnitudes con unidades;Windows+Linux;"Ancho 5,5; area 25,629147; fuente y formato"
+G5;PL-TABLE-03;P1;Materiales;Cuadro de EETT tipado y pendientes;Windows+Linux;Sin afirmar materiales/especificaciones no aportadas
+G5;PL-CSV-01;P2;CSV;Anidados en columnas tipadas;Windows+Linux;Sin [object Object], escape CSV valido
+G6;PL-SHEET-01;P1;Compositor;A3/A2/A1, paneles y plantilla multi-dominio;Windows+Linux;Cero clip/text overlap, escalas fijas
+G6;PL-SHEET-02;P1;Tipografia;Texto/cotas/tables print readable;Windows+Linux;Perfil jerarquico en mm y test a 100%
+G6;PL-SHEET-03;P1;Paginacion;Si no cabe se crea hoja extra o falla explicitamente;Windows+Linux;Nunca autoescala ni elimina datos
+G7;PL-PARITY-01;P1;Paridad CAD;PDF/DXF comparten IR de anotaciones;Windows+Linux;Mismas tablas, lideres, simbolos y hatches
+G7;PL-PARITY-02;P1;Aserciones negativas;Mutar symbol/style/hatch/callout rompe gates;Windows+Linux;Cada mutacion de elemento visible detectada
+G7;PL-VISUAL-01;P1;Golden raster;Comparacion render PDF/imagen aprobada;Windows+Linux;Sin variaciones no aprobadas, human review pendiente
+G8;PL-DOMAIN-01;P1;Tunel;Fixture 150 m, 5 hojas o mas justificadas;Windows+Linux;Planta/perfil/seccion/D1-D4/tablas/leyenda con pendientes
+G8;PL-DOMAIN-02;P1;Edificacion;Muro con vano: plano, hatch, detalle y tabla;Windows+Linux;Oraculo area, vano descontado y sin doble conteo
+G9;PL-E2E-01;P1;Revisiones;Cambio A-B-A invalida derivados/approval;Windows+Linux;Sin reutilizacion de aprobacion ni archivos de otra revision
+G9;PL-E2E-02;P1;Seguridad;Originales intactos, carpeta aislada, cancelacion;Windows+Linux;"SHA originales igual; sin entregas parciales"
+G10;PL-RC-5B;P0;ZIP instalado;Motor de planos presente y cinco laminas desde ZIP;Windows CI;Original gate 5b verde
+G10;PL-RC-5C;P0;Segundo plano;Planos+cubicaciones sin robar foco en simulador;Windows CI;Original gate 5c verde
+G10;PL-RC-5D;P0;DXF desde ZIP;Generar e inspeccionar DXF real del paquete;Windows CI;Extents, layouts, IDs, hatches y tablas en salida
+G10;PL-RC-5E;P1;Artefactos;PDF/PNG/CSV/manifests de 2 dominios;Windows CI;Validar paridad y checksum mismo SHA
+G10;PL-RC-VERSION;P0;Version;Version coordinada src/version/package/lock/ZIP;Windows+Linux;Nunca reusar rc.4 para bytes distintos
+G11;PL-UAT-CAD-01;P0;AutoCAD real;Abrir DXF/DWG, auditar, reabrir y trazar;AutoCAD2027 manual;Sin hoja vacia, DWG coherente, foco intacto
+G12;PL-UAT-PRO-01;P1;Revision profesional;Profesional revisa detalles y contenido;Profesional externo;Acta firmada o limitaciones claras
