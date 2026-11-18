@@ -797,11 +797,9 @@ export class AutoCadCom {
   }
 
   /** Ejecuta `fn` con un permiso humano específico (operación + documentos). Reutiliza uno vigente del contexto si ya lo cubre. */
-  async #conAutorizacion({ proyecto, operacion, documentos }, fn) {
+  async #conAutorizacion({ proyecto, operacion, documentos, cambios }, fn) {
     if (this.platform !== 'win32') throw new UserError('AUTOCAD_NO_DISPONIBLE', 'La conexión con AutoCAD solo existe en Windows con AutoCAD completo.', 'Use la exportación DXF para medir sin AutoCAD.');
-    const actual = permisoActual();
-    if (actual && actual.operacion === operacion && actual.expira > Date.now() && documentos.every((d) => actual.documentos.includes(d))) return fn();
-    const permiso = await this.politica.permiso({ proyecto, operacion, documentos });
+    const permiso = await this.politica.permiso({ proyecto, operacion, documentos, cambios });
     return conPermiso(permiso, fn);
   }
 
@@ -811,7 +809,7 @@ export class AutoCadCom {
     const source = this.sandbox.resolve(project, dxf); const target = this.sandbox.resolveWritable(project, dwg);
     const input = this.#assertWorkCopy(project, source.abs);
     if (!isInside(path.join(target.root, FOLDERS.trabajo), target.abs) || !/\.dwg$/i.test(target.abs)) throw new UserError('DESTINO_INVALIDO', 'El DWG debe estar en la zona de trabajo CAD.');
-    return this.#conAutorizacion({ proyecto: project, operacion: 'exportar_dwg', documentos: [input, target.abs] }, async () => {
+    return this.#conAutorizacion({ proyecto: project, operacion: 'exportar_dwg', documentos: [input, target.abs], cambios: { importar_dxf_aislado: { dxf: input, insunits: 6 }, laminas_a_dwg: { dwg: target.abs, estricto: true } } }, async () => {
     const expected = expectedLayouts(composition);
     const hash = sha256File(input);
     const journal = new CadOperations(target.root); const prior = journal.status(operacion);
@@ -854,7 +852,7 @@ export class AutoCadCom {
     if (!Array.isArray(lineas) || lineas.length < 1 || lineas.length > 100 || lineas.some(l => ['x1', 'y1', 'x2', 'y2'].some(k => !Number.isFinite(l?.[k])))) throw new UserError('DATO_INVALIDO', 'Indique entre 1 y 100 líneas con coordenadas finitas.');
     if (capa && !LAYER.test(capa)) throw new UserError('DATO_INVALIDO', 'Capa inválida.');
     const { abs, root } = this.sandbox.resolve(project, archivo); const ruta = this.#assertWorkCopy(project, abs);
-    return this.#conAutorizacion({ proyecto: project, operacion: 'agregar_lineas', documentos: [ruta] }, () => new CadOperations(root).run({
+    return this.#conAutorizacion({ proyecto: project, operacion: 'agregar_lineas', documentos: [ruta], cambios: { agregar_lineas: { ruta_esperada: ruta, lineas, capa: capa || null, estricto: true, escritura: true } } }, () => new CadOperations(root).run({
       id: operacion, intent: { ruta, lineas, capa: capa || null, tipo: 'lineas' },
       preflight: async () => {
         const s = await this.sesion(project, archivo);
@@ -942,7 +940,7 @@ export class AutoCadCom {
     const { abs } = this.sandbox.resolve(project, rel);
     const real = this.#assertWorkCopy(project, abs);
     validarArchivoParaApertura(real);
-    return this.#conAutorizacion({ proyecto: project, operacion: 'abrir_copia', documentos: [real] }, async () => {
+    return this.#conAutorizacion({ proyecto: project, operacion: 'abrir_copia', documentos: [real], cambios: { abrir_copia: { ruta: real, estricto: true }, importar_dxf_aislado: { dxf: real, estricto: true } } }, async () => {
     if (viaApertura(real) === 'open_dwg') return this.#abrirReconciliando(project, real); // Documents.Open: SOLO DWG
     const r = await this.#importarReconciliando(project, real, {});
     if (r.apertura_tardia || r.importacion_incierta) return r;
@@ -1091,7 +1089,7 @@ export class AutoCadCom {
     if (capa !== undefined && capa !== null && !LAYER.test(capa)) throw new UserError('DATO_INVALIDO', 'Nombre de capa no válido (sin \\ / : * ? " < > | ; , = \' `).');
     const st = await this.#estadoDoc();
     this.#assertWorkCopy(project, st.ruta); // el documento ACTIVO debe ser copia de trabajo (verificación 1, en Node)
-    const r = await this.#conAutorizacion({ proyecto: project, operacion: 'agregar_lineas', documentos: [st.ruta] }, () => this.#exec('agregar_lineas', { lineas: lineas.map(({ x1, y1, x2, y2 }) => ({ x1, y1, x2, y2 })), capa: capa || null, ruta_esperada: st.ruta })); // verificación 2, en PowerShell
+    const r = await this.#conAutorizacion({ proyecto: project, operacion: 'agregar_lineas', documentos: [st.ruta], cambios: { agregar_lineas: { lineas: lineas.map(({ x1, y1, x2, y2 }) => ({ x1, y1, x2, y2 })), capa: capa || null, ruta_esperada: st.ruta } } }, () => this.#exec('agregar_lineas', { lineas: lineas.map(({ x1, y1, x2, y2 }) => ({ x1, y1, x2, y2 })), capa: capa || null, ruta_esperada: st.ruta })); // verificación 2, en PowerShell
     const handles = r.handles || [];
     return { ...r, handles, cantidad: handles.length, creado_en: new Date().toISOString() };
   }
@@ -1178,7 +1176,7 @@ export class AutoCadCom {
     if (!lista.length) throw new UserError('SIN_ENTIDADES', 'No hay entidades que verificar en ese alcance.');
     const antes = await this.leerLote(lista, { tam: tam_lote, ruta });
     let cierre;
-    try { cierre = await this.#conAutorizacion({ proyecto: project, operacion: 'verificar_persistencia', documentos: [ruta] }, () => this.#exec('cerrar_reabrir', { ruta_esperada: ruta, esperadas: todosAntes.length }, { timeoutMs: 120000 })); }
+    try { cierre = await this.#conAutorizacion({ proyecto: project, operacion: 'verificar_persistencia', documentos: [ruta], cambios: { cerrar_reabrir: { ruta_esperada: ruta, esperadas: todosAntes.length } } }, () => this.#exec('cerrar_reabrir', { ruta_esperada: ruta, esperadas: todosAntes.length }, { timeoutMs: 120000 })); }
     catch (e) {
       if (e.detalle?.codigo === 'CAMBIOS_SIN_GUARDAR' || e.code === 'CAMBIOS_SIN_GUARDAR') throw new UserError('CAMBIOS_SIN_GUARDAR', 'La copia tiene cambios sin guardar: no se cierra para no perderlos.', 'Guárdela en AutoCAD y repita.');
       if (e.code === 'REAPERTURA_FALLIDA') e.detalle = { ...(e.detalle || {}), lecturas_previas: antes.entidades.slice(0, 50) };
@@ -1226,7 +1224,7 @@ export class AutoCadCom {
     if (fs.existsSync(dwgAbs)) throw new UserError('DWG_YA_EXISTE', 'Ya existe un DWG de esa versión; no se sobrescribe.', 'Genere una nueva versión del anteproyecto o renombre el DWG existente.');
     const esperado = conteoPorCapa(parseDxf(fs.readFileSync(abs)));
     validarArchivoParaApertura(abs);
-    const { importado, r } = await this.#conAutorizacion({ proyecto: project, operacion: 'dxf_a_dwg', documentos: [abs, dwgAbs] }, async () => {
+    const { importado, r } = await this.#conAutorizacion({ proyecto: project, operacion: 'dxf_a_dwg', documentos: [abs, dwgAbs], cambios: { importar_dxf_aislado: { dxf: abs, insunits: 4 }, dxf_a_dwg: { dwg: dwgAbs, estricto: true } } }, async () => {
       const importado = await this.#importarVerificado(project, abs, { insunits: 4 }); // Add + Import + puerta; Documents.Open nunca recibe un DXF
       return { importado, r: await this.#exec('dxf_a_dwg', { dwg: dwgAbs, nombre_aislado: importado.nombre_aislado, estricto: true }, { timeoutMs: 120000 }) };
     });
@@ -1284,7 +1282,7 @@ export class AutoCadCom {
     if (fs.existsSync(dwgAbs)) throw new UserError('DWG_YA_EXISTE', 'Ya existe un DWG 3D de esa versión; no se sobrescribe.', 'Modifique el modelo (nueva versión) o use otro nombre.');
     fs.mkdirSync(path.dirname(dwgAbs), { recursive: true }); // AutoCAD no crea carpetas: SaveAs falla si no existe (destino ya validado dentro de 03 Trabajo)
     const esperado = {}; for (const p of primitivas) esperado[p.capa] = (esperado[p.capa] || 0) + 1; esperado.TW3D_NOTAS = 1;
-    const r = await this.#conAutorizacion({ proyecto: project, operacion: 'construir_3d', documentos: [dwgAbs] }, () => this.#exec('construir_3d', { dwg: dwgAbs, primitivas, capas, nota, nota_pos, vista_dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null }, { timeoutMs: 90000 + primitivas.length * 600 }));
+    const r = await this.#conAutorizacion({ proyecto: project, operacion: 'construir_3d', documentos: [dwgAbs], cambios: { construir_3d: { dwg: dwgAbs, primitivas, capas, nota, nota_pos, vista_dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null } } }, () => this.#exec('construir_3d', { dwg: dwgAbs, primitivas, capas, nota, nota_pos, vista_dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null }, { timeoutMs: 90000 + primitivas.length * 600 }));
     let cabecera = null; let bytes = 0;
     try { const st = fs.statSync(dwgAbs); bytes = st.size; const fd = fs.openSync(dwgAbs, 'r'); const b = Buffer.alloc(6); fs.readSync(fd, b, 0, 6, 0); fs.closeSync(fd); cabecera = b.toString('latin1'); } catch { /* se informa abajo */ }
     const valido = !!cabecera && /^AC10\d\d$/.test(cabecera) && bytes > 1000;
@@ -1304,7 +1302,7 @@ export class AutoCadCom {
     if (estilo !== null && !ESTILOS[estilo]) throw new UserError('DATO_INVALIDO', `Estilo no válido. Use: ${Object.keys(ESTILOS).join(', ')}.`);
     for (const c of [...mostrar, ...ocultar]) if (!LAYER.test(c)) throw new UserError('DATO_INVALIDO', 'Nombre de capa no válido.');
     const st = await this.#estadoDoc(); this.#assertWorkCopy(project, st.ruta);
-    const r = await this.#conAutorizacion({ proyecto: project, operacion: 'vista_3d', documentos: [st.ruta] }, () => this.#exec('vista_3d', { dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null, mostrar, ocultar, ruta_esperada: st.ruta }, { timeoutMs: 60000 }));
+    const r = await this.#conAutorizacion({ proyecto: project, operacion: 'vista_3d', documentos: [st.ruta], cambios: { vista_3d: { dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null, mostrar, ocultar, ruta_esperada: st.ruta } } }, () => this.#exec('vista_3d', { dir: VISTAS[vista], estilo_cmd: estilo ? ESTILOS[estilo] : null, mostrar, ocultar, ruta_esperada: st.ruta }, { timeoutMs: 60000 }));
     return { ...r, vista, estilo_solicitado: estilo, nota: 'La vista no se guarda en el DWG hasta que lo guarde en AutoCAD. El estilo visual se solicita por comando: confírmelo en pantalla.' };
   }
 
@@ -1326,7 +1324,7 @@ export class AutoCadCom {
     for (const v of [dx, dy, dz, grados, centro[0], centro[1]]) if (!Number.isFinite(v)) throw new UserError('DATO_INVALIDO', 'Valores numéricos no válidos.');
     if (Math.abs(dx) > 1e6 || Math.abs(dy) > 1e6 || Math.abs(dz) > 1e6) throw new UserError('DATO_INVALIDO', 'Desplazamiento fuera de rango (máx. 1 000 000 mm).');
     const st = await this.#estadoDoc(); this.#assertWorkCopy(project, st.ruta);
-    const r = await this.#conAutorizacion({ proyecto: project, operacion: 'transformar_solido', documentos: [st.ruta] }, () => this.#exec('transformar_solido', { handle: String(handle), operacion, dx, dy, dz, grados, cx: centro[0], cy: centro[1], guardar: !!guardar, ruta_esperada: st.ruta }, { timeoutMs: 60000 }));
+    const r = await this.#conAutorizacion({ proyecto: project, operacion: 'transformar_solido', documentos: [st.ruta], cambios: { transformar_solido: { handle: String(handle), operacion, dx, dy, dz, grados, cx: centro[0], cy: centro[1], guardar: !!guardar, ruta_esperada: st.ruta } } }, () => this.#exec('transformar_solido', { handle: String(handle), operacion, dx, dy, dz, grados, cx: centro[0], cy: centro[1], guardar: !!guardar, ruta_esperada: st.ruta }, { timeoutMs: 60000 }));
     return { ...r, aviso: 'El DWG ya NO coincide con el modelo 3D guardado: la modificación manual no actualiza el modelo. Para cambios que deban persistir en el modelo use tannia_3d_modificar.' };
   }
 

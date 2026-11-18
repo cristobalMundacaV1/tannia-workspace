@@ -1,0 +1,70 @@
+✖ BG-R04: agregar_lineas, un cambio B no hereda la aprobación de A (4.698908ms)
+✖ BG-R04: transformar_solido, un cambio B no hereda la aprobación de A (0.911229ms)
+✖ BG-R04: cambiar el documento mientras la persona responde invalida el consentimiento (0.830487ms)
+✖ BG-R05: un registro temporalmente ilegible no permite robar el turno CAD (11247.971819ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11531.153795
+
+✖ failing tests:
+
+test at test/cadbg_consolidacion.test.js:18:67
+✖ BG-R04: agregar_lineas, un cambio B no hereda la aprobación de A (4.698908ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/work/tannia-workspace/test/cadbg_consolidacion.test.js:21:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/cadbg_consolidacion.test.js:18:67
+✖ BG-R04: transformar_solido, un cambio B no hereda la aprobación de A (0.911229ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/work/tannia-workspace/test/cadbg_consolidacion.test.js:21:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/cadbg_consolidacion.test.js:24:1
+✖ BG-R04: cambiar el documento mientras la persona responde invalida el consentimiento (0.830487ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/work/tannia-workspace/test/cadbg_consolidacion.test.js:26:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/cadbg_consolidacion.test.js:28:1
+✖ BG-R05: un registro temporalmente ilegible no permite robar el turno CAD (11247.971819ms)
+  AssertionError [ERR_ASSERTION]: no debe iniciar CAD con propietario desconocido
+  
+  2 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/work/tannia-workspace/test/cadbg_consolidacion.test.js:35:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

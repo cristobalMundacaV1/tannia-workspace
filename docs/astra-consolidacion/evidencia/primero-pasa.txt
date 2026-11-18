@@ -1,0 +1,12 @@
+✔ BG-R04: agregar_lineas, un cambio B no hereda la aprobación de A (5.458973ms)
+✔ BG-R04: transformar_solido, un cambio B no hereda la aprobación de A (1.654994ms)
+✔ BG-R04: cambiar el documento mientras la persona responde invalida el consentimiento (1.181263ms)
+✔ BG-R05: un registro temporalmente ilegible no permite robar el turno CAD (8624.854447ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8830.444073

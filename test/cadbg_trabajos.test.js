@@ -23,12 +23,7 @@ const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const BAJA = os.constants.priority.PRIORITY_BELOW_NORMAL;
 
 function hogar(config = {}) { const home = tmpHome(); fs.mkdirSync(path.join(home, '.tannia-trabajos'), { recursive: true }); fs.writeFileSync(path.join(home, '.tannia-trabajos', 'config.json'), JSON.stringify({ memoria_libre_minima_mb: 0, ...config })); return home; }
-/** Simulador ejecutable (como lo invocaría spawn con accoreconsole.exe). */
-function simulador(dir, modo = 'normal') {
-  const exe = path.join(dir, 'accoreconsole-simulado'); const ctl = path.join(dir, 'modo.txt'); const log = path.join(dir, 'invocaciones.jsonl');
-  fs.writeFileSync(exe, `#!/bin/sh\nexec "${process.execPath}" "${path.join(ROOT, 'test', 'proc', 'accoreconsole_simulado.mjs')}" "$@"\n`, { mode: 0o755 }); fs.writeFileSync(ctl, modo);
-  return { exe, ctl, log, modo: (m) => fs.writeFileSync(ctl, m), invocaciones: () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((x) => !x.fin) : []), env: { TANNIA_ACCORECONSOLE: exe, TANNIA_SIM_ACC_CTL: ctl, TANNIA_SIM_ACC_LOG: log, TANNIA_ACCORECONSOLE_VERSION: 'SIMULADOR' } };
-}
+import { simulador } from './helpers_cadbg.js';
 async function sesion(home, env = {}) {
   const c = await startClient(home, undefined, { TANNIA_AVISOS: 'off', ...env });
   const T = async (n, a, falla = false) => { const r = await call(c.client, n, a); if (!falla) assert.ok(!r.isError, `${n}: ${r.content?.[0]?.text}`); return r; };

@@ -119,7 +119,7 @@ test('BG-R03: herramientas COM antiguas (abrir copia, agregar línea/s) piden au
     cli = await conectar({ action: 'accept', content: { aprobar: true, nombre: 'Persona de prueba' } }); const n0 = vistos.length;
     const ok1 = await cli.callTool({ name: 'tannia_cad_agregar_lineas', arguments: LL }); assert.ok(!ok1.isError, ok1.content[0].text);
     const ok2 = await cli.callTool({ name: 'tannia_cad_agregar_linea', arguments: L }); assert.ok(!ok2.isError, ok2.content[0].text);
-    assert.equal(vistos.length, n0 + 1, 'una autorización cubre agregar líneas en ESE documento durante unos minutos');
+    assert.equal(vistos.length, n0 + 2, 'cada solicitud necesita consentimiento; el lote completo usa una ventana');
     assert.equal(interrupciones(e.llamadas).length, 2); assert.ok(interrupciones(e.llamadas).every((x) => x.input.ruta_esperada === o.copia));
     await cli.close();
   } finally { if (prev === undefined) delete process.env.TANNIA_SIN_DIALOGO; else process.env.TANNIA_SIN_DIALOGO = prev; }
@@ -127,7 +127,7 @@ test('BG-R03: herramientas COM antiguas (abrir copia, agregar línea/s) piden au
 
 test('BG-R03: el permiso queda ligado al documento — un script interactivo sobre otro documento se rechaza aunque haya permiso', async () => {
   const { exigirAlcance } = await import('../src/cad/politica_interactiva.js');
-  const o = obra(); const permiso = { id: 'perm-1', proyecto: 'Obra COM', documentos: [o.copia], scripts: new Set(['agregar_lineas']), expira: Date.now() + 60000 };
+  const o = obra(); const { crearPermiso } = await import('../src/cad/politica_interactiva.js'); const permiso = crearPermiso({ proyecto: 'Obra COM', operacion: 'agregar_lineas', documentos: [o.copia], cambios: { agregar_lineas: { ruta_esperada: o.copia } }, canal: 'prueba' });
   assert.doesNotThrow(() => exigirAlcance(permiso, 'agregar_lineas', { ruta_esperada: o.copia }));
   assert.throws(() => exigirAlcance(permiso, 'agregar_lineas', { ruta_esperada: o.otra }), (x) => x.code === 'FUERA_DEL_ALCANCE_AUTORIZADO');
   assert.throws(() => exigirAlcance(permiso, 'abrir_copia', { ruta: o.copia }), (x) => x.code === 'FUERA_DEL_ALCANCE_AUTORIZADO');

@@ -10,7 +10,7 @@ import { tmpHome, startClient, call, data } from './helpers.js';
 
 test('«Crea un proyecto Casa Los Robles, aquí tienes los antecedentes, necesito una propuesta 3D y los planos guardados» — flujo completo y continuidad', async () => {
   const home = tmpHome('Tannia ñ flujo '); const ext = fs.mkdtempSync(path.join(os.tmpdir(), 'flujo ñ ')); const antecedente = path.join(ext, 'Certificado de informaciones previas.pdf'); fs.writeFileSync(antecedente, '%PDF-1.7 antecedentes del terreno');
-  let cli = await startClient(home); let c = cli.client;
+  let cli = await startClient(home, undefined, { TANNIA_SIN_DIALOGO: '1' }); let c = cli.client;
   try {
     // 1) el agente evalúa el encargo y no encuentra el proyecto → lo crea (acción segura) sin preguntar
     let r = await call(c, 'tannia_encargo_evaluar', { solicitud: 'crea un proyecto Casa Los Robles, antecedentes adjuntos, propuesta 3D y planos para AutoCAD', antecedentes: { pdf: true }, pide: ['3d'], superficie_m2: 90, dormitorios: 3, banos: 2 }); assert.ok(!r.isError); const cap = data(r).capacidad; assert.ok(['anteproyecto_vivienda', 'trabajo_sobre_antecedentes'].includes(cap));
@@ -23,11 +23,11 @@ test('«Crea un proyecto Casa Los Robles, aquí tienes los antecedentes, necesit
     r = await call(c, 'tannia_diseno_previsualizar', { proyecto: 'Casa Los Robles', nombre: 'Casa Los Robles', operaciones: [{ operacion: 'ajustar_tamano', recinto: 'R-D2', eje: 'ancho', valor_mm: 90000 }] }); assert.equal(data(r).aplicable, false, 'rechazo geométrico explicado'); assert.equal(data(r).se_escribio_algo, false);
     r = await call(c, 'tannia_3d_crear', { proyecto: 'Casa Los Robles', nombre: 'Casa Los Robles 3D', desde_anteproyecto: { nombre: 'Casa Los Robles' } }); assert.ok(!r.isError); const d3 = data(r); assert.equal(d3.coherencia_2d.estado, 'coherente_en_alcance'); assert.ok(d3.supuestos_a_confirmar.length && /plano 2D/.test(d3.supuestos_a_confirmar[0]));
     // 4) sin AutoCAD el DWG no se inventa: error claro y el modelo queda guardado
-    r = await call(c, 'tannia_3d_a_autocad', { proyecto: 'Casa Los Robles', nombre: 'Casa Los Robles 3D' }); assert.equal(r.isError, true); assert.match(JSON.stringify(r.content), /AUTOCAD_NO_DISPONIBLE|AUTOCAD_NO_ABIERTO|Windows/);
+    r = await call(c, 'tannia_3d_a_autocad', { proyecto: 'Casa Los Robles', nombre: 'Casa Los Robles 3D' }); assert.equal(r.isError, true); assert.match(JSON.stringify(r.content), (process.platform === 'win32' ? /AUTORIZACION_INTERACTIVA_REQUERIDA/ : /AUTOCAD_NO_DISPONIBLE/));
     assert.ok(!fs.existsSync(path.join(home, 'Proyectos', 'Casa Los Robles', '03 Trabajo', 'Modelos3D', 'Casa Los Robles 3D', 'v001_3D.dwg')));
     await cli.close();
     // 5) NUEVA SESIÓN (servidor reiniciado): "abre la casa de ayer" → se resuelve por nombre y el resumen permite continuar
-    cli = await startClient(home); c = cli.client;
+    cli = await startClient(home, undefined, { TANNIA_SIN_DIALOGO: '1' }); c = cli.client;
     r = await call(c, 'tannia_proyecto_resolver', { texto: 'la casa los robles' }); assert.equal(data(r).estado, 'unico'); const id = data(r).candidatos[0].id; assert.match(id, /^[0-9a-f-]{36}$/);
     r = await call(c, 'tannia_proyecto_resumen', { proyecto: 'Casa Los Robles' }); const res = data(r); assert.equal(res.id, id); assert.equal(res.anteproyectos.length, 1); assert.equal(res.modelos_3d.length, 1); assert.equal(res.antecedentes.importados, 1);
     assert.match(res.pendientes.join(' '), /DWG/); assert.match(res.pendientes.join(' '), /originales/);

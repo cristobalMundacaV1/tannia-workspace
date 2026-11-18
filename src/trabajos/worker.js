@@ -18,6 +18,7 @@ import { sha256File } from '../security/sandbox.js';
 import { huella } from '../autoridad/canonico.js';
 import { detectarCoreConsole, convertirDxfADwgSinInterfaz } from './coreconsole.js';
 import { seleccionarModalidad } from './modalidades.js';
+import { tomarTurnoCad } from './bloqueo_cad.js';
 import { avisarEscritorio } from './avisos.js';
 
 export const PLATAFORMA_SIN_CAD = 'trabajo-sin-cad';
@@ -129,21 +130,8 @@ function motivosNoReutilizar({ destino, registro, revision, shaDxf }) {
  * proyectos o servidores). Archivo exclusivo con dueño (pid del trabajo y del proceso CAD); un dueño muerto lo libera.
  */
 async function tomarCad(p) {
-  const f = path.join(dir, 'cad.lock'); const espera0 = Date.now(); let avisado = false;
-  for (;;) {
-    try { fs.writeFileSync(f, JSON.stringify({ trabajo: id, pid: process.pid, pid_cad: null, t: ahora() }), { flag: 'wx' }); if (avisado) { p.etapa = 'convertir'; evento('turno_cad_obtenido', { espera_ms: Date.now() - espera0 }); guardar(); } return { liberar: () => { try { const c = JSON.parse(fs.readFileSync(f, 'utf8')); if (c.trabajo === id && c.pid === process.pid) fs.rmSync(f, { force: true }); } catch { /* ya no existe */ } }, anotarCad: (pid) => { try { fs.writeFileSync(f, JSON.stringify({ trabajo: id, pid: process.pid, pid_cad: pid, t: ahora() })); } catch { /* informativo */ } } }; }
-    catch (e) { if (e.code !== 'EEXIST') throw e; }
-    let o = null; try { o = JSON.parse(fs.readFileSync(f, 'utf8')); } catch { o = null; }
-    if (!o || (!procesoVivo(o.pid) && !procesoVivo(o.pid_cad))) { // dueño muerto (o archivo ilegible): se aparta con un nombre único y se reintenta
-      try { fs.renameSync(f, `${f}.vencido-${process.pid}-${Date.now()}`); evento('bloqueo_cad_vencido_liberado', { de: o?.trabajo ?? null }); } catch { /* otro proceso lo apartó primero */ }
-      for (const n of fs.readdirSync(dir)) if (n.startsWith('cad.lock.vencido-')) fs.rmSync(path.join(dir, n), { force: true });
-      continue;
-    }
-    if (!avisado) { avisado = true; p.etapa = 'esperando_cad'; evento('esperando_cad', { por: o.trabajo }); guardar(); }
-    if (cancelado()) return null;
-    if (Date.now() - espera0 > limites.tiempo_maximo_ms.dwg) return 'tiempo';
-    await new Promise((r) => setTimeout(r, 400));
-  }
+  return tomarTurnoCad({ archivo: path.join(dir, 'cad.lock'), trabajo: id, cancelado, timeoutMs: limites.tiempo_maximo_ms.dwg, evento,
+    esperando: (o) => { p.etapa = 'esperando_cad'; evento('esperando_cad', { por: o?.trabajo ?? 'propietario no identificado' }); guardar(); } });
 }
 
 /** DWG sin interfaz (modo B) de la revisión VIGENTE de planos; si B no existe → intervención (nunca COM automático). */

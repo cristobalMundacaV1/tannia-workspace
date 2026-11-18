@@ -257,7 +257,7 @@ test('AutoCAD (servidor COM simulado): construir DWG 3D nuevo, verificar cada s�
 });
 
 test('MCP: flujo completo de herramientas 3D sin AutoCAD (crear, ver, modificar, historial) y herramientas de AutoCAD con mensajes claros fuera de Windows', async () => {
-  const home = tmpHome("Tannia ñ mcp3d "); const cli = await startClient(home); const c = cli.client;
+  const home = tmpHome("Tannia ñ mcp3d "); const cli = await startClient(home, undefined, { TANNIA_SIN_DIALOGO: '1' }); const c = cli.client;
   try {
     const tools = (await c.listTools()).tools.map((t) => t.name); for (const n of ['tannia_3d_crear', 'tannia_3d_modificar', 'tannia_3d_ver', 'tannia_3d_historial', 'tannia_3d_a_autocad', 'tannia_3d_vista', 'tannia_3d_inspeccionar', 'tannia_3d_solido_transformar', 'tannia_3d_verificar']) assert.ok(tools.includes(n), n);
     await call(c, 'tannia_proyecto_crear', { nombre: 'Taller' });
@@ -279,7 +279,7 @@ test('MCP: flujo completo de herramientas 3D sin AutoCAD (crear, ver, modificar,
     // diseño 2D → 3D por MCP
     await call(c, 'tannia_diseno_crear', { proyecto: 'Taller', nombre: 'Casa', programa: { dormitorios: 3 } });
     r = await call(c, 'tannia_3d_crear', { proyecto: 'Taller', nombre: 'Casa 3D', desde_anteproyecto: { nombre: 'Casa' } }); d = data(r); assert.equal(d.coherencia_2d.estado, 'coherente_en_alcance'); assert.ok(d.supuestos_a_confirmar[0].includes('2500') && /plano 2D/.test(d.supuestos_a_confirmar[0]));
-    r = await call(c, 'tannia_3d_a_autocad', { proyecto: 'Taller', nombre: 'Casa 3D' }); assert.equal(r.isError, true); assert.match(JSON.stringify(r.content), /AUTOCAD_NO_DISPONIBLE|AUTOCAD_NO_ABIERTO|Windows/);
+    r = await call(c, 'tannia_3d_a_autocad', { proyecto: 'Taller', nombre: 'Casa 3D' }); assert.equal(r.isError, true); assert.match(JSON.stringify(r.content), (process.platform === 'win32' ? /AUTORIZACION_INTERACTIVA_REQUERIDA/ : /AUTOCAD_NO_DISPONIBLE/));
     assert.ok(fs.existsSync(path.join(home, 'Proyectos', 'Taller', '03 Trabajo', 'Modelos3D', 'Casa 3D', 'v001.json')));
     assert.ok(!fs.existsSync(path.join(home, 'Proyectos', 'Taller', '03 Trabajo', 'Modelos3D', 'Casa 3D', 'v001_3D.dwg')), 'sin AutoCAD no se inventa un DWG');
   } finally { await cli.close(); fs.rmSync(home, { recursive: true, force: true }); }
@@ -297,7 +297,7 @@ test('límites de Windows: scripts 3D largos van comprimidos y entradas grandes 
 });
 
 test('esquemas MCP compatibles con la API: ninguna herramienta usa tuplas (items como lista / prefixItems) ni construcciones no admitidas', async () => {
-  const home = tmpHome('Tannia esquemas '); const cli = await startClient(home);
+  const home = tmpHome('Tannia esquemas '); const cli = await startClient(home, undefined, { TANNIA_SIN_DIALOGO: '1' });
   try {
     const tools = (await cli.client.listTools()).tools; assert.ok(tools.length > 50);
     const malos = [];

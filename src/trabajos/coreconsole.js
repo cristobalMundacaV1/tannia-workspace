@@ -99,6 +99,7 @@ export function ejecutarCoreConsole(motor, { dwgEntrada = null, guion, carpeta, 
     fs.writeFileSync(scr, guion, { flag: 'wx', encoding: 'latin1' });
     const args = [...(dwgEntrada ? ['/i', dwgEntrada] : []), '/s', scr, '/l', 'en-US'];
     const t0 = Date.now(); let out = []; let err = []; let fin = null; let child;
+    alIniciar(null); // Persist the spawn-in-progress state before a process can become orphaned.
     try { child = spawn(motor.ruta, args, { cwd: carpeta, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], env: Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('TANNIA_IN'))) }); }
     catch (e) { resolve({ ok: false, clase: 'no_inicia', detalle: String(e.message).slice(0, 200), ms: 0 }); return; }
     try { os.setPriority(child.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch { /* sin permiso: se informa abajo */ }

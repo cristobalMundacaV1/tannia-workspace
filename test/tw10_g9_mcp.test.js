@@ -23,7 +23,7 @@ test('72 herramientas (61 TW-09 + 11 TW-10) con esquemas válidos para el client
 });
 
 test('flujo: encargo → ideas sin terreno → terreno con norte → alternativas → aleros → elegir → decisiones → publicar; versiones inmutables', async () => {
-  const home = tmpHome('Tannia ñ arq '); const { client: c, close } = await startClient(home); const P = 'Casa Los Robles'; const E = 'Estudio Los Robles';
+  const home = tmpHome('Tannia ñ arq '); const { client: c, close } = await startClient(home, undefined, { TANNIA_SIN_DIALOGO: '1' }); const P = 'Casa Los Robles'; const E = 'Estudio Los Robles';
   try {
     assert.ok(!(await call(c, 'tannia_proyecto_crear', { nombre: P })).isError);
     // 1) encargo libre (sin JSON): se interpreta sin inventar terreno ni sol
@@ -66,7 +66,7 @@ test('flujo: encargo → ideas sin terreno → terreno con norte → alternativa
     assert.equal(d.verificacion_dxf.ok, true); for (const f of Object.values(d.archivos)) assert.ok(fs.existsSync(path.join(home, 'Proyectos', P, ...f.split('/'))), f);
     assert.ok(d.modelo_3d.solidos > 20);
     const r3 = await call(c, 'tannia_3d_ver', { proyecto: P, nombre: d.modelo_3d.nombre }); assert.ok(!r3.isError); const m3 = JSON.stringify(data(r3)); assert.ok(m3.length > 10);
-    const dwg = await call(c, 'tannia_arq_publicar', { proyecto: P, estudio: E, a_autocad: true }); assert.equal(dwg.isError, true); assert.match(JSON.stringify(dwg.content), /AUTOCAD/);
+    const dwg = await call(c, 'tannia_arq_publicar', { proyecto: P, estudio: E, a_autocad: true }); assert.equal(dwg.isError, true); assert.match(JSON.stringify(dwg.content), (process.platform === 'win32' ? /AUTORIZACION_INTERACTIVA_REQUERIDA/ : /AUTOCAD_NO_DISPONIBLE/));
     // 9) la versión 2 nunca cambió; el historial conserva todo
     assert.equal(sha(path.join(dir, `${v2}.json`)), hashV2);
     r = await call(c, 'tannia_arq_ver', { proyecto: P, estudio: E, historial: 'listar' }); assert.ok(data(r).versiones.length >= 8);
@@ -77,7 +77,7 @@ test('flujo: encargo → ideas sin terreno → terreno con norte → alternativa
 });
 
 test('entradas incompletas y peligrosas: sin superficie se pide el dato; alternativa bloqueada no se publica; nombres hostiles; originales intactos', async () => {
-  const home = tmpHome('Tannia ñ arq2 '); const { client: c, close } = await startClient(home); const P = 'Proyecto Dos';
+  const home = tmpHome('Tannia ñ arq2 '); const { client: c, close } = await startClient(home, undefined, { TANNIA_SIN_DIALOGO: '1' }); const P = 'Proyecto Dos';
   try {
     await call(c, 'tannia_proyecto_crear', { nombre: P });
     let r = await call(c, 'tannia_arq_encargo', { proyecto: P, estudio: 'E1', texto: 'Quiero una casa en L con patio' }); assert.equal(data(r).puede_generar, false); assert.match(data(r).pregunta_esencial, /m²/);

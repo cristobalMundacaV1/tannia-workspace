@@ -4,6 +4,8 @@
 // esa operación y esos documentos, y vigente por pocos minutos. El adaptador COM lo exige en su único punto de paso (#exec): una
 // herramienta nueva o antigua que se olvide de pedirlo falla cerrado. Las lecturas (estado, listar, medir…) no interrumpen y no lo piden.
 import path from 'node:path';
+import fs from 'node:fs';
+import { canonico, huella } from '../autoridad/canonico.js';
 import crypto from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { UserError } from '../mcp/util.js';
@@ -28,6 +30,20 @@ export const OPERACIONES_INTERACTIVAS = {
 
 const VIGENCIA_MS = 10 * 60000;
 const als = new AsyncLocalStorage();
+const emitidos = new WeakMap();
+const instantanea = (documentos) => documentos.map(p => ({ documento: p, sha256: fs.existsSync(p) ? crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex') : null }));
+const congelar = (x) => { if (x && typeof x === 'object') { Object.values(x).forEach(congelar); Object.freeze(x); } return x; };
+function descripcionCambios(cambios) {
+  const lineas = cambios.agregar_lineas?.lineas;
+  if (lineas) return [`Se agregarán ${lineas.length} líneas en la capa «${cambios.agregar_lineas.capa || 'actual'}». Coordenadas en las unidades del dibujo:`, ...lineas.map((l, i) => `${i + 1}: desde (${l.x1}, ${l.y1}) hasta (${l.x2}, ${l.y2}).`)];
+  const t = cambios.transformar_solido;
+  if (t) return [`Sólido ${t.handle}: ${t.operacion === 'mover' ? `desplazamiento (${t.dx}, ${t.dy}, ${t.dz}) mm` : `giro de ${t.grados} grados alrededor de (${t.cx}, ${t.cy}) mm`}. ${t.guardar ? 'Se guardará la copia.' : 'Quedará sin guardar.'}`];
+  const v = cambios.vista_3d;
+  if (v) return [`Vista hacia (${v.dir}); mostrar capas: ${(v.mostrar || []).join(', ') || 'sin cambio'}; ocultar: ${(v.ocultar || []).join(', ') || 'ninguna'}. La geometría permanece intacta.`];
+  const m = cambios.construir_3d;
+  if (m) return [`Se creará un documento nuevo con ${m.primitivas.length} elementos del modelo indicado; el archivo anterior se conserva.`, ...m.primitivas.map(p => `Elemento ${p.id}: ${p.tipo || p.type || 'sólido'}, capa ${p.capa}; dimensiones y posición: ${JSON.stringify(p.esperado)}.`)];
+  return ['Se ejecutará una sola vez esta operación sobre la versión actual de los documentos indicados. No autoriza otras ediciones.'];
+}
 const norm = (p) => String(p).replace(/\\/g, '/').replace(/\/+$/, '').normalize('NFC').toLowerCase();
 const nombre = (p) => path.win32.basename(path.posix.basename(String(p).replace(/\\/g, '/')));
 
@@ -38,13 +54,20 @@ export const conPermiso = (permiso, fn) => als.run(permiso, fn);
 export function exigirAlcance(permiso, script, input = {}) {
   if (!permiso || !(permiso.expira > Date.now())) throw new UserError('AUTORIZACION_INTERACTIVA_REQUERIDA', 'Esta operación usa AutoCAD con su ventana y necesita que la persona la autorice antes; no se envió nada a AutoCAD.', 'Pida la operación de nuevo: aparecerá una ventana para autorizarla.');
   if (!permiso.scripts.has(script)) throw new UserError('FUERA_DEL_ALCANCE_AUTORIZADO', 'La autorización vigente no cubre esta operación de AutoCAD; no se ejecutó.', 'Pida la operación de nuevo para autorizarla específicamente.');
+  const estado = emitidos.get(permiso);
+  if (!estado || estado.usados.has(script)) throw new UserError('FUERA_DEL_ALCANCE_AUTORIZADO', 'La autorización no existe o ya se utilizó para este cambio.');
+  const esperado = permiso.cambios[script];
+  if (!esperado || Object.entries(esperado).some(([k, v]) => canonico(input[k] ?? null) !== canonico(v ?? null))) throw new UserError('FUERA_DEL_ALCANCE_AUTORIZADO', 'Los cambios solicitados no coinciden con los que autorizó la persona.');
   const docs = permiso.documentos.map(norm);
   for (const k of ['dxf', 'dwg', 'ruta', 'ruta_esperada']) if (input[k] && !docs.includes(norm(input[k]))) throw new UserError('FUERA_DEL_ALCANCE_AUTORIZADO', `La autorización vigente no incluye «${nombre(input[k])}»; no se tocó ese dibujo.`, 'Pida la operación de nuevo para ese documento.');
+  if (huella(instantanea(permiso.documentos)) !== permiso.revision) throw new UserError('DOCUMENTO_CAMBIO_DURANTE_AUTORIZACION', 'El documento cambió después de mostrar la autorización. Vuelva a solicitar el cambio.');
+  estado.usados.add(script);
 }
 
-export function crearPermiso({ proyecto, operacion, documentos, canal, declarado_por = null, vigenciaMs = VIGENCIA_MS, ahora = Date.now() }) {
+export function crearPermiso({ proyecto, operacion, documentos, cambios = {}, canal, declarado_por = null, vigenciaMs = VIGENCIA_MS, ahora = Date.now() }) {
   const op = OPERACIONES_INTERACTIVAS[operacion]; if (!op) throw new UserError('OPERACION_DESCONOCIDA', `Operación interactiva desconocida: ${operacion}.`);
-  return Object.freeze({ id: `perm-${crypto.randomBytes(6).toString('hex')}`, proyecto, operacion, documentos: [...documentos], scripts: new Set(op.scripts), canal, declarado_por, otorgado: new Date(ahora).toISOString(), expira: ahora + vigenciaMs });
+  const p = Object.freeze({ id: `perm-${crypto.randomBytes(6).toString('hex')}`, proyecto, operacion, documentos: Object.freeze([...documentos]), cambios: congelar(JSON.parse(canonico(cambios))), revision: huella(instantanea(documentos)), scripts: new Set(op.scripts), canal, declarado_por, otorgado: new Date(ahora).toISOString(), expira: ahora + vigenciaMs });
+  emitidos.set(p, { usados: new Set() }); return p;
 }
 
 /** Sin canal humano no hay permiso: el valor por defecto del adaptador COM. */
@@ -54,16 +77,18 @@ export const politicaDenegada = Object.freeze({ permiso: async () => { throw new
 export class PoliticaInteractiva {
   constructor({ sandbox, server = null, aprobacion = null, vigenciaMs = VIGENCIA_MS, ahora = () => Date.now() }) { this.sandbox = sandbox; this.server = server; this.aprobacion = aprobacion; this.vigenciaMs = vigenciaMs; this.ahora = ahora; this.vigentes = new Map(); }
 
-  async permiso({ proyecto, operacion, documentos }) {
+  async permiso({ proyecto, operacion, documentos, cambios = {} }) {
     const op = OPERACIONES_INTERACTIVAS[operacion]; if (!op) throw new UserError('OPERACION_DESCONOCIDA', `Operación interactiva desconocida: ${operacion}.`);
-    const clave = `${proyecto}|${operacion}|${documentos.map(norm).sort().join('|')}`;
-    const prev = this.vigentes.get(clave); if (prev && prev.expira > this.ahora()) return prev;
+    cambios = congelar(JSON.parse(canonico(cambios)));
+    const revision = huella(instantanea(documentos));
+    const inicio = this.ahora();
+    const clave = huella({ proyecto, operacion, documentos, cambios, revision, solicitud: crypto.randomUUID() });
     const docTxt = documentos.map((d) => `«${nombre(d)}»`).join(' y ');
     const ventana = contenidoVentana({
       pregunta: `¿Autorizas que Tannia use AutoCAD ahora para ${op.accion}?`,
       porque: 'Esta operación necesita la ventana de AutoCAD (no se puede hacer en segundo plano) y podría interrumpir lo que estés haciendo en él.',
-      revisar: [`Documento: ${docTxt}, en la carpeta «03 Trabajo» del proyecto «${proyecto}» (nunca un original).`, ...op.efectos, 'Queda intacto: tus otros dibujos abiertos, aunque tengan cambios sin guardar. No se guardan, no se cierran y no reciben nada.'],
-      autoriza: `Solo ${op.accion} en ${docTxt}, durante los próximos ${Math.round(this.vigenciaMs / 60000)} minutos.`,
+      revisar: [`Documento: ${docTxt}, en la carpeta «03 Trabajo» del proyecto «${proyecto}» (nunca un original).`, ...op.efectos, ...descripcionCambios(cambios), 'Queda intacto: tus otros dibujos abiertos, aunque tengan cambios sin guardar. No se guardan, no se cierran y no reciben nada.'],
+      autoriza: `Solo ${op.accion} en ${docTxt}, una sola vez y solo para el lote descrito. Debe comenzar antes de ${Math.round(this.vigenciaMs / 60000)} minutos.`,
       si_acepta: 'Tannia hace la operación y revisa el resultado; si algo no coincide, te lo dice.',
       si_rechaza: `No se abre ni se toca AutoCAD. ${op.alternativa}`,
       afecta: documentos.map(nombre),
@@ -71,7 +96,9 @@ export class PoliticaInteractiva {
     });
     const d = await pedirAutorizacionHumana({ sandbox: this.sandbox, server: this.server, aprobacion: this.aprobacion, proyecto, clave: `cad-${operacion}-${crypto.createHash('sha256').update(clave).digest('hex').slice(0, 12)}`, ventana, titulo: `Usar AutoCAD: ${op.accion}`, resumen: ventana.texto_plano, consecuencia: 'Tus otros dibujos abiertos no se tocan.', etiquetaAprobar: '_Usar AutoCAD ahora', etiquetaRechazar: '_Después' });
     if (!d.por) { const r = resultadoNoConfirmado(d, 'uso de AutoCAD'); throw new UserError(d.rechazado ? 'INTERVENCION_POSPUESTA' : 'AUTORIZACION_INTERACTIVA_REQUERIDA', `${r.mensaje} No se envió nada a AutoCAD.`, op.alternativa, { resultado_codigo: r.codigo, operacion }); }
-    const p = crearPermiso({ proyecto, operacion, documentos, canal: d.por, declarado_por: d.nombre || null, vigenciaMs: this.vigenciaMs, ahora: this.ahora() });
-    this.vigentes.set(clave, p); return p;
+    if (this.ahora() - inicio >= this.vigenciaMs) throw new UserError('AUTORIZACION_INTERACTIVA_REQUERIDA', 'La solicitud venció mientras esperaba respuesta; vuelva a pedirla.');
+    if (revision !== huella(instantanea(documentos))) throw new UserError('DOCUMENTO_CAMBIO_DURANTE_AUTORIZACION', 'El documento cambió mientras esperaba la autorización; vuelva a solicitarla.');
+    const p = crearPermiso({ proyecto, operacion, documentos, cambios, canal: d.por, declarado_por: d.nombre || null, vigenciaMs: this.vigenciaMs, ahora: this.ahora() });
+    return p;
   }
 }
