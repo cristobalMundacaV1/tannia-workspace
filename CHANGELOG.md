@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0-rc.3 — 2026-11-18 (revisión independiente PR #36; NO aceptado, sin AutoCAD real)
+- Toda operación de AutoCAD que pueda interrumpir el escritorio (abrir copia, agregar líneas, DWG, 3D, vista, verificación) pide autorización humana específica del documento; sin ella no se ejecuta.
+- Un DWG ya generado solo se reutiliza si sigue íntegro; si cambió, se aparta y se vuelve a generar.
+- Un solo AutoCAD sin interfaz a la vez en todo el equipo.
+- AUDIT con errores impide publicar el DWG.
+
 ## 0.3.0-rc.2 — 2026-11-18 (candidato CAD-BG; NO aceptado, sin AutoCAD ni Windows real con la persona)
 - Trabajos en segundo plano: planos, cubicaciones, presupuesto, memoria y DWG se preparan en un proceso oculto de prioridad baja; la persona puede seguir usando su computador. Cola, cancelación y reanudación tras interrupciones.
 - DWG sin interfaz con AutoCAD Core Console (pendiente de comprobar en AutoCAD 2027): solo se publica si la relectura coincide con el modelo.
